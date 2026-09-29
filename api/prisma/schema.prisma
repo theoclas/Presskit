@@ -1,0 +1,510 @@
+// Fersua Studio — booking de DJs. MySQL 8.4, utf8mb4_unicode_ci.
+// Los enums deben coincidir con packages/shared/src/enums.ts (lo verifica un test).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["strictUndefinedChecks"]
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum EmailTokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+enum RevokeReason {
+  LOGOUT
+  ROTATED
+  REUSE_DETECTED
+  PASSWORD_CHANGED
+  ADMIN_ACTION
+  EXPIRED
+}
+
+enum ProfileStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum PaletteKey {
+  SUNSET
+  MIAMI
+  NEON
+  ACID
+  INFERNO
+  OCEAN
+  GOLD
+  MONO
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  SOUNDCLOUD
+  SPOTIFY
+  TIKTOK
+  YOUTUBE
+  FACEBOOK
+  BEATPORT
+  MIXCLOUD
+  RESIDENT_ADVISOR
+  X
+  WHATSAPP
+  APPLE_MUSIC
+  BANDCAMP
+  TWITCH
+  THREADS
+  LINKTREE
+  WEBSITE
+}
+
+enum MediaKind {
+  HERO
+  CARD
+  MEMBER
+  GALLERY
+  FLYER
+}
+
+enum EventCtaType {
+  WHATSAPP
+  URL
+  NONE
+}
+
+enum BookingStatus {
+  NEW
+  READ
+  ARCHIVED
+  SPAM
+}
+
+enum TicketType {
+  PQRS_CONSULTA
+  PQRS_RECLAMO
+  REPORTE_PERFIL
+  SOLICITUD_DATOS_DJ
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum DocType {
+  CC
+  CE
+  NIT
+  PASAPORTE
+  PPT
+}
+
+model User {
+  id                    String     @id @default(cuid())
+  /// Siempre en minúscula. Es el identificador de login (no el correo).
+  username              String     @unique @db.VarChar(24)
+  /// Solo para recuperar la contraseña y avisos. NULL en cuentas creadas por CLI sin correo.
+  email                 String?    @unique @db.VarChar(254)
+  emailVerifiedAt       DateTime?
+  passwordHash          String     @db.VarChar(255)
+  passwordChangedAt     DateTime   @default(now())
+  mustChangePassword    Boolean    @default(false)
+  tempPasswordExpiresAt DateTime?
+  role                  UserRole   @default(USER)
+  /// TRUE solo en el admin: el índice único garantiza que exista máximo uno.
+  adminSlot             Boolean?   @unique
+  status                UserStatus @default(ACTIVE)
+  /// Va en el access JWT ("tv"). Subirlo invalida todos los tokens emitidos.
+  tokenVersion          Int        @default(0)
+  failedLoginCount      Int        @default(0)
+  lockedUntil           DateTime?
+  lastLoginAt           DateTime?
+  lastLoginIpHash       String?    @db.Char(64)
+  /// 2FA del admin: secreto TOTP cifrado (AES-256-GCM) y códigos de recuperación con hash.
+  mfaSecretEnc          String?    @db.VarChar(255)
+  mfaEnabledAt          DateTime?
+  mfaRecoveryCodes      Json?
+  termsVersion          String?    @db.VarChar(20)
+  termsAcceptedAt       DateTime?
+  privacyVersion        String?    @db.VarChar(20)
+  privacyAcceptedAt     DateTime?
+  ageConfirmedAt        DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  profile          DjProfile?     @relation("ProfileOwner")
+  approvedProfiles DjProfile[]    @relation("ProfileApprover")
+  refreshTokens    RefreshToken[]
+  emailTokens      EmailToken[]
+  uploads          MediaAsset[]   @relation("MediaUploader")
+  auditLogs        AuditLog[]
+  handledTickets   Ticket[]       @relation("TicketHandler")
+
+  @@index([role])
+  @@index([status, createdAt])
+}
+
+/// Una fila por refresh token. Rotan en cada uso; reutilizar uno reemplazado revoca la familia.
+model RefreshToken {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId        String        @db.VarChar(30)
+  tokenHash       String        @unique @db.Char(64)
+  expiresAt       DateTime
+  familyExpiresAt DateTime
+  replacedAt      DateTime?
+  replacedById    String?       @db.VarChar(30)
+  revokedAt       DateTime?
+  revokeReason    RevokeReason?
+  userAgent       String?       @db.VarChar(120)
+  ipHash          String?       @db.Char(64)
+  createdAt       DateTime      @default(now())
+  lastUsedAt      DateTime      @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+model EmailToken {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          EmailTokenType
+  tokenHash     String         @unique @db.Char(64)
+  expiresAt     DateTime
+  usedAt        DateTime?
+  requestIpHash String?        @db.Char(64)
+  createdAt     DateTime       @default(now())
+
+  @@index([userId, type, createdAt])
+  @@index([expiresAt])
+}
+
+model DjProfile {
+  id               String        @id @default(cuid())
+  /// 1 usuario = máx. 1 perfil. NULL = perfil sin dueño, administrado por el admin.
+  userId           String?       @unique
+  user             User?         @relation("ProfileOwner", fields: [userId], references: [id], onDelete: SetNull)
+  slug             String        @unique @db.VarChar(40)
+  slugChangedAt    DateTime?
+  displayName      String        @db.VarChar(60)
+  tagline          String?       @db.VarChar(120)
+  seoDescription   String?       @db.VarChar(160)
+  city             String?       @db.VarChar(60)
+  countryCode      String        @default("CO") @db.Char(2)
+  /// Dígitos E.164 sin '+', ej. 573505209860.
+  whatsappNumber   String?       @db.VarChar(15)
+  publicEmail      String?       @db.VarChar(254)
+  publicPhone      String?       @db.VarChar(20)
+  palette          PaletteKey    @default(SUNSET)
+  /// Record<TextSlotKey, string>, validado contra PAGE_TEXT_SLOTS.
+  texts            Json
+  /// FormFieldConfig[] ordenado, validado contra BOOKING_FIELD_CATALOGUE.
+  bookingForm      Json
+  showGallery      Boolean       @default(true)
+  showRider        Boolean       @default(true)
+  showEvents       Boolean       @default(true)
+  showOpenDateRow  Boolean       @default(true)
+  formEnabled      Boolean       @default(true)
+  formOpenWhatsapp Boolean       @default(true)
+  notifyByEmail    Boolean       @default(true)
+
+  heroImageId String?     @unique
+  heroImage   MediaAsset? @relation("ProfileHero", fields: [heroImageId], references: [id], onDelete: SetNull)
+  cardImageId String?     @unique
+  cardImage   MediaAsset? @relation("ProfileCard", fields: [cardImageId], references: [id], onDelete: SetNull)
+
+  status         ProfileStatus @default(DRAFT)
+  statusReason   String?       @db.VarChar(500)
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+  approvedBy     User?         @relation("ProfileApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  featured       Boolean       @default(false)
+  featuredRank   Int           @default(100)
+  lastActivityAt DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  genres        ProfileGenre[]
+  members       Member[]
+  socialLinks   SocialLink[]
+  gallery       GalleryItem[]
+  riderItems    RiderItem[]
+  events        Event[]
+  bookings      BookingRequest[]
+  media         MediaAsset[]     @relation("ProfileMedia")
+  slugRedirects SlugRedirect[]
+  legalInfo     DjLegalInfo?
+  tickets       Ticket[]
+
+  @@index([status, featured, featuredRank])
+  @@index([status, lastActivityAt])
+}
+
+/// Slugs viejos y nombres heredados → 301 al slug actual.
+model SlugRedirect {
+  fromSlug  String    @id @db.VarChar(60)
+  profileId String
+  profile   DjProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([profileId])
+}
+
+model Genre {
+  id        Int            @id @default(autoincrement())
+  slug      String         @unique @db.VarChar(40)
+  name      String         @unique @db.VarChar(40)
+  isActive  Boolean        @default(true)
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  profiles  ProfileGenre[]
+}
+
+model ProfileGenre {
+  profileId String
+  profile   DjProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  genreId   Int
+  genre     Genre     @relation(fields: [genreId], references: [id], onDelete: Restrict)
+  sortOrder Int       @default(0)
+
+  @@id([profileId, genreId])
+  @@index([genreId])
+}
+
+model Member {
+  id          String       @id @default(cuid())
+  profileId   String
+  profile     DjProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name        String       @db.VarChar(60)
+  role        String?      @db.VarChar(80)
+  description String?      @db.VarChar(400)
+  photoId     String?      @unique
+  photo       MediaAsset?  @relation("MemberPhoto", fields: [photoId], references: [id], onDelete: SetNull)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  socialLinks SocialLink[]
+
+  @@index([profileId, sortOrder])
+}
+
+/// memberId NULL = red del perfil. profileId siempre presente (alcance de autorización).
+model SocialLink {
+  id        String         @id @default(cuid())
+  profileId String
+  profile   DjProfile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  memberId  String?
+  member    Member?        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  platform  SocialPlatform
+  url       String         @db.VarChar(500)
+  label     String?        @db.VarChar(30)
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+
+  @@index([profileId, memberId, sortOrder])
+  @@index([memberId])
+}
+
+model GalleryItem {
+  id        String     @id @default(cuid())
+  profileId String
+  profile   DjProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  mediaId   String     @unique
+  media     MediaAsset @relation("GalleryMedia", fields: [mediaId], references: [id], onDelete: Cascade)
+  alt       String?    @db.VarChar(125)
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  @@index([profileId, sortOrder])
+}
+
+model RiderItem {
+  id        String    @id @default(cuid())
+  profileId String
+  profile   DjProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name      String    @db.VarChar(60)
+  note      String?   @db.VarChar(80)
+  sortOrder Int       @default(0)
+
+  @@index([profileId, sortOrder])
+}
+
+model Event {
+  id        String       @id @default(cuid())
+  profileId String
+  profile   DjProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  /// Fecha de calendario en Bogotá.
+  date      DateTime     @db.Date
+  startTime String?      @db.VarChar(5)
+  title     String?      @db.VarChar(80)
+  venue     String       @db.VarChar(90)
+  city      String?      @db.VarChar(60)
+  flyerId   String?      @unique
+  flyer     MediaAsset?  @relation("EventFlyer", fields: [flyerId], references: [id], onDelete: SetNull)
+  ctaType   EventCtaType @default(WHATSAPP)
+  ctaUrl    String?      @db.VarChar(500)
+  ctaLabel  String?      @db.VarChar(20)
+  isHidden  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([profileId, date])
+  @@index([date, isHidden])
+}
+
+model BookingRequest {
+  id             String        @id @default(cuid())
+  profileId      String
+  profile        DjProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  /// [{ key, label, value }] con las etiquetas vigentes al enviar.
+  payload        Json
+  contactName    String        @db.VarChar(80)
+  contactEmail   String?       @db.VarChar(254)
+  contactPhone   String?       @db.VarChar(20)
+  eventDate      DateTime?     @db.Date
+  status         BookingStatus @default(NEW)
+  readAt         DateTime?
+  archivedAt     DateTime?
+  /// Prueba de autorización (Ley 1581): fecha y versión de la política aceptada.
+  consentAt      DateTime
+  consentVersion String        @db.VarChar(20)
+  ipHash         String        @db.Char(64)
+  createdAt      DateTime      @default(now())
+
+  @@index([profileId, status, createdAt])
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+  @@index([contactEmail])
+}
+
+/// Tokens de formulario ya usados (un solo uso). Se purgan al expirar.
+model UsedFormNonce {
+  nonce     String   @id @db.Char(32)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model MediaAsset {
+  id            String     @id @default(cuid())
+  profileId     String?
+  profile       DjProfile? @relation("ProfileMedia", fields: [profileId], references: [id], onDelete: Cascade)
+  uploadedById  String?
+  uploadedBy    User?      @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  kind          MediaKind
+  /// Ruta relativa dentro de UPLOAD_DIR, sin extensión ni variante: "<profileId>/<key>".
+  storageKey    String     @unique @db.VarChar(80)
+  /// [{ w, h, bytes, file }] — file relativo a storageKey.
+  variants      Json
+  hasOg         Boolean    @default(false)
+  width         Int
+  height        Int
+  bytesTotal    Int
+  originalBytes Int
+  originalMime  String     @db.VarChar(20)
+  sha256        String     @db.Char(64)
+  /// Los archivos de perfiles no aprobados viven en private/ y se sirven con URL firmada.
+  isPublic      Boolean    @default(false)
+  attachedAt    DateTime?
+  createdAt     DateTime   @default(now())
+
+  heroOf    DjProfile?   @relation("ProfileHero")
+  cardOf    DjProfile?   @relation("ProfileCard")
+  memberOf  Member?      @relation("MemberPhoto")
+  galleryOf GalleryItem? @relation("GalleryMedia")
+  flyerOf   Event?       @relation("EventFlyer")
+
+  @@index([profileId, kind])
+  @@index([attachedAt, createdAt])
+}
+
+/// Registro del oferente (art. 53 Ley 1480 — portal de contacto). Privado: solo el admin.
+model DjLegalInfo {
+  id          String    @id @default(cuid())
+  profileId   String    @unique
+  profile     DjProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  legalName   String    @db.VarChar(120)
+  docType     DocType
+  docNumber   String    @db.VarChar(20)
+  address     String    @db.VarChar(200)
+  /// string[] (máx. 3).
+  phones      Json
+  updatedById String?   @db.VarChar(30)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+/// PQRS de habeas data, reportes de perfiles y solicitudes de datos de un DJ (art. 53).
+model Ticket {
+  id             String       @id @default(cuid())
+  type           TicketType
+  status         TicketStatus @default(OPEN)
+  profileId      String?
+  profile        DjProfile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profileSlug    String?      @db.VarChar(60)
+  name           String       @db.VarChar(80)
+  email          String       @db.VarChar(254)
+  phone          String?      @db.VarChar(20)
+  subject        String       @db.VarChar(120)
+  message        String       @db.Text
+  consentAt      DateTime
+  consentVersion String       @db.VarChar(20)
+  ipHash         String       @db.Char(64)
+  /// Vencimiento legal (días hábiles según el tipo).
+  dueAt          DateTime     @db.Date
+  resolution     String?      @db.Text
+  resolvedAt     DateTime?
+  handledById    String?
+  handledBy      User?        @relation("TicketHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status, dueAt])
+  @@index([type, createdAt])
+  @@index([email])
+}
+
+/// Solo se inserta. Sin FK a los objetos afectados para que sobreviva a borrados.
+model AuditLog {
+  id            BigInt   @id @default(autoincrement())
+  actorId       String?
+  actor         User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorUsername String?  @db.VarChar(24)
+  action        String   @db.VarChar(48)
+  targetType    String?  @db.VarChar(24)
+  targetId      String?  @db.VarChar(30)
+  profileId     String?  @db.VarChar(30)
+  metadata      Json?
+  ipHash        String?  @db.Char(64)
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@index([profileId, createdAt])
+  @@index([action, createdAt])
+}

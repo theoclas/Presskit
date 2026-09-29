@@ -1,0 +1,29 @@
+# Desarrollo local: MySQL + mailpit. Nada se publica fuera de 127.0.0.1.
+name: fersua-booking-dev
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DEV_DB_ROOT_PASSWORD:-devroot}
+      MYSQL_DATABASE: fersua_booking
+    ports:
+      - "127.0.0.1:3309:3306"
+    volumes:
+      - dev_db_data:/var/lib/mysql
+      - ./deploy/mysql/my.cnf:/etc/mysql/conf.d/zz-fersua.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
+volumes:
+  dev_db_data:

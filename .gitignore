@@ -1,0 +1,34 @@
+# Dependencias y builds
+node_modules/
+dist/
+**/dist/
+*.tsbuildinfo
+coverage/
+.vite/
+
+# Entornos (se versionan solo los ejemplos)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Datos locales
+api/.uploads/
+backups/
+.deploy/
+*.sql
+*.sql.gz
+*.log
+
+# Playwright
+web/test-results/
+web/playwright-report/
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Las migraciones de Prisma sí se versionan
+!api/prisma/migrations/**/*.sql
