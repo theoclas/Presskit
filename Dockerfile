@@ -1,4 +1,5 @@
-# syntax=docker/dockerfile:1.7
+# Compatible con el builder clásico de Docker (el VPS usa docker.io de Ubuntu sin buildx):
+# nada de RUN --mount ni otras funciones exclusivas de BuildKit.
 #
 # Un solo Dockerfile con dos imágenes finales:
 #   --target api   -> NestJS (node:22-alpine, usuario node)
@@ -25,7 +26,7 @@ COPY packages/shared/package.json packages/shared/
 COPY api/package.json api/
 COPY web/package.json web/
 # Nunca --ignore-scripts: Prisma baja su motor en un script de instalación.
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund && npm cache clean --force
 
 # ---------------------------------------------------------------------------
 # shared: @fersua/shared compilado (dist CJS + ESM)
@@ -70,7 +71,7 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY api/package.json api/
 COPY web/package.json web/
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev -w api -w @fersua/shared --no-audit --no-fund
+RUN npm ci --omit=dev -w api -w @fersua/shared --no-audit --no-fund && npm cache clean --force
 COPY api/prisma api/prisma
 # Lo que npm no pudo subir a la raíz (p. ej. sharp) queda en api/node_modules: se copia
 # también. mkdir -p para que el COPY no falle si un día queda vacío.

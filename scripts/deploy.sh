@@ -74,7 +74,7 @@ fi
 
 # ------------------------------------------------------------------ 4. build por etapas
 # Una etapa pesada a la vez (vite, luego nest) para no agotar 1 vCPU / 2 GB + swap.
-# La caché de BuildKit hace que los pasos siguientes reutilicen lo ya compilado.
+# La caché de capas de Docker hace que los pasos siguientes reutilicen lo ya compilado.
 log "Build: web..."
 docker build --target web-build -t "$STAGE_IMAGE:web-build" "$ROOT_DIR"
 log "Build: api (nest)..."
@@ -86,7 +86,7 @@ APP_VERSION="$NEW" dc build edge
 
 docker tag "$API_IMAGE:$NEW" "$API_IMAGE:current"
 docker tag "$EDGE_IMAGE:$NEW" "$EDGE_IMAGE:current"
-# Las etapas intermedias solo servían para compilar de a una; la caché de BuildKit se queda.
+# Las etapas intermedias solo servían para compilar de a una; la caché de capas se queda.
 docker image rm "$STAGE_IMAGE:web-build" "$STAGE_IMAGE:api-build" >/dev/null 2>&1 || true
 
 # ------------------------------------------------------------------ 5. arranque
