@@ -56,7 +56,23 @@ for key in DB_NAME DB_MIGRATOR_USER DB_APP_USER; do
   [ -z "$v" ] || [[ "$v" =~ ^[A-Za-z0-9_]+$ ]] || fail "$key solo admite letras, números y _"
 done
 [ "$(get DB_MIGRATOR_USER)" != "$(get DB_APP_USER)" ] || fail "DB_MIGRATOR_USER y DB_APP_USER deben ser distintos"
-[ "$(get JWT_ACCESS_SECRET)" != "$(get BOOKING_FORM_SECRET)" ] || fail "JWT_ACCESS_SECRET y BOOKING_FORM_SECRET no pueden ser iguales"
+# Valores de ejemplo (api/.env.example es público) o sin azar: el api tampoco arranca con ellos.
+secret_keys="JWT_ACCESS_SECRET BOOKING_FORM_SECRET IP_HASH_SECRET MFA_ENC_KEY"
+for key in $secret_keys; do
+  v="$(get "$key")"
+  [ -n "$v" ] || continue
+  case "$v" in
+    *change-me* | dev-* | *example* | *placeholder*) fail "$key tiene un valor de ejemplo: genera uno nuevo (ver scripts/init-env.sh)" ;;
+  esac
+  distinct="$(printf '%s' "$v" | fold -w1 | sort -u | wc -l)"
+  [ "$distinct" -ge 8 ] || fail "$key no parece aleatorio: genera uno nuevo (ver scripts/init-env.sh)"
+done
+for a in $secret_keys; do
+  for b in $secret_keys; do
+    [ "$a" \< "$b" ] || continue
+    [ -z "$(get "$a")" ] || [ "$(get "$a")" != "$(get "$b")" ] || fail "$a y $b no pueden ser iguales"
+  done
+done
 
 case "$(get PUBLIC_URL)" in
   https://*) ;;

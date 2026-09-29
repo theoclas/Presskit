@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { MailService } from './mail.service';
 
-// Se completa en M2. Ya está registrado en app.module.ts.
+// Global: auth, admin y (en M3) el panel del DJ mandan correos sin importar el módulo cada vez.
+@Global()
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [],
-  exports: [],
+  providers: [MailService],
+  exports: [MailService],
 })
 export class MailModule {}

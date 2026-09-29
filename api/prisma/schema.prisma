@@ -143,6 +143,11 @@ model User {
   mfaSecretEnc          String?    @db.VarChar(255)
   mfaEnabledAt          DateTime?
   mfaRecoveryCodes      Json?
+  /// Códigos TOTP/recuperación fallidos seguidos (contraseña correcta, código malo), entre
+  /// todos los mfaToken. Un ingreso completo lo deja en 0.
+  mfaFailedCount        Int        @default(0)
+  /// Pausa para pedir otro código tras varios fallos. No aplica desde un dispositivo conocido.
+  mfaLockedUntil        DateTime?
   termsVersion          String?    @db.VarChar(20)
   termsAcceptedAt       DateTime?
   privacyVersion        String?    @db.VarChar(20)
@@ -442,20 +447,29 @@ model MediaAsset {
   @@index([attachedAt, createdAt])
 }
 
-/// Registro del oferente (art. 53 Ley 1480 — portal de contacto). Privado: solo el admin.
+/// Registro del oferente (art. 53 Ley 1480 — portal de contacto). Privado: el dueño y el admin.
+/// Al borrar el perfil NO se borra: queda sin perfil (profileId NULL), con el slug y el nombre
+/// de ese momento, y el job de retención lo purga 12 meses después de closedAt
+/// (docs/diseno/11 §5: hay que poder entregarlo a quien se queje del DJ).
 model DjLegalInfo {
-  id          String    @id @default(cuid())
-  profileId   String    @unique
-  profile     DjProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  legalName   String    @db.VarChar(120)
-  docType     DocType
-  docNumber   String    @db.VarChar(20)
-  address     String    @db.VarChar(200)
+  id                String     @id @default(cuid())
+  profileId         String?    @unique
+  profile           DjProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  legalName         String     @db.VarChar(120)
+  docType           DocType
+  docNumber         String     @db.VarChar(20)
+  address           String     @db.VarChar(200)
   /// string[] (máx. 3).
-  phones      Json
-  updatedById String?   @db.VarChar(30)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  phones            Json
+  updatedById       String?    @db.VarChar(30)
+  /// Cuándo se borró el perfil. NULL mientras el perfil exista.
+  closedAt          DateTime?
+  closedProfileSlug String?    @db.VarChar(40)
+  closedDisplayName String?    @db.VarChar(60)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([closedAt])
 }
 
 /// PQRS de habeas data, reportes de perfiles y solicitudes de datos de un DJ (art. 53).

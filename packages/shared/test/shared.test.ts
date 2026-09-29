@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  API_ROUTES,
   APP_TOP_LEVEL_ROUTES,
+  AUTH_HEADERS,
+  PROFILE_STATUSES,
+  PROFILE_STATUS_ACTIONS,
+  STATUS_TRANSITIONS,
+  canTransition,
+  normalizeDocNumber,
   BOOKING_FIELD_CATALOGUE,
   PAGE_TEXT_SLOTS,
   PALETTES,
@@ -9,6 +16,10 @@ import {
   SOCIAL_PLATFORMS,
   SOCIAL_PLATFORM_KEYS,
   addBusinessDays,
+  businessDaysInRange,
+  colombianHolidays,
+  easterSunday,
+  isBusinessDay,
   buildBookingSummary,
   buildWaUrl,
   cleanText,
@@ -276,6 +287,59 @@ describe('fechas', () => {
     expect(isValidDateOnly('2026-02-30')).toBe(false);
     expect(addBusinessDays('2026-09-25', 10)).toBe('2026-10-09');
   });
+
+  it('Pascua', () => {
+    expect(['2026', '2027', '2028', '2029', '2030'].map((y) => easterSunday(Number(y)))).toEqual([
+      '2026-04-05',
+      '2027-03-28',
+      '2028-04-16',
+      '2029-04-01',
+      '2030-04-21',
+    ]);
+  });
+
+  it('festivos de Colombia 2026 (calendario oficial: 18 días)', () => {
+    expect([...colombianHolidays(2026)].sort()).toEqual([
+      '2026-01-01',
+      '2026-01-12',
+      '2026-03-23',
+      '2026-04-02',
+      '2026-04-03',
+      '2026-05-01',
+      '2026-05-18',
+      '2026-06-08',
+      '2026-06-15',
+      '2026-06-29',
+      '2026-07-20',
+      '2026-08-07',
+      '2026-08-17',
+      '2026-10-12',
+      '2026-11-02',
+      '2026-11-16',
+      '2026-12-08',
+      '2026-12-25',
+    ]);
+    // Ley Emiliani: el 12 de octubre de 2027 es martes y pasa al lunes 18.
+    expect(colombianHolidays(2027).has('2027-10-18')).toBe(true);
+    expect(colombianHolidays(2027).has('2027-10-12')).toBe(false);
+  });
+
+  it('días hábiles de las PQRS: sin fines de semana ni festivos', () => {
+    expect(isBusinessDay('2026-10-12')).toBe(false); // Día de la Raza (lunes)
+    expect(isBusinessDay('2026-10-13')).toBe(true);
+    expect(isBusinessDay('2026-10-10')).toBe(false); // sábado
+    // Desde el lunes 28 de sep. de 2026: el 12 de octubre no cuenta.
+    expect(addBusinessDays('2026-09-28', 10)).toBe('2026-10-13');
+    // Semana Santa 2027 (jueves 25 y viernes 26 de marzo) y San José (lunes 22).
+    expect(addBusinessDays('2027-03-18', 3)).toBe('2027-03-24');
+    expect(addBusinessDays('2027-03-24', 1)).toBe('2027-03-29');
+    // Diciembre: 8 y 25 de 2026 (martes y viernes), y Año Nuevo 2027 (viernes).
+    expect(addBusinessDays('2026-12-07', 1)).toBe('2026-12-09');
+    expect(addBusinessDays('2026-12-24', 2)).toBe('2026-12-29');
+    expect(addBusinessDays('2026-12-31', 1)).toBe('2027-01-04');
+    expect(businessDaysInRange('2026-09-29', '2026-10-14')).toBe(10);
+    expect(businessDaysInRange('2026-10-14', '2026-09-29')).toBe(0);
+  });
 });
 
 describe('otros', () => {
@@ -286,5 +350,48 @@ describe('otros', () => {
     expect(isSafeNextPath('/panel/fotos')).toBe(true);
     expect(isSafeNextPath('//evil.com')).toBe(false);
     expect(isSafeNextPath('https://evil.com')).toBe(false);
+  });
+});
+
+describe('estados del perfil', () => {
+  it('transiciones del admin y del dueño', () => {
+    expect(canTransition('submit', 'DRAFT')).toBe(true);
+    expect(canTransition('submit', 'APPROVED')).toBe(false);
+    expect(canTransition('approve', 'DRAFT')).toBe(true);
+    expect(canTransition('approve', 'SUSPENDED')).toBe(false);
+    expect(canTransition('reject', 'PENDING_REVIEW')).toBe(true);
+    expect(canTransition('suspend', 'DRAFT')).toBe(false);
+    expect(canTransition('reinstate', 'SUSPENDED')).toBe(true);
+  });
+  it('cada acción parte de estados válidos y termina en uno válido', () => {
+    for (const a of PROFILE_STATUS_ACTIONS) {
+      const t = STATUS_TRANSITIONS[a];
+      expect(PROFILE_STATUSES).toContain(t.to);
+      for (const from of t.from) expect(PROFILE_STATUSES).toContain(from);
+      expect(t.from).not.toContain(t.to);
+    }
+  });
+});
+
+describe('datos legales (art. 53)', () => {
+  it('normaliza el número de documento según el tipo', () => {
+    expect(normalizeDocNumber('CC', '1.023.456.789')).toBe('1023456789');
+    expect(normalizeDocNumber('NIT', '900.123.456-7')).toBe('9001234567');
+    expect(normalizeDocNumber('CE', 'ab 12345')).toBe('AB12345');
+    expect(normalizeDocNumber('CC', 'AB1234')).toBeNull();
+    expect(normalizeDocNumber('PASAPORTE', '12')).toBeNull();
+    expect(normalizeDocNumber('CC', '1'.repeat(21))).toBeNull();
+    expect(normalizeDocNumber('CC', 42)).toBeNull();
+  });
+});
+
+describe('contrato de sesión', () => {
+  it('rutas y cabeceras de auth', () => {
+    expect(API_ROUTES.authMfa).toBe('/api/auth/mfa');
+    expect(API_ROUTES.authStepUp).toBe('/api/auth/step-up');
+    expect(API_ROUTES.authLogout).toBe('/api/auth/logout');
+    expect(AUTH_HEADERS).toEqual({ xhrName: 'X-Requested-With', xhrValue: 'fersua', stepUp: 'X-Step-Up' });
+    expect(LIMITS.admin.pageSizeMax).toBeGreaterThanOrEqual(LIMITS.admin.pageSizeDefault);
+    expect(LIMITS.genres.nameMin).toBeLessThan(LIMITS.genres.nameMax);
   });
 });

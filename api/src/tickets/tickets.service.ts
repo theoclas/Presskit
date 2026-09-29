@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Request } from 'express';
-import { CONSENT_VERSION, todayBogota, type TicketSubmitResultDto } from '@fersua/shared';
+import { CONSENT_VERSION, PQRS_DEADLINE_BUSINESS_DAYS, todayBogota, type TicketSubmitResultDto, type TicketType } from '@fersua/shared';
 import { Errors } from '../common/errors';
 import { RequestContext } from '../common/request-context';
+import { AppConfig } from '../config/app-config.service';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { dateOnlyToDb } from '../public/date-only';
 import { PublicProfileResolver } from '../public/public-profile.resolver';
@@ -10,6 +12,7 @@ import { isHoneypotFilled } from '../booking/booking-rules';
 import type { TicketSubmitBody } from './ticket-submit.dto';
 import {
   TICKET_TYPES_WITH_PROFILE,
+  TICKET_TYPE_LABELS,
   fakeTicketId,
   ticketCapExceeded,
   ticketDueDate,
@@ -27,6 +30,8 @@ export class TicketsService {
     private readonly prisma: PrismaService,
     private readonly resolver: PublicProfileResolver,
     private readonly requestContext: RequestContext,
+    private readonly mail: MailService,
+    private readonly config: AppConfig,
   ) {}
 
   async submit(body: TicketSubmitBody, req: Request): Promise<TicketSubmitResultDto> {
@@ -49,9 +54,10 @@ export class TicketsService {
     const today = todayBogota();
     const dueDate = ticketDueDate(body.type, today);
 
-    // Honeypot: respuesta idéntica (id con forma de cuid), pero no se guarda nada: Ticket no
-    // tiene estado SPAM. TODO(M2), antes de avisar tickets por correo: token HMAC con tiempo
-    // mínimo de llenado, como el del formulario de booking.
+    // Honeypot: respuesta idéntica (id con forma de cuid), pero no se guarda nada ni se avisa:
+    // Ticket no tiene estado SPAM. Pendiente (M4): token HMAC con tiempo mínimo de llenado,
+    // como el del formulario de booking. Mientras tanto, los avisos al admin los acotan los
+    // topes diarios de tickets y el cupo de correo por destinatario.
     if (isHoneypotFilled(body.hp_x7)) {
       this.log.log(`ticket.honeypot type=${body.type}`);
       return { id: fakeTicketId(), dueDate };
@@ -83,9 +89,31 @@ export class TicketsService {
       select: { id: true },
     });
 
-    // Sin datos personales: la bandeja del admin y los correos llegan en M2.
+    // Sin datos personales en el log.
     this.log.log(`ticket.created id=${created.id} type=${body.type}${profile ? ` profile=${profile.slug}` : ''}`);
+    await this.notifyAdmin(created.id, body.type, dueDate);
     return { id: created.id, dueDate };
+  }
+
+  /**
+   * Aviso al admin: una PQRS tiene plazo legal y la insignia del panel no basta si nadie entra.
+   * Solo tipo, radicado y vencimiento (nunca el texto del público). Va a ADMIN_NOTIFY_EMAIL o,
+   * si no hay, al correo del admin. Un fallo aquí nunca tumba el envío del ticket.
+   */
+  private async notifyAdmin(ticketId: string, type: TicketType, dueDate: string): Promise<void> {
+    try {
+      const to =
+        this.config.adminNotifyEmail ??
+        (await this.prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { email: true }, orderBy: { createdAt: 'asc' } }))?.email;
+      this.mail.send(to, 'admin-new-ticket', {
+        typeLabel: TICKET_TYPE_LABELS[type],
+        ticketId,
+        dueDate,
+        businessDays: PQRS_DEADLINE_BUSINESS_DAYS[type],
+      });
+    } catch (err) {
+      this.log.warn(`aviso de ticket no enviado: ${err instanceof Error ? err.message.slice(0, 120) : 'error'}`);
+    }
   }
 
   /** Tickets de las últimas 24 h: de esta IP y en total. */

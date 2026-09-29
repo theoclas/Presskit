@@ -136,4 +136,70 @@ export class MediaService {
       throw err;
     }
   }
+
+  /**
+   * Mueve en disco TODA la media de un perfil hacia public/ (aprobar, reactivar) o private/
+   * (suspender). NO toca las filas: el llamador actualiza isPublic (con MediaMove.ids) en la
+   * misma transacción que el cambio de estado y, si esa transacción falla, llama a undo().
+   * Si un movimiento falla a mitad, deshace los anteriores antes de lanzar el error.
+   */
+  async moveProfileMedia(profileId: string, toPublic: boolean): Promise<MediaMove> {
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: { profileId, isPublic: !toPublic },
+      select: { id: true, storageKey: true },
+    });
+    const moved: string[] = [];
+    const ids: string[] = [];
+    const undo = async (): Promise<void> => {
+      for (const key of [...moved].reverse()) {
+        await this.storage.moveAsset(key, toPublic, !toPublic).catch((e: unknown) => {
+          this.logger.error(`No se pudo devolver ${key} a su carpeta: ${String(e)}`);
+        });
+      }
+      moved.length = 0;
+    };
+    try {
+      for (const row of rows) {
+        const where = await this.storage.assetLocation(row.storageKey);
+        const atSource = toPublic ? where.inPrivate : where.inPublic;
+        const atTarget = toPublic ? where.inPublic : where.inPrivate;
+        if (atSource) {
+          await this.storage.moveAsset(row.storageKey, !toPublic, toPublic);
+          moved.push(row.storageKey);
+        } else if (!atTarget) {
+          // Sin archivos en ningún lado: la fila igual se marca para que el estado quede coherente.
+          this.logger.warn(`Asset ${row.id} sin archivos en disco al moverlo`);
+        }
+        // atTarget sin atSource: un movimiento anterior se cortó después de mover; solo falta la fila.
+        ids.push(row.id);
+      }
+    } catch (err) {
+      await undo();
+      throw err;
+    }
+    return { ids, undo };
+  }
+
+  /**
+   * Barrido posterior al commit: una subida que terminó justo durante la aprobación pudo quedar
+   * del lado equivocado. Nunca lanza (el cambio de estado ya quedó hecho).
+   */
+  async syncProfileMedia(profileId: string, isPublic: boolean): Promise<void> {
+    try {
+      const rows = await this.prisma.mediaAsset.findMany({
+        where: { profileId, isPublic: !isPublic },
+        select: { id: true, storageKey: true, isPublic: true },
+      });
+      for (const row of rows) await this.setPublic(row, isPublic);
+    } catch (err) {
+      this.logger.error(`No se pudo sincronizar la media del perfil ${profileId}: ${String(err)}`);
+    }
+  }
+}
+
+export interface MediaMove {
+  /** Filas cuya visibilidad hay que cambiar en la transacción del llamador. */
+  ids: string[];
+  /** Devuelve los archivos a su carpeta original. Nunca lanza. */
+  undo(): Promise<void>;
 }

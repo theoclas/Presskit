@@ -1,0 +1,141 @@
+/* Páginas de ingreso: mismo lenguaje visual de la plantilla (tarjeta .djp section, .btn). */
+
+.djp .auth-card {
+  box-sizing: border-box;
+  max-width: 440px;
+  margin: 24px auto 28px;
+  padding: 24px 22px 20px;
+}
+
+.djp .auth-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.djp .auth-sub {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Sin tocar font-size: dj-additions.css lo sube a 16px en pantallas táctiles (zoom de iOS). */
+.djp .auth-card input {
+  box-sizing: border-box;
+  padding: 11px 12px;
+}
+
+.djp .pw-field {
+  position: relative;
+}
+
+.djp .pw-field input {
+  padding-right: 88px;
+}
+
+/* "Mostrar" dentro del campo, con área táctil de 44px. */
+.djp .pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.djp .pw-toggle:hover {
+  color: var(--text);
+}
+
+.djp .pw-toggle:focus-visible,
+.djp .link-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.djp .auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.djp .auth-actions .btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.djp .link-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.djp .auth-foot {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.djp .auth-foot a {
+  color: var(--text);
+  display: inline-block;
+  padding: 10px 2px;
+}
+
+.djp .code-input {
+  letter-spacing: .4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.djp .pw-rules {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.djp .pw-rules li[data-ok="true"] {
+  color: #86efac;
+}
+
+.djp .auth-status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .djp .auth-card {
+    margin: 12px auto 20px;
+    padding: 20px 16px 16px;
+  }
+}

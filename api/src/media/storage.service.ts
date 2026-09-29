@@ -138,6 +138,32 @@ export class StorageService {
     await renameWithRetry(from, to);
   }
 
+  /** Dónde están hoy los archivos de un asset. Sirve para mover de forma tolerante. */
+  async assetLocation(storageKey: string): Promise<{ inPublic: boolean; inPrivate: boolean }> {
+    const [inPublic, inPrivate] = await Promise.all([
+      isDir(this.assetDir(storageKey, true)),
+      isDir(this.assetDir(storageKey, false)),
+    ]);
+    return { inPublic, inPrivate };
+  }
+
+  /**
+   * Ruta de una variante, buscando primero en la raíz que dice la fila y después en la otra:
+   * mientras se aprueba o suspende un perfil, los archivos se mueven antes que la fila.
+   */
+  async locateFile(storageKey: string, file: string, preferPublic: boolean): Promise<string | null> {
+    for (const isPublic of [preferPublic, !preferPublic]) {
+      const full = this.filePath(storageKey, isPublic, file);
+      try {
+        const st = await fs.lstat(full);
+        if (st.isFile()) return full;
+      } catch {
+        // No está en esta raíz.
+      }
+    }
+    return null;
+  }
+
   /** Borra todas las carpetas de un perfil (public y private). */
   async deleteProfileFolders(profileId: string): Promise<void> {
     assertSegment(profileId, 'profileId');
@@ -169,6 +195,14 @@ export class StorageService {
       }
     }
     return removed;
+  }
+}
+
+async function isDir(full: string): Promise<boolean> {
+  try {
+    return (await fs.lstat(full)).isDirectory();
+  } catch {
+    return false;
   }
 }
 

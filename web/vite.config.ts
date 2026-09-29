@@ -70,5 +70,8 @@ export default defineConfig({
     include: ['tests/**/*.test.{ts,tsx}'],
     css: false,
     restoreMocks: true,
+    // Las pruebas del admin montan AntD en jsdom: algunas tardan ~4-5 s en un equipo normal y
+    // más con la CPU ocupada (CI, build de Docker en paralelo). Con 5 s por defecto fallaban solas.
+    testTimeout: 20_000,
   },
 });

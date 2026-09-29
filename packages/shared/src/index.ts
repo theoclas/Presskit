@@ -16,5 +16,6 @@ export * from './booking-validate';
 export * from './whatsapp';
 export * from './legal';
 export * from './genres';
+export * from './profile-status';
 export * from './api-types';
 export * from './admin-types';

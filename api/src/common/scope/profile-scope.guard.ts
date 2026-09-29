@@ -1,7 +1,7 @@
-import { CanActivate, createParamDecorator, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, createParamDecorator, ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
 import type { AuthedRequest } from '../../auth/auth-user';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Errors } from '../errors';
+import { AppError, Errors } from '../errors';
 
 /**
  * Id de perfil ya autorizado. Los servicios de edición solo aceptan este tipo, así nadie
@@ -44,7 +44,9 @@ export class ProfileScopeGuard implements CanActivate {
 
     if (path === OWNER_PREFIX || path.startsWith(`${OWNER_PREFIX}/`)) {
       if (user.role !== 'USER') throw Errors.forbidden();
-      if (!user.profileId) throw Errors.notFound('Aún no tienes un perfil DJ.');
+      // Código propio (docs/diseno/02 §4): el panel distingue 'aún sin perfil' (onboarding en M3)
+      // de un id que no existe.
+      if (!user.profileId) throw new AppError(HttpStatus.NOT_FOUND, 'NO_PROFILE', 'Aún no tienes un perfil DJ.');
       req.scopedProfileId = user.profileId as ScopedProfileId;
       req.actingAsAdmin = false;
       return true;

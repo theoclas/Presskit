@@ -23,11 +23,21 @@ if (!initial.length) {
   process.exit(1);
 }
 
-const FORBIDDEN = /\b(antd|axios|dayjs)\b|rc-(field-form|picker|table)/;
+// Nombres de paquete (si el minificador los deja) y firmas que el minificador NO borra porque
+// son cadenas literales de cada librería (las mismas que usa web/tests/admin-bundle.test.tsx).
+const FORBIDDEN = [
+  ['nombre de paquete', /\b(antd|axios|dayjs)\b|rc-(field-form|picker|table)/],
+  ['axios', /AxiosError|ERR_BAD_REQUEST/],
+  ['dayjs', /\$isDayjsObject/],
+  ['antd', /anticon|data-css-hash/],
+];
 const bad = [];
 for (const rel of new Set(initial)) {
-  const m = FORBIDDEN.exec(readFileSync(resolve(dist, rel), 'utf8'));
-  if (m) bad.push(`${rel} (${m[0]})`);
+  const code = readFileSync(resolve(dist, rel), 'utf8');
+  for (const [name, re] of FORBIDDEN) {
+    const m = re.exec(code);
+    if (m) bad.push(`${rel} (${name}: ${m[0]})`);
+  }
 }
 if (bad.length) {
   console.error(`check-bundle: el bundle público carga librerías del panel:\n  - ${bad.join('\n  - ')}`);

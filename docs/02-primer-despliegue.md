@@ -115,6 +115,7 @@ en git, `npm run ci:compose` (y la CI) fallan si el bit falta.
 
 ```bash
 cd /home/deploy/apps/fersuastudio-booking
+sudo cp deploy/host-nginx/conf.d/fersua-booking-log.conf /etc/nginx/conf.d/
 sudo cp deploy/host-nginx/snippets/fersua-booking-proxy.conf /etc/nginx/snippets/
 sudo cp deploy/host-nginx/booking.conf /etc/nginx/sites-available/fersua-booking.conf
 sudo ln -s /etc/nginx/sites-available/fersua-booking.conf /etc/nginx/sites-enabled/fersua-booking.conf
@@ -128,6 +129,12 @@ sudo certbot renew --dry-run
 - Deja `listen [::]:80;` solo si los otros vhosts ya escuchan en IPv6.
 - Recomendado: un `default_server` que responda `444` a hosts desconocidos (ver comentario en `booking.conf`).
 - HSTS queda sin `includeSubDomains` ni `preload` (hay otros subdominios que no son nuestros).
+- **Log sin datos personales (desde M2):** `fersua-booking-log.conf` define el formato `fersua_booking`, que escribe la ruta sin la query string (las búsquedas del admin llevan correos y teléfonos). Si el vhost ya estaba instalado (certbot lo modificó, así que no se vuelve a copiar), basta con:
+  ```bash
+  sudo cp deploy/host-nginx/conf.d/fersua-booking-log.conf /etc/nginx/conf.d/
+  sudo sed -i 's|fersua-booking.access.log;|fersua-booking.access.log fersua_booking;|' /etc/nginx/sites-available/fersua-booking.conf
+  sudo nginx -t && sudo systemctl reload nginx
+  ```
 
 ## F. Verificación
 
@@ -151,12 +158,67 @@ curl -sI $B/.env | head -n 1                                       # 404
       pública, no `172.30.90.1`.
 - [ ] SSL Labs (nota A) y securityheaders.com.
 
-## G. Lo que viene después
+## G. [VPS deploy] Cuenta de administración (M2)
 
-- **Admin (M2)**: se creará con una CLI interactiva que pide usuario, correo y contraseña con entrada
-  oculta y configura el TOTP, algo como
-  `docker compose run --rm -it api node dist/cli/main.js admin:create`.
-  Nunca pongas `ADMIN_*` en `.env`: el api se niega a arrancar si las encuentra.
+Hay un solo admin y se crea una sola vez, por SSH en el VPS, con la CLI interactiva. La contraseña se
+escribe oculta: nunca queda en `.env`, en git ni en el historial de la terminal. Nunca pongas
+variables `ADMIN_*` en `.env`: el api se niega a arrancar si las encuentra.
+
+Antes, en el celular: instala Google Authenticator (sirven también Microsoft Authenticator, 1Password
+o Aegis).
+
+```bash
+cd ~/apps/fersuastudio-booking
+docker compose ps        # db, api y edge "healthy" (despliega M2 antes con: bash scripts/deploy.sh)
+docker compose run --rm -it api node dist/cli/main.js admin:create
+```
+
+La CLI pide, en este orden:
+
+1. **Usuario**: Enter deja `fersua` (se guarda en minúscula; está reservado para el admin).
+2. **Correo**: el tuyo. Ahí llega un aviso cada vez que alguien entra al admin desde una red nueva.
+3. **Contraseña**: mínimo 12 caracteres, dos veces. No se ve nada mientras escribes (ni asteriscos).
+4. **QR**: escanéalo con la app. Si la terminal lo deforma, agrega la cuenta a mano con la URI
+   `otpauth://...` que se imprime debajo.
+5. **Código de 6 dígitos** que muestra la app, para confirmar que quedó bien configurada.
+6. **10 códigos de recuperación** (`XXXX-XXXX`): cópialos ya a tu gestor de contraseñas. Se muestran
+   **una sola vez** y cada uno sirve una vez si pierdes el teléfono.
+
+Si ya existe un admin, `admin:create` se niega (hay uno solo): usa los comandos de rescate.
+
+**Primer ingreso:** `https://booking.fersuastudio.com/login` → usuario y contraseña → código de la app
+→ llegas a `/admin`. En "DJs" está Mac Fly & Mike Bran para editarlo, cargar fechas y sus datos
+legales (art. 53).
+
+**Rescate** (siempre desde el VPS; la cuenta del admin nunca se recupera por correo):
+
+| Situación | Comando |
+|---|---|
+| Olvidaste la contraseña | `docker compose run --rm -it api node dist/cli/main.js admin:reset-password` |
+| Perdiste el teléfono o gastaste los códigos | `docker compose run --rm -it api node dist/cli/main.js admin:reset-mfa` |
+| Cuenta bloqueada por intentos fallidos | `docker compose run --rm -it api node dist/cli/main.js admin:unlock` |
+
+- `admin:reset-password` y `admin:reset-mfa` cierran todas las sesiones abiertas del admin;
+  `admin:reset-mfa` muestra un QR nuevo y 10 códigos nuevos (los viejos dejan de servir).
+- `admin:unlock --username <usuario>` desbloquea también la cuenta de un DJ.
+- `node dist/cli/main.js help` lista todos los comandos.
+
+**Comprobar** (desde el PC o el VPS):
+
+```bash
+B=https://booking.fersuastudio.com
+curl -s -o /dev/null -w '%{http_code}\n' $B/api/admin/stats    # 401: sin sesión no hay admin
+curl -sI $B/admin | grep -iE '^HTTP|content-security' | head -n 3  # 200 y un solo CSP
+```
+
+- [ ] En el navegador, DevTools → Application → Cookies: `__Host-rt` es HttpOnly, Secure y
+      SameSite=Strict (JavaScript no la ve).
+- [ ] "Cerrar sesión" (arriba a la derecha) y volver a entrar con usuario, contraseña y código.
+
+## H. Lo que viene después
+
 - **Monitoreo**: UptimeRobot (gratis) sobre `https://booking.fersuastudio.com/api/health`, y la URL de
   healthchecks.io en `BACKUP_HEALTHCHECK_URL`.
 - **Antes de lanzar**: completar los marcadores `[...]` de los textos legales y cargar fechas nuevas de Mac Fly.
+- **M3**: registro abierto de DJs (`REGISTRATION_OPEN=true`), su panel en `/panel` y la recuperación
+  de contraseña por correo.

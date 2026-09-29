@@ -26,7 +26,7 @@ export const LIMITS = {
     statusReasonMax: 500,
     statusReasonMin: 10,
   },
-  genres: { perProfileMin: 1, perProfileMax: 6, nameMax: 40 },
+  genres: { perProfileMin: 1, perProfileMax: 6, nameMin: 2, nameMax: 40 },
   members: { max: 6, nameMax: 60, roleMax: 80, descriptionMax: 400 },
   social: { perProfileMax: 10, perMemberMax: 6, urlMax: 500, labelMax: 30 },
   gallery: { max: 24, altMax: 125 },
@@ -66,7 +66,9 @@ export const LIMITS = {
     minFreeDiskBytes: 5 * 1024 * MB,
     orphanTtlHours: 24,
   },
-  ticket: { messageMax: 3000, nameMax: 80, subjectMax: 120 },
+  ticket: { messageMax: 3000, nameMax: 80, subjectMax: 120, resolutionMax: 3000 },
+  /** Listas paginadas del admin (usuarios, solicitudes, PQRS, auditoría, perfiles). */
+  admin: { pageSizeDefault: 20, pageSizeMax: 100 },
   legalInfo: { legalNameMax: 120, docNumberMax: 20, addressMax: 200, phoneMax: 20, phonesMax: 3 },
   retention: {
     bookingMonths: 12,
@@ -75,6 +77,8 @@ export const LIMITS = {
     verifyTokenHours: 48,
     tempPasswordHours: 72,
     draftIdleDays: 30,
+    /** Registro del art. 53 de un perfil borrado: se conserva y luego se purga. */
+    legalInfoMonths: 12,
     unverifiedUserDays: 14,
   },
 } as const;

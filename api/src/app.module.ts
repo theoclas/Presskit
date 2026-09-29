@@ -7,7 +7,11 @@ import { AuditModule } from './audit/audit.service';
 import { CommonModule } from './common/common.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { MustChangePasswordGuard } from './common/guards/must-change-password.guard';
 import { OriginGuard } from './common/guards/origin.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { StepUpGuard } from './common/guards/step-up.guard';
 import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor';
 import { AppConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.controller';
@@ -21,6 +25,11 @@ import { MailModule } from './mail/mail.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { AdminModule } from './admin/admin.module';
 
+/** Ruta sin la query string, para el log. */
+export function pathOnly(url: string | undefined): string {
+  return (url ?? '').split('?')[0] ?? '';
+}
+
 @Module({
   imports: [
     AppConfigModule,
@@ -31,9 +40,11 @@ import { AdminModule } from './admin/admin.module';
         level: process.env.LOG_LEVEL ?? 'info',
         genReqId: (req) => (req.headers['x-request-id'] as string) || crypto.randomUUID(),
         // Sin cabeceras ni IP en el log del api (Ley 1581): la IP ya queda en el log del edge,
-        // que tiene su propia retención. Aquí basta con el id para cruzar ambos.
+        // que tiene su propia retención. Aquí basta con el id para cruzar ambos. La URL va sin
+        // query: las búsquedas del admin llevan correos y teléfonos (?q=) y la vista previa
+        // firmada lleva una capacidad de lectura (?exp=&sig=).
         serializers: {
-          req: (req: { id?: unknown; method?: string; url?: string }) => ({ id: req.id, method: req.method, url: req.url }),
+          req: (req: { id?: unknown; method?: string; url?: string }) => ({ id: req.id, method: req.method, url: pathOnly(req.url) }),
           res: (res: { statusCode?: number }) => ({ statusCode: res.statusCode }),
         },
         // Nunca registrar credenciales, cookies ni tokens.
@@ -73,6 +84,12 @@ import { AdminModule } from './admin/admin.module';
   providers: [
     { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: OriginGuard },
+    // Sesión y autorización, en este orden (docs/api-m2.md). StepUpGuard solo actúa en
+    // rutas con @RequireStepUp.
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: MustChangePasswordGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: StepUpGuard },
     { provide: APP_INTERCEPTOR, useClass: CacheControlInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],

@@ -55,10 +55,10 @@ describe('validateTicketFields', () => {
 });
 
 describe('ticketDueDate', () => {
-  it('consulta: 10 días hábiles; reclamo: 15 (sin fines de semana)', () => {
-    // 2026-09-28 es lunes.
-    expect(ticketDueDate('PQRS_CONSULTA', '2026-09-28')).toBe('2026-10-12');
-    expect(ticketDueDate('PQRS_RECLAMO', '2026-09-28')).toBe('2026-10-19');
+  it('consulta: 10 días hábiles; reclamo: 15 (sin fines de semana ni festivos)', () => {
+    // 2026-09-28 es lunes; el lunes 12 de octubre es festivo (Día de la Raza).
+    expect(ticketDueDate('PQRS_CONSULTA', '2026-09-28')).toBe('2026-10-13');
+    expect(ticketDueDate('PQRS_RECLAMO', '2026-09-28')).toBe('2026-10-20');
   });
 });
 

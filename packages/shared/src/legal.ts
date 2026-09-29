@@ -1,3 +1,6 @@
+import type { DocType } from './enums';
+import { LIMITS } from './limits';
+
 // Versiones de los documentos legales. Al cambiar el texto de un documento se sube su
 // versión aquí: los consentimientos guardan la versión aceptada y el panel pide aceptar de nuevo.
 
@@ -32,3 +35,16 @@ export const REGISTER_CONSENTS = {
   data: 'Autorizo el tratamiento de mis datos personales conforme a la Política de Tratamiento de Datos Personales.',
   age: 'Declaro que soy mayor de 18 años.',
 } as const;
+
+/**
+ * Número de documento del registro del art. 53 en su forma guardada (sin espacios, puntos ni
+ * guiones, en mayúsculas), o null si no es válido: CC, NIT y PPT solo dígitos; CE y
+ * pasaporte letras y números. El api decide con esto y la web avisa antes de enviar.
+ */
+export function normalizeDocNumber(docType: DocType, raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const v = raw.normalize('NFKC').replace(/[\s.\-]/g, '').toUpperCase();
+  if (v.length > LIMITS.legalInfo.docNumberMax) return null;
+  const re = docType === 'CC' || docType === 'NIT' || docType === 'PPT' ? /^\d{4,20}$/ : /^[A-Z0-9]{4,20}$/;
+  return re.test(v) ? v : null;
+}

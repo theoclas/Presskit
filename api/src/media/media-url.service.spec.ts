@@ -76,3 +76,71 @@ describe('MediaUrlService', () => {
     expect(parseVariants({ not: 'an array' })).toEqual([]);
   });
 });
+
+describe('MediaUrlService: vista previa firmada', () => {
+  const signed = new MediaUrlService({
+    publicUrl: 'https://booking.fersuastudio.com',
+    bookingFormSecret: 's'.repeat(32),
+  } as unknown as AppConfig);
+  const ID = 'cmabcdefghij0123456789xyz';
+  const NOW = Date.UTC(2026, 8, 29, 15, 7, 0);
+
+  function parse(url: string) {
+    const u = new URL(url, 'https://x.test');
+    const [, , , , assetId, file] = u.pathname.split('/');
+    return { path: u.pathname, assetId, file, exp: u.searchParams.get('exp')!, sig: u.searchParams.get('sig')! };
+  }
+
+  it('los privados salen con URL firmada relativa (variantes y og) y los públicos igual que siempre', () => {
+    const dto = signed.toEditorAssetDto(asset({ id: ID, isPublic: false }), NOW)!;
+    expect(dto.isPublic).toBe(false);
+    expect(dto.kind).toBe('HERO');
+    expect(dto.bytesTotal).toBe(3000);
+    expect(dto.variants.map((v) => v.w)).toEqual([480, 960]);
+    for (const v of dto.variants) {
+      expect(v.url).toMatch(/^\/api\/media\/preview\/[a-z0-9]+\/\d+\.webp\?exp=\d+&sig=[0-9a-f]{64}$/);
+      const p = parse(v.url);
+      expect(signed.verifyPreview(p.assetId, p.file, p.exp, p.sig, NOW)).toBe(true);
+    }
+    expect(parse(dto.ogUrl!).file).toBe('og.jpg');
+    // Nunca una ruta /media/ para un privado.
+    expect(JSON.stringify(dto)).not.toContain('/media/prof1');
+
+    const pub = signed.toEditorAssetDto(asset({ id: ID }), NOW)!;
+    expect(pub.variants[0]!.url).toBe('/media/prof1/AbCdEfGh12345678/480.webp');
+    // toImageDto (público) sigue sin mostrar privados.
+    expect(signed.toImageDto(asset({ id: ID, isPublic: false }))).toBeNull();
+  });
+
+  it('la expiración queda entre 50 y 60 minutos y es estable dentro de un bloque de 10', () => {
+    const a = parse(signed.previewUrl(ID, '480.webp', NOW));
+    const b = parse(signed.previewUrl(ID, '480.webp', NOW + 60_000));
+    expect(a.sig).toBe(b.sig);
+    const left = Number(a.exp) - NOW / 1000;
+    expect(left).toBeGreaterThan(50 * 60 - 1);
+    expect(left).toBeLessThanOrEqual(60 * 60);
+  });
+
+  it('rechaza firmas alteradas, otro archivo, otro asset, vencidas o con vida > 1 h', () => {
+    const p = parse(signed.previewUrl(ID, '480.webp', NOW));
+    expect(signed.verifyPreview(ID, '960.webp', p.exp, p.sig, NOW)).toBe(false);
+    expect(signed.verifyPreview('cmzzzzzzzzzz0123456789xyz', '480.webp', p.exp, p.sig, NOW)).toBe(false);
+    expect(signed.verifyPreview(ID, '480.webp', String(Number(p.exp) + 600), p.sig, NOW)).toBe(false);
+    const flipped = `${p.sig.slice(0, -1)}${p.sig.endsWith('0') ? '1' : '0'}`;
+    expect(signed.verifyPreview(ID, '480.webp', p.exp, flipped, NOW)).toBe(false);
+    expect(signed.verifyPreview(ID, '480.webp', p.exp, p.sig, Number(p.exp) * 1000 + 1)).toBe(false);
+    // Una firma válida pero con exp a más de 1 h (p. ej. de un secreto filtrado) tampoco.
+    expect(signed.verifyPreview(ID, '480.webp', p.exp, p.sig, NOW - 30 * 60_000)).toBe(false);
+    for (const bad of ['../x', '480.png', 'og.jpeg', '']) {
+      expect(signed.verifyPreview(ID, bad, p.exp, p.sig, NOW)).toBe(false);
+    }
+    expect(signed.verifyPreview(ID, '480.webp', [p.exp], p.sig, NOW)).toBe(false);
+    expect(signed.verifyPreview(ID, '480.webp', p.exp, undefined, NOW)).toBe(false);
+  });
+
+  it('otro secreto no valida la firma', () => {
+    const other = new MediaUrlService({ publicUrl: 'x', bookingFormSecret: 't'.repeat(32) } as unknown as AppConfig);
+    const p = parse(signed.previewUrl(ID, '480.webp', NOW));
+    expect(other.verifyPreview(ID, '480.webp', p.exp, p.sig, NOW)).toBe(false);
+  });
+});

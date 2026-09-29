@@ -213,6 +213,10 @@ if (R) {
     [R.bookingRequests('macfly-mike-bran'), 'zone=forms', 'booking-requests (slug con guiones)'],
     [R.bookingRequests('abc'), 'proxy-api-public.conf', 'booking-requests sin cookies'],
     [R.authLogin, 'zone=auth', 'login con límite auth'],
+    [R.authMfa, 'zone=auth', 'mfa (código TOTP) con límite auth'],
+    [R.authStepUp, 'zone=auth', 'step-up (contraseña + TOTP) con límite auth'],
+    [R.authChangePassword, 'zone=auth', 'change-password con límite auth'],
+    [`${R.authMfa.toUpperCase()}/`, 'zone=auth', 'mfa en mayúsculas y con barra'],
     [R.authRegister, 'zone=auth', 'registro con límite auth'],
     [R.authForgot, 'zone=auth', 'forgot-password con límite auth'],
     [R.authReset, 'zone=auth', 'reset-password con límite auth'],
@@ -250,9 +254,16 @@ if (R) {
     const loc = selectLocation(uri);
     check(loc && loc.body.includes(needle), `${desc}: "${uri}" cae en location ${loc ? `${loc.mod} ${loc.pattern}` : '(ninguno)'} sin "${needle}"`);
   }
-  // El refresh necesita su cookie: nunca debe caer en un location que la borra.
-  const refresh = selectLocation(R.authRefresh);
-  check(refresh && !refresh.body.includes('proxy-api-public.conf'), `${R.authRefresh} no debe borrar la cookie`);
+  // Las rutas de sesión leen o fijan la cookie de refresh: nunca deben caer en un location
+  // que la borra (proxy-api-public.conf). Sin cookie, logout no revocaría nada y mfa o
+  // change-password no podrían abrir la sesión.
+  for (const uri of [R.authRefresh, R.authLogout, R.authLogin, R.authMfa, R.authChangePassword, R.authStepUp]) {
+    const loc = selectLocation(uri);
+    check(
+      loc && loc.body.includes('proxy-api.conf') && !loc.body.includes('proxy-api-public.conf'),
+      `${uri} no debe borrar la cookie (cae en ${loc ? `${loc.mod} ${loc.pattern}` : '(ninguno)'})`,
+    );
+  }
 }
 
 // Todo location que sirve contenido incluye las cabeceras de seguridad (add_header no se hereda).

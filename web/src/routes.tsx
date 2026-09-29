@@ -7,6 +7,7 @@ import { ErrorPage } from './public/pages/ErrorPage';
 import { DjPage } from './public/pages/DjPage';
 import { IndexPage } from './public/pages/IndexPage';
 import { NotFoundPage } from './public/pages/NotFoundPage';
+import { PanelSoonPage } from './public/pages/PanelSoonPage';
 
 type TopLevel = (typeof APP_TOP_LEVEL_ROUTES)[number];
 type LazyPage = () => Promise<{ Component: ComponentType }>;
@@ -15,32 +16,52 @@ type LazyPage = () => Promise<{ Component: ComponentType }>;
 const legal = (pick: (m: typeof import('./public/legal/LegalPages')) => ComponentType): LazyPage => () =>
   import('./public/legal/LegalPages').then((m) => ({ Component: pick(m) }));
 
+// Ingreso y admin: chunks aparte. axios, antd y dayjs solo llegan por aquí (ver scripts/ci/check-bundle.mjs).
+const loginPage: LazyPage = () => import('./auth/LoginPage').then((m) => ({ Component: m.LoginPage }));
+const changePasswordPage: LazyPage = () =>
+  import('./auth/ChangePasswordPage').then((m) => ({ Component: m.ChangePasswordPage }));
+const adminApp: LazyPage = () => import('./admin/AdminApp').then((m) => ({ Component: m.AdminApp }));
+const previewPage: LazyPage = () => import('./public/pages/PreviewPage').then((m) => ({ Component: m.PreviewPage }));
+const authRoot: LazyPage = () => import('./auth/AuthRoot').then((m) => ({ Component: m.AuthRoot }));
+
+interface TopLevelDef {
+  lazy?: LazyPage;
+  Component?: ComponentType;
+  splat?: boolean;
+  /** Va dentro de AuthRoot (AuthProvider + cliente http). */
+  auth?: boolean;
+}
+
 /**
  * Una entrada por cada ruta de APP_TOP_LEVEL_ROUTES (el Record obliga a cubrirlas todas).
- * Ingreso, registro, panel y admin llegan en M2/M3: por ahora muestran "Próximamente".
+ * Registro, recuperación y panel del DJ llegan en M3: por ahora muestran "Próximamente" (el
+ * panel, un aviso de que la cuenta está lista y que el equipo edita la página).
  */
-const TOP_LEVEL: Record<TopLevel, { lazy?: LazyPage; Component?: ComponentType; splat?: boolean }> = {
-  login: { Component: ComingSoonPage },
+const TOP_LEVEL: Record<TopLevel, TopLevelDef> = {
+  login: { lazy: loginPage, auth: true },
   registro: { Component: ComingSoonPage },
   recuperar: { Component: ComingSoonPage },
   restablecer: { Component: ComingSoonPage },
-  'cambiar-clave': { Component: ComingSoonPage },
+  'cambiar-clave': { lazy: changePasswordPage, auth: true },
   'verificar-correo': { Component: ComingSoonPage },
   privacidad: { lazy: legal((m) => m.PrivacyPage) },
   terminos: { lazy: legal((m) => m.TermsPage) },
   'terminos-artistas': { lazy: legal((m) => m.ArtistTermsPage) },
   pqrs: { lazy: legal((m) => m.PqrsPage) },
   reportar: { lazy: legal((m) => m.ReportPage) },
-  panel: { Component: ComingSoonPage, splat: true },
-  admin: { Component: ComingSoonPage, splat: true },
-  _preview: { Component: ComingSoonPage },
+  panel: { Component: PanelSoonPage, splat: true },
+  admin: { lazy: adminApp, splat: true, auth: true },
+  _preview: { lazy: previewPage, auth: true },
 };
 
-const topLevelRoutes: RouteObject[] = APP_TOP_LEVEL_ROUTES.map((name) => {
+function topLevelRoute(name: TopLevel): RouteObject {
   const def = TOP_LEVEL[name];
   const path = def.splat ? `${name}/*` : name;
   return def.lazy ? { path, lazy: def.lazy } : { path, Component: def.Component };
-});
+}
+
+const publicTopLevel = APP_TOP_LEVEL_ROUTES.filter((n) => !TOP_LEVEL[n].auth).map(topLevelRoute);
+const authTopLevel = APP_TOP_LEVEL_ROUTES.filter((n) => TOP_LEVEL[n].auth).map(topLevelRoute);
 
 export const routes: RouteObject[] = [
   {
@@ -49,7 +70,9 @@ export const routes: RouteObject[] = [
     ErrorBoundary: ErrorPage,
     children: [
       { index: true, Component: IndexPage },
-      ...topLevelRoutes,
+      ...publicTopLevel,
+      // Layout sin ruta propia: sus hijas siguen siendo de primer nivel (/login, /admin/*...).
+      { id: 'auth-root', lazy: authRoot, children: authTopLevel },
       // React Router prioriza los segmentos estáticos: /:slug nunca tapa una ruta de arriba.
       { path: ':slug', Component: DjPage },
       { path: '*', Component: NotFoundPage },

@@ -324,7 +324,7 @@ Se documentan como comandos para copiar y pegar en `docs/02-primer-despliegue.md
 4. **VPS como deploy, en `~/apps/fersuastudio-booking`:**
    - `scripts/init-env.sh` y completar SMTP.
    - `scripts/deploy.sh --first`, que compila `api` y luego `edge` en secuencia para no agotar la RAM.
-   - `docker compose run --rm -it api node dist/cli/admin.js create`: Fernando escribe usuario, correo y contraseña, y configura el TOTP.
+   - `docker compose run --rm -it api node dist/cli/main.js admin:create`: Fernando escribe usuario, correo y contraseña, y configura el TOTP (paso a paso en `docs/02-primer-despliegue.md`, sección G).
    - `seed:genres` y `seed:macfly`.
 5. **Antes de lanzar:** completar los marcadores de `/privacidad` y cargar fechas actuales de Mac Fly.
 

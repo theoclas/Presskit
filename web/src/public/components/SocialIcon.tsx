@@ -44,11 +44,20 @@ const PATHS: Record<SocialPlatform, string> = {
   WEBSITE: GLOBE,
 };
 
-/** Decorativo: el enlace siempre lleva su texto visible, así que el ícono va oculto al lector. */
-export function SocialIcon({ platform }: { platform: SocialPlatform }) {
+/**
+ * Decorativo: el enlace siempre lleva su texto visible, así que el ícono va oculto al lector.
+ * `size` (px) es para fuera de la página pública (el editor), donde no aplica el CSS de .djp.
+ */
+export function SocialIcon({ platform, size }: { platform: SocialPlatform; size?: number }) {
   const d = PATHS[platform] ?? GLOBE;
   return (
-    <svg className="si" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <svg
+      className="si"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      {...(size ? { width: size, height: size, fill: 'currentColor', style: { flex: 'none' } } : {})}
+    >
       <path d={d} />
     </svg>
   );

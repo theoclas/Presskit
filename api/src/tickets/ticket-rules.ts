@@ -33,6 +33,14 @@ export function ticketCapExceeded(counts: { ip: number; total: number }): boolea
   return counts.ip >= TICKET_DAILY_CAPS.perIp || counts.total >= TICKET_DAILY_CAPS.total;
 }
 
+/** Nombre de cada tipo en el aviso al admin (sin texto del público). */
+export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
+  PQRS_CONSULTA: 'Consulta sobre datos personales',
+  PQRS_RECLAMO: 'Reclamo sobre datos personales',
+  REPORTE_PERFIL: 'Reporte de un perfil',
+  SOLICITUD_DATOS_DJ: 'Solicitud de datos de un DJ (art. 53)',
+};
+
 const CUID_RANDOM_CHARS = 16;
 
 /**
@@ -109,7 +117,7 @@ export function validateTicketFields(input: {
   return { value: { name, email, phone, subject, message }, errors };
 }
 
-/** Vencimiento legal en días hábiles (sin festivos: es un aviso, el admin decide). */
+/** Vencimiento legal en días hábiles (lunes a viernes sin festivos de Colombia). */
 export function ticketDueDate(type: TicketType, today: string): string {
   return addBusinessDays(today, PQRS_DEADLINE_BUSINESS_DAYS[type]);
 }

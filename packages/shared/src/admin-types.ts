@@ -181,6 +181,12 @@ export interface EditorProfileDto {
   featuredRank: number;
   owner: { id: string; username: string; status: UserStatus } | null;
   hasLegalInfo: boolean;
+  /**
+   * Lo que falta de la lista para publicar (PUBLISH_CHECKLIST + registro legal): claves como
+   * 'heroImage', 'genres', 'contact', 'legalInfo'. Vacío = completo. El admin puede aprobar
+   * igual (salvo el registro legal); la web lo muestra como aviso.
+   */
+  publishMissing: string[];
   usage: MediaUsageDto;
   submittedAt: string | null;
   approvedAt: string | null;
@@ -258,7 +264,8 @@ export interface AdminProfileListItemDto {
   featured: boolean;
   featuredRank: number;
   cardImage: ImageDto | null;
-  owner: { id: string; username: string } | null;
+  /** Con la cuenta suspendida, un perfil aprobado no se ve en público. */
+  owner: { id: string; username: string; status: UserStatus } | null;
   nextEventDate: string | null;
   newBookings: number;
   hasLegalInfo: boolean;
@@ -274,6 +281,8 @@ export interface AdminUserDto {
   role: UserRole;
   status: UserStatus;
   mustChangePassword: boolean;
+  /** Vencimiento de la contraseña temporal pendiente (null si no hay una). */
+  tempPasswordExpiresAt: string | null;
   lockedUntil: string | null;
   lastLoginAt: string | null;
   createdAt: string;
@@ -283,6 +292,11 @@ export interface AdminUserDto {
 export interface CreateUserInput {
   username: string;
   email?: string | null;
+}
+
+/** PATCH /admin/users/:id (con step-up). null o '' quita el correo. */
+export interface UpdateUserEmailInput {
+  email: string | null;
 }
 
 /** Respuesta única: la contraseña temporal no se vuelve a mostrar. */
@@ -354,6 +368,8 @@ export interface AdminStatsDto {
   openTickets: number;
   overdueTickets: number;
   users: number;
+  /** Perfiles públicos sin el registro del art. 53 (máx. 10), para avisar en el resumen. */
+  approvedWithoutLegal: { id: string; slug: string; displayName: string }[];
 }
 
 export interface GenreAdminDto {
