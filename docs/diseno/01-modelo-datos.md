@@ -285,7 +285,7 @@ model BookingRequest {
   readAt         DateTime?
   archivedAt     DateTime?
   consentAt      DateTime                            // Ley 1581 checkbox (mandatory)
-  consentVersion String        @db.VarChar(20)      // CONSENT_VERSION, e.g. "2026-10"
+  consentVersion String        @db.VarChar(20)      // CONSENT_VERSION, e.g. "2026-09"
   ipHash         String        @db.Char(64)
   userAgent      String?       @db.VarChar(200)
   createdAt      DateTime      @default(now())

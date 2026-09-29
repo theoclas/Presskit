@@ -11,6 +11,11 @@ export interface GenreDto {
   name: string;
 }
 
+/** GET /api/public/genres: cada género con cuántos perfiles visibles lo usan. */
+export interface GenreCountDto extends GenreDto {
+  count: number;
+}
+
 export interface SocialLinkDto {
   platform: SocialPlatform;
   label: string;
@@ -47,7 +52,10 @@ export interface PublicDjCardDto {
   city: string | null;
   palette: PaletteKey;
   featured: boolean;
+  /** Recorte 4:5 de la tarjeta (o la foto del hero si no hay). */
   cardImage: ImageDto | null;
+  /** Foto horizontal del hero, solo en los destacados (la usa el hero del index); null en los demás. */
+  heroImage: ImageDto | null;
   genres: GenreDto[];
   nextEvent: { date: string; dateLabel: string; venue: string } | null;
 }
@@ -113,6 +121,14 @@ export interface TicketSubmitDto {
   message: string;
   consent: true;
   hp_x7?: string;
+}
+
+/** Respuesta de POST /api/public/tickets. */
+export interface TicketSubmitResultDto {
+  /** Número de radicado. */
+  id: string;
+  /** Fecha límite de respuesta, 'YYYY-MM-DD' (Bogotá). */
+  dueDate: string;
 }
 
 export interface ApiErrorDto {

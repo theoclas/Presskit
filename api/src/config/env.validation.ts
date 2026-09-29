@@ -34,6 +34,8 @@ export const envValidationSchema = Joi.object({
   ADMIN_NOTIFY_EMAIL: Joi.string().email().allow('').default(''),
 
   UPLOAD_DIR: Joi.string().default('/data/media'),
+  /** index.html compilado de la web (plantilla del shell SEO). */
+  SHELL_TEMPLATE: Joi.string().default('../web/dist/index.html'),
   SEO_INDEXABLE: Joi.boolean().default(false),
   REGISTRATION_OPEN: Joi.boolean().default(false),
   LOG_LEVEL: Joi.string().valid('fatal', 'error', 'warn', 'info', 'debug', 'trace').default('info'),

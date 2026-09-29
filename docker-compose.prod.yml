@@ -1,0 +1,196 @@
+# Producción en el VPS. Se usa siempre a través de .env (COMPOSE_FILE apunta aquí), así
+# `docker compose ps/logs/up` en ~/apps/fersuastudio-booking toman este archivo.
+#
+# Reglas que revisa scripts/ci/check-compose.mjs:
+#   - solo el edge publica puerto, y solo en 127.0.0.1;
+#   - ninguna variable ADMIN_* (salvo ADMIN_NOTIFY_EMAIL, que es solo un correo de avisos).
+#
+# Las subredes están fijas porque el edge confía en el gateway 172.30.90.1 (real_ip) y el api
+# en la subred 172.30.90.0/24 (TRUST_PROXY). Si se cambian, hay que cambiar los tres sitios.
+
+name: fersua-booking
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Falta DB_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: ${DB_NAME:?Falta DB_NAME en .env}
+      # MYSQL_USER es el que migra: la imagen le da todos los permisos sobre DB_NAME.
+      MYSQL_USER: ${DB_MIGRATOR_USER:?Falta DB_MIGRATOR_USER en .env}
+      MYSQL_PASSWORD: ${DB_MIGRATOR_PASSWORD:?Falta DB_MIGRATOR_PASSWORD en .env}
+      # Los usa deploy/mysql/init/01-app-user.sh para crear el usuario de la app (solo DML).
+      DB_APP_USER: ${DB_APP_USER:?Falta DB_APP_USER en .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?Falta DB_APP_PASSWORD en .env}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./deploy/mysql/my.cnf:/etc/mysql/conf.d/zz-fersua.cnf:ro
+      - ./deploy/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks: [backend]
+    healthcheck:
+      # Por TCP a propósito: durante la inicialización MySQL corre sin red y aún no está listo.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    stop_grace_period: 60s
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpus: 0.75
+    pids_limit: 256
+    logging: *logging
+
+  migrate:
+    # Misma imagen del api. Corre `prisma migrate deploy` con el usuario que migra y termina.
+    image: fersua-booking-api:${APP_VERSION:-current}
+    pull_policy: never
+    command: ["prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
+    environment:
+      DATABASE_URL: mysql://${DB_MIGRATOR_USER}:${DB_MIGRATOR_PASSWORD}@db:3306/${DB_NAME}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+    # Sin read_only: el CLI de Prisma puede necesitar escribir archivos temporales.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    logging: *logging
+
+  api:
+    image: fersua-booking-api:${APP_VERSION:-current}
+    build:
+      context: .
+      target: api
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Una por una a propósito (sin env_file): el api nunca recibe la clave root ni la del migrador.
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      NODE_OPTIONS: --max-old-space-size=256
+      DATABASE_URL: mysql://${DB_APP_USER}:${DB_APP_PASSWORD}@db:3306/${DB_NAME}?connection_limit=${DB_CONNECTION_LIMIT:-5}&pool_timeout=10
+      PUBLIC_URL: ${PUBLIC_URL:?Falta PUBLIC_URL en .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Solo se confía en la subred del edge: req.ip = IP real del visitante.
+      TRUST_PROXY: 172.30.90.0/24
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Falta JWT_ACCESS_SECRET en .env}
+      BOOKING_FORM_SECRET: ${BOOKING_FORM_SECRET:?Falta BOOKING_FORM_SECRET en .env}
+      IP_HASH_SECRET: ${IP_HASH_SECRET:?Falta IP_HASH_SECRET en .env}
+      MFA_ENC_KEY: ${MFA_ENC_KEY:?Falta MFA_ENC_KEY en .env}
+      COOKIE_SECURE: "true"
+      SMTP_HOST: ${SMTP_HOST:?Falta SMTP_HOST en .env}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:?Falta SMTP_USER en .env}
+      SMTP_PASS: ${SMTP_PASS:?Falta SMTP_PASS en .env}
+      MAIL_FROM: ${MAIL_FROM:?Falta MAIL_FROM en .env}
+      ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL:-}
+      UPLOAD_DIR: /data/media
+      SHELL_TEMPLATE: /app/web/index.html
+      SEO_INDEXABLE: ${SEO_INDEXABLE:-false}
+      REGISTRATION_OPEN: ${REGISTRATION_OPEN:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - media:/data/media
+    # backend para la db; edge para recibir tráfico y salir a smtp.hostinger.com:465.
+    networks: [backend, edge]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    mem_reservation: 192m
+    cpus: 0.75
+    pids_limit: 256
+    logging: *logging
+
+  edge:
+    image: fersua-booking-edge:${APP_VERSION:-current}
+    build:
+      context: .
+      target: edge
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    # Único puerto publicado, solo en loopback: Docker se salta ufw, así que nunca 0.0.0.0.
+    ports:
+      - "127.0.0.1:${EDGE_PORT:-8090}:8080"
+    volumes:
+      # Solo la parte pública de los medios, y en solo lectura. private/ nunca llega al edge.
+      - type: volume
+        source: media
+        target: /srv/media
+        read_only: true
+        volume:
+          subpath: public
+    networks: [edge]
+    environment:
+      NGINX_ENTRYPOINT_QUIET_LOGS: "1"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    cpus: 0.5
+    pids_limit: 64
+    logging: *logging
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.90.0/24
+          gateway: 172.30.90.1
+  backend:
+    # Sin salida a internet: la db solo habla con migrate y api.
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.91.0/24
+          gateway: 172.30.91.1
+
+volumes:
+  db_data:
+    name: fersua_booking_db
+  media:
+    name: fersua_booking_media

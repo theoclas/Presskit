@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "profile": "macfly-mike-bran",
+  "note": "Generado por scripts/prepare-seed-media.mjs. JPEG q85, máx. 2560 px, sin metadatos.",
+  "files": {
+    "hero": "hero.jpg",
+    "member-mikebran": "member-mikebran.jpg",
+    "member-macfly": "member-macfly.jpg",
+    "gallery-1": "gallery-1.jpg",
+    "gallery-2": "gallery-2.jpg",
+    "gallery-3": "gallery-3.jpg",
+    "gallery-4": "gallery-4.jpg",
+    "gallery-5": "gallery-5.jpg",
+    "gallery-6": "gallery-6.jpg",
+    "gallery-7": "gallery-7.jpg",
+    "gallery-8": "gallery-8.jpg",
+    "flyer-2025-11-14": "flyer-2025-11-14.jpg",
+    "flyer-2025-11-16": "flyer-2025-11-16.jpg",
+    "flyer-2025-11-30": "flyer-2025-11-30.jpg",
+    "flyer-2025-12-19": "flyer-2025-12-19.jpg",
+    "flyer-2025-12-26": "flyer-2025-12-26.jpg",
+    "flyer-2026-01-24": "flyer-2026-01-24.jpg",
+    "flyer-2026-01-25": "flyer-2026-01-25.jpg",
+    "card": "hero.jpg"
+  },
+  "details": [
+    {
+      "name": "hero",
+      "file": "hero.jpg",
+      "source": "img/header.JPEG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 397291,
+      "sha256": "39c2bced399bbfdedf83833f71d95628af62310282d5860fdb0716db84994dc3"
+    },
+    {
+      "name": "member-mikebran",
+      "file": "member-mikebran.jpg",
+      "source": "img/Mikebran.jpg",
+      "width": 1564,
+      "height": 2560,
+      "bytes": 545233,
+      "sha256": "bfc01a4308de6f2fcb40934ca752759f5a264d95e906c86d691239130aa1d67e"
+    },
+    {
+      "name": "member-macfly",
+      "file": "member-macfly.jpg",
+      "source": "img/Macfly.jpg",
+      "width": 853,
+      "height": 1280,
+      "bytes": 72323,
+      "sha256": "296154b56c37f7fc1b27e0165fadc2978cd6ae2a5711ed1635bd21b8c98494ca"
+    },
+    {
+      "name": "gallery-1",
+      "file": "gallery-1.jpg",
+      "source": "img/photo-1.jpg",
+      "width": 2080,
+      "height": 1170,
+      "bytes": 288126,
+      "sha256": "98e7e4fddd3c0c48a20dc177c71a33d51698cbd15527e4eca821dae4d5b3c657"
+    },
+    {
+      "name": "gallery-2",
+      "file": "gallery-2.jpg",
+      "source": "img/photo-2.jpg",
+      "width": 1221,
+      "height": 812,
+      "bytes": 129289,
+      "sha256": "95697f0029740767c41294483fae5149a4b0026553899e9bbd09257818866105"
+    },
+    {
+      "name": "gallery-3",
+      "file": "gallery-3.jpg",
+      "source": "img/photo-3.jpg",
+      "width": 2560,
+      "height": 1707,
+      "bytes": 716814,
+      "sha256": "33fb8f752da4cd17200f7f9a064cfc04b9f1808bc767655cb3303b8a963f29d8"
+    },
+    {
+      "name": "gallery-4",
+      "file": "gallery-4.jpg",
+      "source": "img/photo-4.jpg",
+      "width": 2560,
+      "height": 1707,
+      "bytes": 518261,
+      "sha256": "777eddfe99b3720347c74b522945472716d54a0e0885049d9bfa3a78b88650e8"
+    },
+    {
+      "name": "gallery-5",
+      "file": "gallery-5.jpg",
+      "source": "img/photo-5.jpg",
+      "width": 2560,
+      "height": 1707,
+      "bytes": 204327,
+      "sha256": "06d7d8821099cedb2b3fdbb04c579f948029e70628806002eb2e9e9e587012ab"
+    },
+    {
+      "name": "gallery-6",
+      "file": "gallery-6.jpg",
+      "source": "img/photo-6.jpg",
+      "width": 2560,
+      "height": 1707,
+      "bytes": 385044,
+      "sha256": "b45d4b8a125b79733d140836dcb10470190f2ae0982d249d87d761fe9505e09f"
+    },
+    {
+      "name": "gallery-7",
+      "file": "gallery-7.jpg",
+      "source": "img/photo-7.jpg",
+      "width": 2560,
+      "height": 1707,
+      "bytes": 339575,
+      "sha256": "5b9065df9a64a81bb1bba57b4ebf959f4b9aefe96cc190c3bff7285ea2933e64"
+    },
+    {
+      "name": "gallery-8",
+      "file": "gallery-8.jpg",
+      "source": "img/photo-8.jpg",
+      "width": 2560,
+      "height": 1707,
+      "bytes": 273150,
+      "sha256": "7f463e6d9793dfebe0ad22575d445bc21e103716f0511f3f9b1fdb8d08c88cd0"
+    },
+    {
+      "name": "flyer-2025-11-14",
+      "file": "flyer-2025-11-14.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/14 Nov.jpg",
+      "width": 899,
+      "height": 1599,
+      "bytes": 119182,
+      "sha256": "619bcb93a14bc3fd96e6d6c74b05269df276b65f90f4cc103f213eb0f342bb4a"
+    },
+    {
+      "name": "flyer-2025-11-16",
+      "file": "flyer-2025-11-16.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/16 Nov.jpg",
+      "width": 879,
+      "height": 1599,
+      "bytes": 124343,
+      "sha256": "12f28ba3d58d567855e86714b42f82a242e5e92bf227d8dca810fb623f0e67a8"
+    },
+    {
+      "name": "flyer-2025-11-30",
+      "file": "flyer-2025-11-30.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/30 Nov.jpg",
+      "width": 720,
+      "height": 1280,
+      "bytes": 197434,
+      "sha256": "0b48e659e08ea275a19e8a38f978af8698b1bbe00ed332853ad94d60ddd45967"
+    },
+    {
+      "name": "flyer-2025-12-19",
+      "file": "flyer-2025-12-19.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/Viuz 19.jpg",
+      "width": 1080,
+      "height": 1350,
+      "bytes": 113344,
+      "sha256": "3f93482ebdce280bcc1b3cf2959446ad8454ad7a1c601f825810ed028efb528b"
+    },
+    {
+      "name": "flyer-2025-12-26",
+      "file": "flyer-2025-12-26.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/Baren 26 DIC.png",
+      "width": 2048,
+      "height": 2560,
+      "bytes": 297026,
+      "sha256": "671a15a2e76f1ef748311e476cbde941fb3377fade873697e1a16b87d42acf41"
+    },
+    {
+      "name": "flyer-2026-01-24",
+      "file": "flyer-2026-01-24.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/Viuz24012025.jpg",
+      "width": 810,
+      "height": 1440,
+      "bytes": 68474,
+      "sha256": "db7d778e7e7736c801fd97dbe28f0d27c41b9dd730149673f0490e4b41971cc0"
+    },
+    {
+      "name": "flyer-2026-01-25",
+      "file": "flyer-2026-01-25.jpg",
+      "source": "Eventos/MacflyMikeBran/IMG/Sonorama25012025.jpg",
+      "width": 900,
+      "height": 1600,
+      "bytes": 132803,
+      "sha256": "5402b820d658057f752232fa15cfc809177b2075f2eb1208a384ba07fbe70d39"
+    }
+  ]
+}

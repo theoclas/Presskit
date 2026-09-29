@@ -24,6 +24,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
+    // Errores de body-parser (cuerpo demasiado grande, JSON roto, charset raro). No son
+    // HttpException y corren antes de las rutas: sin esto cualquier POST a /api/* daba un 500
+    // con stack en el log, fácil de usar para llenar los logs. Son culpa del cliente: sin log.
+    const bodyError = bodyParserStatus(exception);
+    if (bodyError) {
+      if (bodyError === 413) {
+        res.status(413).json({ statusCode: 413, code: 'PAYLOAD_TOO_LARGE', message: 'Lo que enviaste es demasiado grande.' });
+      } else if (bodyError === 415) {
+        res.status(415).json({ statusCode: 415, code: 'UNSUPPORTED_MEDIA_TYPE', message: 'Formato no soportado.' });
+      } else {
+        res.status(400).json({ statusCode: 400, code: 'VALIDATION_FAILED', message: 'Revisa los datos enviados.' });
+      }
+      return;
+    }
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const body = exception.getResponse();
@@ -57,6 +72,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
         res.status(404).json({ statusCode: 404, code: 'NOT_FOUND', message: 'No encontrado.' });
         return;
       }
+      // Valor demasiado largo para la columna (P2000) o que el motor no acepta (InvalidArg,
+      // p. ej. una mitad suelta de emoji que se coló): es entrada mala, no una falla nuestra.
+      if (exception.code === 'P2000' || exception.code === 'InvalidArg') {
+        this.logger.warn(`Prisma rechazó la entrada: ${exception.code}`);
+        res.status(400).json({ statusCode: 400, code: 'VALIDATION_FAILED', message: 'Revisa los datos enviados.' });
+        return;
+      }
     }
 
     this.logger.error(exception instanceof Error ? exception.stack : String(exception));
@@ -66,6 +88,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message: 'Ocurrió un error inesperado. Intenta de nuevo.',
     });
   }
+}
+
+/**
+ * Estado 4xx de un error estilo http-errors de body-parser ({ type, status, expose }), o null.
+ * Se exige `type` de body-parser para no tragarse otros errores con un `status` cualquiera.
+ */
+export function bodyParserStatus(exception: unknown): number | null {
+  if (!exception || typeof exception !== 'object') return null;
+  const e = exception as { type?: unknown; status?: unknown; statusCode?: unknown };
+  const status = typeof e.status === 'number' ? e.status : typeof e.statusCode === 'number' ? e.statusCode : null;
+  if (status === null || status < 400 || status > 499) return null;
+  if (typeof e.type !== 'string' || !/^(entity|request|encoding|charset|parameters|stream)./.test(e.type)) return null;
+  return status;
 }
 
 function codeForStatus(status: number): string {

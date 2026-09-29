@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Las acciones van por versión mayor. TODO: fijarlas por SHA (M15) cuando el repo esté estable.
+
+jobs:
+  build-test:
+    name: Build y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: fersua_booking
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+      # Correo de prueba: el api manda avisos por SMTP y no debe fallar por no tener servidor.
+      mailpit:
+        image: axllent/mailpit:v1.27
+        ports:
+          - 1025:1025
+    env:
+      # Solo para la CI: base efímera del contenedor de servicio.
+      DATABASE_URL: mysql://root:ci-root-password@127.0.0.1:3306/fersua_booking
+      SHADOW_DATABASE_URL: mysql://root:ci-root-password@127.0.0.1:3306/fersua_booking_shadow
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Valores de desarrollo (no secretos) para que el api arranque en las pruebas.
+      # El DATABASE_URL del job tiene prioridad sobre el del archivo.
+      - name: api/.env de prueba
+        run: cp api/.env.example api/.env
+
+      - name: shared (build + test)
+        run: |
+          npm run build:shared
+          npm test -w @fersua/shared
+
+      - name: Prisma validate + generate
+        run: |
+          npm exec -w api -- prisma validate
+          npm exec -w api -- prisma generate
+
+      - name: Migraciones (deploy + chequeo de drift)
+        run: |
+          mysql -h 127.0.0.1 -uroot -pci-root-password -e 'CREATE DATABASE IF NOT EXISTS fersua_booking_shadow'
+          npm exec -w api -- prisma migrate deploy
+          # Código 2 = el schema cambió sin migración: la CI falla.
+          npm exec -w api -- prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --exit-code
+
+      - name: Typecheck
+        run: npm run typecheck --workspaces --if-present
+
+      - name: api (build + test)
+        run: |
+          npm run build -w api
+          npm test -w api -- --ci --passWithNoTests
+          if [ -f api/test/jest-e2e.json ]; then npm run test:e2e -w api -- --ci; fi
+
+      - name: web (build + test)
+        run: |
+          npm run build -w web
+          npm test -w web --if-present
+          npm run ci:bundle
+
+  security:
+    name: Seguridad
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Bloqueante: vulnerabilidades altas o críticas en dependencias de producción.
+      - name: npm audit (producción)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: npm audit (todo, informativo)
+        run: npm audit --audit-level=critical || true
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .github/gitleaks.toml
+
+  docker:
+    name: Imágenes y despliegue
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Lint de compose y del edge
+        run: |
+          npm ci
+          npm run build:shared
+          npm run ci:compose
+
+      - name: Scripts del VPS (init-env, check-env, compose config)
+        run: |
+          bash scripts/init-env.sh
+          sed -i "s|^SMTP_PASS=.*|SMTP_PASS='ci-dummy'|" .env
+          bash scripts/check-env.sh
+          docker compose -f docker-compose.prod.yml --env-file .env config --quiet
+          rm -f .env
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: api
+          push: false
+          load: true
+          tags: fersua-booking-api:ci
+          build-args: APP_VERSION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build edge
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: edge
+          push: false
+          load: true
+          tags: fersua-booking-edge:ci
+          cache-from: type=gha
+
+      - name: nginx -t dentro del edge
+        run: docker run --rm --add-host api:127.0.0.1 fersua-booking-edge:ci nginx -t

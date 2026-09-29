@@ -1,0 +1,586 @@
+/*
+ * Port del <style> de public_html/MacflyMikebran.html.
+ * Mismas clases y valores; cada selector va prefijado con .djp para no chocar con el panel,
+ * y los rgba fijos pasan a variables de paleta (rgb(var(--x-rgb) / alfa)):
+ *   15,23,42 -> --surface-rgb · 148,163,184 -> --line-rgb · 248,250,252 -> --text-rgb
+ *   249,115,22 -> --accent-rgb · 236,72,153 -> --accent-2-rgb · #fff sobre acento -> --on-accent
+ * :root y body no están aquí: van en styles/base.css (el fondo debe ir en body para
+ * repetirse por viewport igual que en la plantilla).
+ * Lo nuevo (arreglos y componentes que la plantilla no tenía) va en dj-additions.css.
+ */
+
+.djp,
+.djp * {
+  box-sizing: border-box;
+}
+
+.djp a {
+  color: inherit;
+}
+
+.djp .shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* NAV SIMPLE */
+.djp .nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.djp .nav-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.djp .brand {
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.djp .nav-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--text-rgb) / .6);
+  background: rgb(var(--surface-rgb) / .7);
+}
+
+.djp .nav-links {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.djp .nav-links a {
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.djp .nav-links a:hover {
+  border-color: rgb(var(--text-rgb) / .35);
+  background: rgb(var(--surface-rgb) / .75);
+}
+
+/* HERO */
+.djp .hero {
+  border-radius: 26px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: radial-gradient(circle at top left, rgb(var(--surface-rgb) / .2), rgb(var(--surface-rgb) / .98));
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 20px 20px 18px;
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.djp .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 10% 0%, rgb(var(--accent-rgb) / .16), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgb(var(--accent-2-rgb) / .18), transparent 55%);
+  pointer-events: none;
+}
+
+.djp .hero-left,
+.djp .hero-right {
+  position: relative;
+  z-index: 1;
+}
+
+.djp .hero-label {
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.djp .hero-title {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+}
+
+.djp .hero-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.djp .hero-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.djp .chip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--text-rgb) / .4);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  background: rgb(var(--surface-rgb) / .75);
+}
+
+.djp .hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.djp .btn {
+  appearance: none;
+  border-radius: 999px;
+  padding: 10px 15px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .12s ease, background .12s ease;
+}
+
+.djp .btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  box-shadow: 0 14px 30px rgb(var(--accent-rgb) / .35);
+}
+
+.djp .btn-secondary {
+  background: rgb(var(--surface-rgb) / .8);
+  color: var(--text);
+  border: 1px solid rgb(var(--line-rgb) / .7);
+}
+
+.djp .btn:active {
+  transform: translateY(1px);
+}
+
+.djp .hero-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.djp .hero-right {
+  display: grid;
+  gap: 10px;
+  grid-template-rows: 1.2fr 1fr;
+}
+
+.djp .hero-photo {
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  background: #000;
+}
+
+.djp .hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.08) contrast(1.08);
+}
+
+.djp .hero-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(var(--surface-rgb) / 0), rgb(var(--surface-rgb) / .9));
+}
+
+.djp .hero-photo-caption {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  z-index: 1;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.djp .hero-mini {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.djp .mini-card {
+  border-radius: 16px;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  background: rgb(var(--surface-rgb) / .95);
+  padding: 10px 11px 9px;
+  font-size: 12px;
+}
+
+.djp .mini-tabs {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.djp .media-tab-btn {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  background: rgb(var(--surface-rgb) / .9);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+.djp .media-tab-btn.is-active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  border-color: rgb(var(--accent-rgb) / .8);
+  box-shadow: 0 10px 25px rgb(var(--accent-rgb) / .35);
+}
+
+.djp .media-module {
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  padding: 16px 16px 14px;
+  margin-bottom: 20px;
+  display: none;
+  /* OCULTO */
+}
+
+.djp .media-module.is-visible {
+  display: block;
+  /* SE MUESTRA CUANDO TENGA ESTA CLASE */
+}
+
+.djp .media-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.djp .media-item {
+  margin: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  background: #000;
+}
+
+.djp .media-item2 {
+  margin: 0;
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  margin-bottom: 4px;
+}
+
+.djp .media-item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.05);
+}
+
+.djp .media-inner {
+  display: none;
+}
+
+.djp .media-inner.is-visible {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .djp .media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.djp .mini-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.djp .mini-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+/* GRID PRINCIPAL */
+.djp .grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.djp section {
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  padding: 16px 16px 14px;
+}
+
+.djp .sec-title {
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  margin-bottom: 4px;
+}
+
+.djp .sec-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* ARTISTAS */
+.djp .artists-list {
+  display: grid;
+  gap: 10px;
+}
+
+.djp .artist-card {
+  display: grid;
+  grid-template-columns: 115px minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--line-rgb) / .6);
+  background: radial-gradient(circle at top, rgb(var(--surface-rgb) / .5), rgb(var(--surface-rgb) / 1));
+}
+
+.djp .artist-photo {
+  border-radius: 13px;
+  overflow: hidden;
+  background: #000;
+}
+
+.djp .artist-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.djp .artist-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.djp .artist-role {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.djp .artist-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 7px;
+}
+
+.djp .pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.djp .pill {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.djp .socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.djp .socials a {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  text-decoration: none;
+  color: var(--muted);
+}
+
+/* FECHAS */
+.djp .shows {
+  display: grid;
+  gap: 8px;
+}
+
+.djp .show-item {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px dashed rgb(var(--line-rgb) / .7);
+  background: rgb(var(--surface-rgb) / .95);
+  font-size: 13px;
+}
+
+.djp .show-date {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.djp .show-place {
+  color: var(--muted);
+}
+
+.djp .show-cta a {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--text-rgb) / .5);
+  text-decoration: none;
+  color: var(--text);
+}
+
+.djp .shows-note {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* FORM */
+.djp form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 8px 0 4px;
+}
+
+.djp input,
+.djp textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  background: rgb(var(--surface-rgb) / .98);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.djp textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.djp .form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.djp .small {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.djp footer {
+  margin: 10px 0 18px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@media (max-width: 960px) {
+  .djp .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .djp .hero-right {
+    grid-template-rows: 220px auto;
+  }
+
+  .djp .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .djp .shell {
+    padding: 16px;
+  }
+
+  .djp .nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .djp .hero {
+    padding: 18px 16px 14px;
+    border-radius: 22px;
+  }
+
+  .djp .hero-title {
+    font-size: 30px;
+  }
+
+  .djp .artist-card {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .djp .show-item {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 15px;
+  }
+}

@@ -1,0 +1,38 @@
+version: 2
+
+updates:
+  # Un solo lockfile en la raíz (npm workspaces).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    # Espera 5 días antes de proponer una versión nueva (las de seguridad no esperan).
+    cooldown:
+      default-days: 5
+    groups:
+      nestjs:
+        patterns: ["@nestjs/*", "rxjs", "reflect-metadata"]
+      prisma:
+        patterns: ["prisma", "@prisma/*"]
+      react:
+        patterns: ["react", "react-dom", "react-router*", "@tanstack/*", "antd", "@ant-design/*"]
+      build-tools:
+        patterns: ["vite", "@vitejs/*", "typescript", "tsup", "vitest", "jest", "ts-jest", "@types/*"]
+    # sharp procesa archivos de usuarios (CVE de libwebp): sus PRs van solos para revisarlos rápido.
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

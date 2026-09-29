@@ -1,0 +1,363 @@
+/*
+ * Lo que la plantilla no tenía: arreglos de accesibilidad/móvil y los componentes nuevos.
+ * Todo con prefijo .djp, igual que dj-template.css.
+ */
+
+/* Los <select> y checkbox del formulario se ven como los inputs de la plantilla. */
+.djp select {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--line-rgb) / .7);
+  background: rgb(var(--surface-rgb) / .98);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.djp input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 1px 0 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.djp input[type="date"],
+.djp input[type="time"] {
+  color-scheme: dark;
+  min-height: 38px;
+}
+
+.djp input::placeholder,
+.djp textarea::placeholder {
+  color: rgb(var(--line-rgb) / .8);
+}
+
+.djp input[aria-invalid="true"],
+.djp textarea[aria-invalid="true"],
+.djp select[aria-invalid="true"] {
+  border-color: #f87171;
+}
+
+/* Foco visible para teclado (la plantilla no tenía ninguno). */
+.djp :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.djp :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* iOS hace zoom al enfocar inputs de menos de 16px: en cualquier pantalla táctil, también en
+   horizontal (844x390 pasa de 640px de ancho). */
+@media (max-width: 960px), (pointer: coarse) {
+  .djp input,
+  .djp textarea,
+  .djp select {
+    font-size: 16px;
+  }
+}
+
+/* Áreas táctiles de 44px sin cambiar el aspecto: un ::after invisible más grande. */
+.djp .show-cta a,
+.djp .show-cta button,
+.djp .socials a,
+.djp .nav-links a,
+.djp .media-tab-btn,
+.djp .btn {
+  position: relative;
+}
+
+.djp .show-cta a::after,
+.djp .show-cta button::after,
+.djp .socials a::after,
+.djp .nav-links a::after,
+.djp .media-tab-btn::after {
+  content: "";
+  position: absolute;
+  inset: -10px -4px;
+}
+
+/* Los .btn miden 38-39px: con 3px arriba y abajo llegan a 44 sin tocar el aspecto. */
+.djp .btn::after {
+  content: "";
+  position: absolute;
+  inset: -3px 0;
+}
+
+/* La plantilla cargaba Inter estática (400/500/600/800): su 700 caía en 800. Con la
+   variable, el 700 es real y las fechas y el rider se verían más delgados. */
+.djp .show-date,
+.djp .media-item2 b {
+  font-weight: 800;
+}
+
+/* .sec-title ahora es h2: mismo aspecto que el div original. */
+.djp .sec-title {
+  font-weight: 400;
+  margin: 0 0 4px;
+  line-height: normal;
+}
+
+/* Textos multilínea del DJ: se respetan los saltos sin HTML. */
+.djp .hero-sub,
+.djp .artist-desc,
+.djp .pre-line {
+  white-space: pre-line;
+}
+
+/* Variantes de layout cuando falta contenido. */
+.djp .hero--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.djp .hero-right--single {
+  grid-template-rows: 1fr;
+}
+
+@media (max-width: 960px) {
+  .djp .hero-right--single {
+    grid-template-rows: 220px;
+  }
+}
+
+.djp .grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.djp .hero-socials {
+  margin-top: 12px;
+}
+
+/* Íconos de redes (Simple Icons, CC0). */
+.djp .socials a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.djp .si {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  flex: none;
+}
+
+/* Foto de integrante ausente. */
+.djp .artist-photo--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 115px;
+  font-size: 28px;
+  font-weight: 800;
+  color: rgb(var(--text-rgb) / .35);
+  background: radial-gradient(circle at top, rgb(var(--accent-rgb) / .25), #000);
+}
+
+/* Galería: cada foto es un botón que abre el visor. */
+.djp .media-item > button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.djp .rider-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: none;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Fechas */
+.djp .show-cta button {
+  appearance: none;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--text-rgb) / .5);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.djp .shows-empty {
+  margin: 0 0 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Formulario */
+.djp .req {
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+.djp .field-error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+.djp form label.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 14px 0 4px;
+  cursor: pointer;
+}
+
+.djp .consent a {
+  color: var(--text);
+}
+
+.djp .form-alert {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgb(248 113 113 / .6);
+  background: rgb(127 29 29 / .35);
+  font-size: 13px;
+}
+
+.djp .form-alert--info {
+  border-color: rgb(var(--line-rgb) / .6);
+  background: rgb(var(--surface-rgb) / .9);
+}
+
+.djp .btn[disabled],
+.djp .btn[aria-disabled="true"] {
+  opacity: .6;
+  cursor: progress;
+}
+
+.djp .booking-success {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--accent-rgb) / .6);
+  background: rgb(var(--surface-rgb) / .95);
+}
+
+.djp .booking-success p {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.djp .legend {
+  margin: 4px 0 0;
+}
+
+/* Honeypot: fuera de la vista y del lector de pantalla, pero en el DOM. */
+.djp .hp-field {
+  position: absolute !important;
+  left: -10000px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+/* Diálogos nativos (flyer y visor de fotos). */
+.djp dialog.dlg {
+  border: 0;
+  padding: 0;
+  margin: auto;
+  background: transparent;
+  color: var(--text);
+  max-width: min(92vw, 720px);
+  max-height: 100dvh;
+  overflow: visible;
+}
+
+.djp dialog.dlg::backdrop {
+  background: rgb(0 0 0 / .85);
+}
+
+.djp .dlg-inner {
+  display: grid;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  max-height: 100dvh;
+  overflow: auto;
+}
+
+.djp .dlg-media {
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.djp .dlg-media img {
+  display: block;
+  max-width: 100%;
+  max-height: 72dvh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.djp .dlg-meta {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.djp .dlg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.djp .lightbox .dlg-actions {
+  align-items: center;
+}
+
+.djp .lightbox-count {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 56px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .djp *,
+  .djp *::before,
+  .djp *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.djp .brand-link {
+  text-decoration: none;
+}
+
+/* "DISPONIBLE" no cabe en la columna de 80px de las fechas: esta fila usa ancho automático. */
+.djp .show-item--open {
+  grid-template-columns: minmax(80px, max-content) minmax(0, 1fr) auto;
+}
+
+@media (max-width: 640px) {
+  .djp .show-item--open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -17,7 +17,7 @@ docker compose up -d            # MySQL 127.0.0.1:3309 + mailpit 127.0.0.1:8025
 cp api/.env.example api/.env
 npm run build:shared
 npm exec -w api -- prisma migrate dev
-npm run dev:api                 # http://localhost:4100/api/health
+npm run dev:api                 # http://127.0.0.1:4100/api/health
 npm run dev:web                 # http://localhost:5180
 ```
 

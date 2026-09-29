@@ -8,20 +8,23 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
 @Public()
-@SkipThrottle()
 export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfig,
   ) {}
 
-  /** Vivo: lo usa el healthcheck de Docker y el monitor externo. */
+  /** Vivo: lo usa el healthcheck de Docker y el monitor externo. Sin límite: no toca la BD. */
   @Get()
+  @SkipThrottle()
   live() {
     return { status: 'ok', version: this.config.appVersion };
   }
 
-  /** Listo: base de datos y carpeta de medios accesibles. Sin detalles hacia afuera. */
+  /**
+   * Listo: base de datos y carpeta de medios accesibles. Sin detalles hacia afuera.
+   * Con el límite general (hace un SELECT contra un pool de 5 conexiones) y bloqueado en el edge.
+   */
   @Get('ready')
   async ready() {
     try {

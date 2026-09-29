@@ -32,3 +32,7 @@ Thumbs.db
 
 # Las migraciones de Prisma sí se versionan
 !api/prisma/migrations/**/*.sql
+
+# Env sueltos de pruebas (p. ej. el de la prueba de humo del stack de producción)
+*.env
+.claude/settings.local.json

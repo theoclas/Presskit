@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-09-28 (noche).
+> Última actualización: 2026-09-29.
 
 ## Qué es
 Plataforma de booking de DJs de **Fersua Studio**: cada DJ (o dúo) arma su página con la plantilla de
@@ -37,51 +37,48 @@ Los diseños detallados están en `docs/diseno/01…11`.
 | Hito | Estado |
 |---|---|
 | **M0** Fundaciones | ✅ Hecho y subido (commit `7a3c321`) |
-| **M1** Sitio público + semilla Mac Fly + legal + infraestructura | 🟡 En construcción (ver abajo) |
-| **M2** Auth + admin (2FA, editar perfiles, tickets, auditoría) | ⏳ Pendiente |
+| **M1** Sitio público + semilla Mac Fly + legal + infraestructura | ✅ Hecho y subido |
+| **M2** Auth + admin (2FA, editar perfiles, tickets, auditoría) | 🟡 En construcción (contrato en `docs/api-m2.md`) |
 | **M3** Registro y autoservicio de DJs (correo, panel, media privada) | ⏳ Pendiente |
 | **M4** Endurecimiento + cambio de DNS del dominio principal | ⏳ Pendiente |
 
 ### M0 (hecho)
-- `packages/shared`: límites, catálogos y validadores, con 29 pruebas.
+- `packages/shared`: límites, catálogos y validadores, con sus pruebas.
 - `api`: esquema Prisma (18 tablas) + migración `init`, configuración validada, filtro de errores, guard de origen, throttler por IP real, auditoría y health.
 - `docker-compose.yml` de desarrollo.
 
-### M1 (en curso al pausar)
-Se lanzó un workflow de agentes: construir en paralelo → integrar → revisar → corregir.
-Estado de la etapa de construcción al pausar:
+### M1 (hecho)
+- **API** (`api/src/public`, `booking`, `tickets`, `media`, `cli`):
+  - `GET /api/public/djs`, `/djs/:slug` (301 desde slugs viejos), `/genres`, `sitemap.xml`, `robots.txt`.
+  - Shell SEO `GET /api/public/shell?path=`: head, OG y JSON-LD por perfil, head propio en las páginas legales, 301 relativos (mayúsculas, `.html`, slug viejo) y 404 con noindex.
+  - Formulario de booking: token HMAC, honeypot, tiempo mínimo, topes diarios (lo que pasa el tope se guarda como SPAM) y enlace de WhatsApp armado en el servidor.
+  - Tickets públicos (PQRS y reportes) con radicado y fecha límite.
+  - Imágenes: sharp → WebP sin metadatos (recorte 4:5 centrado para tarjetas) + JPEG de OG.
+  - CLI: `seed:genres`, `seed:macfly [--force]`.
+- **Web** (`web/src/public`): página del DJ con la plantilla de Mac Fly (fiel al original, con los bugs corregidos), index con búsqueda y filtros, páginas legales, PQRS/reportar, 404 y página de error. Pie legal y aviso de privacidad breve junto a cada formulario.
+- **Infra**: `Dockerfile` (targets `api` y `edge`), `docker-compose.prod.yml`, edge nginx con límites por IP (IPv6 por /64), backups, cron y guías `docs/01…07`. CI: build, pruebas, e2e, `ci:compose` y `ci:bundle`.
+- **Cómo correrlo:** ver "Desarrollo local" abajo y `docs/01-desarrollo-local.md`. Para publicar: `docs/02-primer-despliegue.md`.
+- **Pendiente técnico (no bloquea):** la prueba visual con Playwright contra `tests/visual/template-reference.html` (390×844 y 1280×800) todavía no existe.
 
-| Área | Estado |
-|---|---|
-| API de medios, CLI y semilla | ✅ Terminado |
-| API pública, SEO, formulario y tickets | ✅ Terminado |
-| Textos legales | ✅ Terminado |
-| Web pública | 🟡 Corriendo |
-| Infraestructura, CI y guías | 🟡 Corriendo |
+### M2 (en construcción)
+Auth (usuario + contraseña, 2FA del admin, cookie `__Host-rt`), panel de admin para editar perfiles, tickets y auditoría. El contrato de endpoints está en `docs/api-m2.md` y los tipos en `packages/shared/src/admin-types.ts`.
 
-Luego vienen la integración de punta a punta (incluye el stack Docker de producción local en 127.0.0.1:8090), las revisiones de seguridad y fidelidad visual, y las correcciones.
-
-**Nada de M1 está commiteado todavía:** los archivos están en disco en la carpeta local (`git status`).
-
-## Cómo retomar
-1. Abre la carpeta y revisa `git status` para ver qué dejó escrito M1.
-2. Si la **misma sesión** de Claude sigue abierta, el workflow pudo haber terminado solo. Hay que leer su resultado.
-   - Si se cortó, se reanuda con `resumeFromRunId: wf_6cc5bf46-486`: los agentes ya terminados no se repiten.
-3. Si es una **sesión nueva**, pídele a Claude:
-   *"Lee docs/ESTADO.md y docs/00-plan.md del proyecto fersuastudio-booking y continúa con M1: integra lo que quedó en disco, compila, prueba y corrige."*
-4. Para desarrollo local:
-   ```bash
-   docker compose up -d            # MySQL 127.0.0.1:3309 (root/devroot) + mailpit 8025
-   npm install && npm run build:shared
-   npm run build -w api && npm run cli -w api -- seed:genres && npm run cli -w api -- seed:macfly
-   npm run dev:api                 # http://localhost:4100/api/health
-   npm run dev:web                 # http://localhost:5180
-   ```
-5. Al cerrar M1: verificar en el navegador, commitear y subir, y seguir `docs/02-primer-despliegue.md` para publicar en `booking.fersuastudio.com`.
+## Desarrollo local
+```bash
+docker compose up -d            # MySQL 127.0.0.1:3309 (root/devroot) + mailpit http://127.0.0.1:8025
+npm install && npm run build:shared
+npm run build -w api && npm run cli -w api -- seed:genres && npm run cli -w api -- seed:macfly
+npm run dev:api                 # http://127.0.0.1:4100/api/health (en desarrollo solo escucha en 127.0.0.1)
+npm run dev:web                 # http://localhost:5180 (proxy de /api y /media al api)
+```
+Verificación completa: `npm test -w @fersua/shared`, `npm test -w api`, `npm run test:e2e -w api` (con la BD arriba), `npm test -w web`, `npm run ci:compose`, `npm run ci:bundle` (después de `npm run build -w web`).
 
 ## Pendientes de Fernando (no frenan el desarrollo)
-- Datos del responsable para la política de privacidad: nombre o razón social, NIT o cédula, dirección y correo. Van en `web/src/public/legal/operator.ts` y `docs/legal/`.
-- Fechas actuales de Mac Fly & Mike Bran: todas las del sitio viejo ya pasaron.
+- **Marcadores legales:** nombre o razón social, NIT o cédula, dirección, correo y teléfono del responsable. Van en `web/src/public/legal/operator.ts` (los documentos y los avisos junto a los formularios los toman de ahí) y en las copias de `docs/legal/`. Revisar los textos con un abogado.
+- **Fechas actuales de Mac Fly & Mike Bran:** todas las del sitio viejo ya pasaron; mientras tanto "Fechas" solo muestra la fila "Disponible".
+- **`DjLegalInfo` de Mac Fly** (registro privado del art. 53: nombre, documento y contacto del responsable del dúo). Se carga en M2 desde el admin; sin ese registro el admin no puede aprobar perfiles.
+- **Confirmar para la semilla de Mac Fly:** el SoundCloud del dúo (se quitó del hero hasta confirmarlo), el año del pie de la foto ("2024 / 2025") y si la descripción al compartir debe volver a "Contrataciones, próximas fechas y press kit." (hoy sale `seoDescription`; no hay campo aparte).
+- **Aprobar las diferencias intencionales con la página original:** íconos en las redes, asteriscos de obligatorio, casilla de autorización, avisos legales, "Rider Técnico" con tilde y la columna de "Disponible" más ancha.
 - **hPanel:** registro A `booking` → 177.7.40.130 y crear el buzón `no-reply@fersuastudio.com`.
 - **VPS con sudo:** 2 GB de swap, vhost de nginx y certbot. Los comandos están en `docs/02-primer-despliegue.md`.
 - **GitHub:** agregar la deploy key de solo lectura del VPS al repo Presskit.

@@ -17,3 +17,4 @@ export * from './whatsapp';
 export * from './legal';
 export * from './genres';
 export * from './api-types';
+export * from './admin-types';

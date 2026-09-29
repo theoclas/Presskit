@@ -42,7 +42,8 @@ export const PALETTES: Record<PaletteKey, Palette> = {
     lineRgb: '148 163 184',
     textRgb: '248 250 252',
     onAccent: '#ffffff',
-    themeColor: '#020617',
+    // El de la página original (barra del navegador en Android), no el color del fondo.
+    themeColor: '#0f172a',
   },
   MIAMI: {
     name: 'Miami (rosa/violeta)',

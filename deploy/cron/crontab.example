@@ -1,0 +1,7 @@
+# crontab del usuario deploy en el VPS (crontab -e). Ajusta la ruta si tu usuario no es deploy.
+# El VPS corre en UTC: 08:15 UTC = 03:15 en Bogotá. Comprueba con: timedatectl
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Respaldo nocturno: BD + instantánea de medios + rotación + ping a healthchecks.io.
+15 8 * * * cd /home/deploy/apps/fersuastudio-booking && bash scripts/backup.sh nightly >> /home/deploy/backups/fersua-booking/backup.log 2>&1

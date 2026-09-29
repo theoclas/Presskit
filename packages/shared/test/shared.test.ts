@@ -15,11 +15,17 @@ import {
   containsCardNumber,
   defaultFormConfig,
   eventWhatsappText,
+  fillEventMessage,
   formatShowDate,
   isLabelAllowed,
   isSafeNextPath,
   isValidDateOnly,
+  isValidPhone,
+  isWellFormedText,
+  LIMITS,
   normalizeSocialUrl,
+  sliceText,
+  toWellFormedText,
   resolveFormFields,
   resolveTexts,
   suggestSlug,
@@ -191,6 +197,13 @@ describe('envío de booking', () => {
     expect(containsCardNumber('4111111111111111')).toBe(true);
     expect(containsCardNumber('3001234567')).toBe(false);
   });
+  it('teléfonos', () => {
+    expect(isValidPhone('+57 300 123 4567')).toBe(true);
+    expect(isValidPhone('(604) 555-1234')).toBe(true);
+    expect(isValidPhone('123456')).toBe(false);
+    expect(isValidPhone('+57 300 123 4567 8901 23')).toBe(false);
+    expect(isValidPhone('300-abc-4567')).toBe(false);
+  });
   it('los campos resueltos respetan el orden del DJ', () => {
     expect(resolveFormFields(config).map((f) => f.key)).toEqual(['fullName', 'email1', 'eventDate', 'budget', 'message']);
   });
@@ -214,6 +227,44 @@ describe('WhatsApp', () => {
     });
     expect(t).toContain('*Nombre:* Ana');
     expect(t).toContain('https://fersuastudio.com/macfly-mike-bran');
+  });
+  it('un emoji justo en el corte no rompe el enlace (sin mitades sueltas)', () => {
+    const summary = buildBookingSummary({
+      title: 'Solicitud de booking',
+      displayName: 'Mike Bran & Macfly',
+      // El emoji cae en las unidades 699-700: el corte de 700 lo partiría.
+      rows: [{ label: 'Mensaje', value: `${'a'.repeat(699)}\u{1F600}b` }],
+      pageUrl: 'https://fersuastudio.com/macfly-mike-bran',
+    });
+    expect(isWellFormedText(summary)).toBe(true);
+    expect(() => buildWaUrl('573505209860', summary)).not.toThrow();
+    // Corte total del mensaje en el mismo punto débil.
+    const long = `${'x'.repeat(LIMITS.booking.whatsappMessageMax - 1)}\u{1F600}${'y'.repeat(50)}`;
+    expect(() => buildWaUrl('573505209860', long)).not.toThrow();
+    // Y aunque llegue una mitad suelta de otro lado, tampoco lanza.
+    expect(buildWaUrl('573505209860', 'Hola \ud83d')).toBe('https://wa.me/573505209860?text=Hola');
+  });
+  it('los $ del nombre del evento no se interpretan como patrones de reemplazo', () => {
+    expect(
+      eventWhatsappText('Quiero ir a {evento} ({fecha})', { venue: "Club $& Bar $' x", date: '2026-11-14' }),
+    ).toBe("Quiero ir a Club $& Bar $' x (14 de noviembre de 2026)");
+    // Un {algo} escrito en el lugar tampoco se confunde con un placeholder de la plantilla.
+    expect(fillEventMessage('Evento: {evento}', { evento: 'Fiesta {fecha}', fecha: 'X' })).toBe('Evento: Fiesta {fecha}');
+  });
+});
+
+describe('texto bien formado', () => {
+  it('cleanText quita mitades sueltas de emojis y conserva los completos', () => {
+    expect(cleanText('Prueba \ud83d Uno \u{1F600}')).toBe('Prueba Uno \u{1F600}');
+    expect(cleanText('\udc00x')).toBe('x');
+    expect(isWellFormedText('ok \u{1F600}')).toBe(true);
+    expect(isWellFormedText('mal \ud83d')).toBe(false);
+    expect(toWellFormedText('a😀\ud83db')).toBe('a\u{1F600}b');
+  });
+  it('sliceText no parte un par sustituto', () => {
+    expect(sliceText('ab\u{1F600}', 3)).toBe('ab');
+    expect(sliceText('ab\u{1F600}', 4)).toBe('ab\u{1F600}');
+    expect(sliceText('abc', 10)).toBe('abc');
   });
 });
 

@@ -3,6 +3,10 @@
 **/.env
 **/.env.*
 !**/*.example
+# Env sueltos (smoke.env, prod.env…): igual que en .gitignore. Después de la excepción de
+# *.example para que ninguna regla los vuelva a incluir.
+*.env
+**/*.env
 **/*.pem
 **/*.key
 **/.uploads
@@ -17,3 +21,4 @@ backups
 docs
 *.sql
 *.sql.gz
+**/*.tsbuildinfo

@@ -1,0 +1,161 @@
+/*
+ * Base de las páginas públicas. Los valores por defecto son la paleta SUNSET; las demás
+ * llegan por virtual:palettes.css (html[data-palette=...]) y por las variables en línea
+ * que pone applyPalette() en <html>.
+ */
+
+:root {
+  --bg: #020617;
+  --bg-soft: #0b1120;
+  --card: rgba(15, 23, 42, .98);
+  --muted: #9ca3af;
+  --text: #f9fafb;
+  --accent: #f97316;
+  --accent-2: #ec4899;
+  --border: rgba(148, 163, 184, .55);
+  --accent-rgb: 249 115 22;
+  --accent-2-rgb: 236 72 153;
+  --surface-rgb: 15 23 42;
+  --line-rgb: 148 163 184;
+  --text-rgb: 248 250 252;
+  --on-accent: #ffffff;
+  --font: "Inter Variable", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/*
+ * Igual que la plantilla: html y body al 100% y el fondo en body, así el degradado se
+ * repite por cada alto de pantalla exactamente como en la página original.
+ */
+html[data-surface="public"],
+html[data-surface="public"] body {
+  height: 100%;
+}
+
+html[data-surface="public"] body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(900px 700px at 0% 0%, rgb(var(--accent-rgb) / .25), transparent 55%),
+    radial-gradient(800px 600px at 100% 100%, rgb(var(--accent-2-rgb) / .22), transparent 55%),
+    var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Enlace para saltar al contenido: solo aparece con el teclado. */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 12px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+main:focus {
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Marcadores legales sin llenar ([NIT/CC], [CORREO]...): visibles pero discretos. */
+.ph {
+  background: rgb(var(--accent-rgb) / .14);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 3px;
+  outline: 1px dashed rgb(var(--accent-rgb) / .45);
+  outline-offset: -1px;
+}
+
+/* Pie legal: fuera de .djp para que ninguna paleta ni texto del DJ pueda ocultarlo. */
+.legal-footer {
+  box-sizing: border-box;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 4px 20px 28px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.legal-footer p {
+  margin: 4px 0;
+}
+
+.legal-footer a {
+  position: relative;
+  color: inherit;
+  display: inline-block;
+  padding: 6px 2px;
+  text-underline-offset: 2px;
+}
+
+/* Área táctil de 44px (el enlace mide ~31px) sin separar más las filas del pie. */
+.legal-footer a::after {
+  content: "";
+  position: absolute;
+  inset: -7px 0;
+}
+
+.legal-footer a:hover {
+  color: var(--text);
+}
+
+.legal-footer a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.legal-footer .sep {
+  padding: 0 4px;
+  opacity: .6;
+}
+
+.legal-footer-dj {
+  color: var(--text);
+  opacity: .85;
+}
+
+@media (max-width: 640px) {
+  .legal-footer {
+    padding: 4px 16px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}

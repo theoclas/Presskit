@@ -2,10 +2,10 @@
 // versión aquí: los consentimientos guardan la versión aceptada y el panel pide aceptar de nuevo.
 
 export const LEGAL_DOCS = {
-  privacy: { version: '2026-10', path: '/privacidad', title: 'Política de Tratamiento de Datos Personales' },
-  terms: { version: '2026-10', path: '/terminos', title: 'Términos y Condiciones de Uso' },
-  artistTerms: { version: '2026-10', path: '/terminos-artistas', title: 'Términos para Artistas' },
-  pqrs: { version: '2026-10', path: '/pqrs', title: 'PQRS y Habeas Data' },
+  privacy: { version: '2026-09', path: '/privacidad', title: 'Política de Tratamiento de Datos Personales' },
+  terms: { version: '2026-09', path: '/terminos', title: 'Términos y Condiciones de Uso' },
+  artistTerms: { version: '2026-09', path: '/terminos-artistas', title: 'Términos para Artistas' },
+  pqrs: { version: '2026-09', path: '/pqrs', title: 'PQRS y Habeas Data' },
 } as const;
 
 export type LegalDocKey = keyof typeof LEGAL_DOCS;

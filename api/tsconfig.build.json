@@ -1,4 +1,8 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // nest build borra dist (deleteOutDir); con incremental un .tsbuildinfo viejo hace que tsc no emita nada.
+    "incremental": false
+  },
   "exclude": ["node_modules", "dist", "test", "prisma", "seed-assets", "src/**/*.spec.ts"]
 }

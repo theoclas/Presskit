@@ -19,7 +19,9 @@
     "db:down": "docker compose down",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "ci:compose": "node scripts/ci/check-compose.mjs",
+    "ci:bundle": "node scripts/ci/check-bundle.mjs"
   },
   "overrides": {
     "deepmerge-ts": "^8.0.0"

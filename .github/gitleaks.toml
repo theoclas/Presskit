@@ -1,0 +1,13 @@
+# gitleaks con las reglas por defecto. Solo se excluyen archivos que llevan valores de
+# ejemplo a propósito: plantillas de entorno y pruebas (nunca secretos reales).
+title = "fersuastudio-booking"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Plantillas de entorno y pruebas con valores de ejemplo"
+paths = [
+  '''(^|/)\.env(\.[a-z]+)?\.example$''',
+  '''(^|/)[^/]+\.(e2e-)?spec\.ts$''',
+]

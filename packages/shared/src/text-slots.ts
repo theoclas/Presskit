@@ -109,7 +109,9 @@ export const PAGE_TEXT_SLOTS = [
     key: 'bookingDisclaimer',
     group: 'booking',
     label: 'Nota bajo el formulario',
-    default: 'Al enviar aceptas ser contactado por email o WhatsApp con info de disponibilidad, cachet y rider técnico.',
+    // Informativo, no un consentimiento: la autorización es solo la casilla. Un "al enviar
+    // aceptas…" es consentimiento por clic y no vale (Res. SIC 76538).
+    default: 'Te contactaremos por email o WhatsApp con info de disponibilidad, cachet y rider técnico.',
     max: 300,
   },
   {

@@ -25,6 +25,12 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const INT_RE = /^\d{1,6}$/;
 const HANDLE_RE = /^@?([A-Za-z0-9._]{1,30})$/;
 
+/** Teléfono razonable: 7-15 dígitos con +, espacios, guiones o paréntesis. Lo usan booking y tickets. */
+export function isValidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, '');
+  return TEL_RE.test(value) && digits.length >= 7 && digits.length <= 15;
+}
+
 /** Luhn: detecta números de tarjeta pegados en cualquier campo. */
 export function containsCardNumber(value: string): boolean {
   const runs = value.replace(/[ -]/g, '').match(/\d{13,19}/g) ?? [];
@@ -55,11 +61,9 @@ function checkValue(field: ResolvedFormField, raw: string, today: string): { val
       value = value.toLowerCase();
       if (!isValidEmail(value)) return { error: 'INVALID' };
       break;
-    case 'tel': {
-      const digits = value.replace(/\D/g, '');
-      if (!TEL_RE.test(value) || digits.length < 7 || digits.length > 15) return { error: 'INVALID' };
+    case 'tel':
+      if (!isValidPhone(value)) return { error: 'INVALID' };
       break;
-    }
     case 'date': {
       if (!isValidDateOnly(value)) return { error: 'INVALID' };
       const ahead = daysBetween(today, value);
