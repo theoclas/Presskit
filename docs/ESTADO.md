@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-09-29. **M2 terminado**: revisado, corregido y commiteado ("feat: M2 — login con 2FA y panel de administración"). Falta subirlo y desplegarlo.
+> Última actualización: 2026-09-29 (noche). **M2 en producción** (`31fa48a`) y el admin real `fersua` ya creado con 2FA. Siguiente: M3.
 
 ## Qué es
 Plataforma de booking de DJs de **Fersua Studio**: cada DJ (o dúo) arma su página con la plantilla de
@@ -22,14 +22,15 @@ Los diseños detallados están en `docs/diseno/01…11`. El contrato de M2 está
 |---|---|
 | **M0** Fundaciones | ✅ Hecho y subido (`7a3c321`) |
 | **M1** Sitio público + semilla de Mac Fly + legal + infraestructura | ✅ Hecho, subido (`1235f4c`, `b19e6f1`) y **EN PRODUCCIÓN** |
-| **M2** Auth con 2FA + panel admin | ✅ Hecho, revisado y commiteado. **Falta push y despliegue** |
+| **M2** Auth con 2FA + panel admin | ✅ Hecho, revisado, subido (`31fa48a`) y **EN PRODUCCIÓN**; admin real creado |
 | **M3** Registro y autoservicio de DJs | ⏳ Siguiente |
 | **M4** Endurecimiento + cambio de DNS del dominio principal | ⏳ Pendiente |
 
-## Producción (M1)
+## Producción (M1 + M2)
 - **https://booking.fersuastudio.com**, con HTTPS por certbot (vence el 2026-12-28 y se renueva solo), `noindex` mientras sea beta.
 - **VPS:** `~/apps/fersuastudio-booking`, proyecto compose `fersua-booking` (db, migrate, api, edge). El edge escucha en `127.0.0.1:8090`; el vhost del host es `/etc/nginx/sites-available/fersua-booking.conf`.
-- **Versión desplegada:** `b19e6f1`. Semilla cargada: 27 géneros y Mac Fly & Mike Bran (APROBADO, sin dueño). Ya hay un respaldo manual.
+- **Versión desplegada:** `31fa48a` (M2), con la migración `m2_review_fixes` aplicada. Semilla: 27 géneros y Mac Fly & Mike Bran (APROBADO, sin dueño). Respaldos: el manual y el automático previo a cada despliegue.
+- **Admin:** un solo usuario `fersua` (ADMIN, 2FA TOTP y correo registrado), creado por Fernando con `admin:create` el 2026-09-29. Se entra por https://booking.fersuastudio.com/login. Rescate solo desde el VPS (`admin:reset-password`, `admin:reset-mfa`, `admin:unlock`).
 - **`.env` del VPS** (chmod 600, nunca en git): secretos aleatorios y la clave SMTP real de `no-reply@fersuastudio.com`, verificada contra Hostinger.
 - **Actualizar:** `cd ~/apps/fersuastudio-booking && bash scripts/deploy.sh` (git pull, build clásico, migraciones y salud; si falla, vuelve atrás solo).
 
@@ -59,14 +60,10 @@ Los diseños detallados están en `docs/diseno/01…11`. El contrato de M2 está
 **Verificación final (2026-09-29):** shared 41 pruebas; api 359 unitarias (35 suites) y 75 e2e (6 suites); web 134 (21 archivos); `ci:bundle` y `ci:compose` en verde; imágenes `api` y `edge` compiladas con el builder clásico. Prueba de humo contra el api compilado y revisión en el navegador (resumen, editor en 390 px, fechas archivadas, redes con íconos, auditoría) sin errores de consola.
 
 ### Pendiente, en este orden
-1. **Push de M2** (lo hace el agente principal; los subagentes lo tienen bloqueado).
-2. **Desplegar en el VPS:** `cd ~/apps/fersuastudio-booking && bash scripts/deploy.sh` (compila api y edge y aplica la migración nueva).
-3. **Admin real, lo hace Fernando por SSH** (paso a paso en `docs/02-primer-despliegue.md`, sección G):
-   `cd ~/apps/fersuastudio-booking && docker compose run --rm -it api node dist/cli/main.js admin:create`
-   Pide usuario (`fersua`), correo y contraseña oculta de 12+ caracteres, muestra el QR para Google Authenticator, pide un código para confirmar e imprime 10 códigos de recuperación **una sola vez**.
-4. **Log del nginx del host sin query string** (sudo, una vez; detalle en `docs/02-primer-despliegue.md`, sección E):
+1. ~~Push de M2~~ ✅ · ~~Desplegar en el VPS~~ ✅ · ~~Crear el admin real~~ ✅
+2. **Log del nginx del host sin query string** (sudo, una vez; detalle en `docs/02-primer-despliegue.md`, sección E):
    `sudo cp deploy/host-nginx/conf.d/fersua-booking-log.conf /etc/nginx/conf.d/`, agregar ` fersua_booking` a los `access_log` de `/etc/nginx/sites-available/fersua-booking.conf`, `sudo nginx -t` y reload.
-5. Desde `/admin`: cargar el registro legal (art. 53) de Mac Fly (el resumen lo marca en rojo) y sus fechas nuevas.
+3. Desde `/admin`: cargar el registro legal (art. 53) de Mac Fly (el resumen lo marca en rojo) y sus fechas nuevas.
 
 ### Siguiente hito: M3 (registro y autoservicio de DJs)
 - Registro abierto con verificación de correo, recuperación de contraseña y panel `/panel` reutilizando el editor (`EditorScopeProvider` con actor `owner`; hoy `/panel` muestra "Tu cuenta está lista").
@@ -79,7 +76,7 @@ Los diseños detallados están en `docs/diseno/01…11`. El contrato de M2 está
 - El chunk del admin pesa ~1,1 MB (350 kB gzip) y Vite lo advierte; separar antd con `manualChunks` es opcional.
 
 ### Cómo retomar
-- **Sesión nueva:** decir *"Lee docs/ESTADO.md del proyecto fersuastudio-booking y continúa"* (push/despliegue de M2 si aún no están, o M3).
+- **Sesión nueva:** decir *"Lee docs/ESTADO.md del proyecto fersuastudio-booking y continúa"* (M2 ya está en producción: sigue M3).
 - **Admin de desarrollo:** en la BD local existe el admin `fersua` con 2FA. Sus credenciales de prueba están en un archivo del temp del sistema (fuera del repo). Si se pierden, se regeneran sin tocar nada más:
   `echo "<clave nueva de 12+>" | npm run cli -w api -- admin:reset-password --password-stdin` y
   `npm run cli -w api -- admin:reset-mfa --totp-secret-out <archivo en el temp>` (escribe el secreto TOTP; bórralo al terminar).
