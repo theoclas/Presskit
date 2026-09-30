@@ -69,6 +69,7 @@ describe('toTicketDto', () => {
     // Vence el martes 13 de octubre de 2026 (10 hábiles desde el 28 de sep.; el 12 es festivo).
     dueAt: new Date('2026-10-13T00:00:00.000Z'),
     resolution: null,
+    isSpam: false,
     createdAt: new Date('2026-09-28T15:00:00.000Z'),
   };
 

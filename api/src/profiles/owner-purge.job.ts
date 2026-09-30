@@ -47,6 +47,8 @@ const SELF_SERVICE_OWNER = Prisma.sql`u.role = 'USER' AND u.ageConfirmedAt IS NO
 const NOT_ADMIN_BUILT = Prisma.sql`NOT EXISTS (SELECT 1 FROM AuditLog b WHERE b.profileId = p.id
   AND b.action LIKE 'admin.profile.%' AND b.action NOT IN (${Prisma.join([...ADMIN_REVIEW_ONLY_ACTIONS])}))`;
 
+// BATCH es una constante numérica del código, nunca entrada de nadie.
+// eslint-disable-next-line no-restricted-properties -- texto fijo, sin datos del usuario
 const LIMIT = Prisma.raw(`LIMIT ${BATCH}`);
 
 export interface PurgeSummary {

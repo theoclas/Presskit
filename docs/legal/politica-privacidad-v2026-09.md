@@ -47,6 +47,7 @@ No vendemos ni alquilamos datos personales. Solo los compartimos con:
 
 - El artista al que va dirigida tu solicitud.
 - Hostinger, que nos presta el servidor (VPS) donde viven la plataforma, la base de datos y los respaldos, y el servicio de correo. Actúa como encargado y puede alojar los datos fuera de Colombia. Al autorizar el tratamiento aceptas esta transmisión.
+- Google (Google Drive), donde guardamos una copia de los respaldos para no perderlos si falla el servidor. La copia se cifra antes de salir del servidor y Google no puede leerla. Actúa como encargado y puede guardarla fuera de Colombia.
 - WhatsApp (Meta), solo si tú decides abrirlo: el mensaje lo envías tú desde tu cuenta y Meta lo trata según sus propias políticas.
 - Las autoridades, cuando la ley lo exija.
 
@@ -76,7 +77,7 @@ Escríbenos desde la página /pqrs o al correo [CORREO DE CONTACTO]. Cuéntanos 
 - Cuentas y perfiles sin uso: si no confirmas tu correo en 14 días, borramos la cuenta y lo que hayas empezado a armar. Un borrador sin cambios en 30 días (te avisamos por correo a los 21) y un perfil rechazado sin cambios en 30 días se borran con sus fotos y su registro de oferente, que nunca se publicó; tu cuenta no se borra.
 - Solicitudes marcadas como spam: 30 días.
 - PQRS y reportes: el tiempo necesario para atenderlos y poder demostrar que se atendieron.
-- Respaldos: las copias diarias duran 14 días y las semanales 8 semanas. Por eso un dato borrado puede tardar hasta 8 semanas en desaparecer de todos los respaldos.
+- Respaldos (en el servidor y en la copia cifrada de Google Drive): las copias diarias duran 14 días y las semanales 8 semanas. Por eso un dato borrado puede tardar hasta 8 semanas en desaparecer de todos los respaldos.
 - Registros técnicos del servidor: 14 días.
 
 ## 9. Seguridad

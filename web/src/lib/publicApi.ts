@@ -9,6 +9,7 @@ import {
   type PublicDjProfileDto,
   type TicketSubmitDto,
   type TicketSubmitResultDto,
+  type TicketTokenDto,
 } from '@fersua/shared';
 
 // Cliente mínimo con fetch para las páginas públicas (sin axios en este bundle).
@@ -92,6 +93,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const enc = encodeURIComponent;
 
+// M4: POST /api/public/tickets exige el token de GET /api/public/tickets/token.
+const TICKET_TOKEN_ROUTE = `${API_ROUTES.tickets}/token`;
+
 export const publicApi = {
   listDjs: (signal?: AbortSignal) => request<PublicDjCardDto[]>(API_ROUTES.publicDjs, { signal }),
 
@@ -109,6 +113,9 @@ export const publicApi = {
       body: JSON.stringify(body),
       cache: 'no-store',
     }),
+
+  /** Token del formulario de PQRS y reportes (mismo esquema HMAC que el de booking). */
+  getTicketToken: () => request<TicketTokenDto>(TICKET_TOKEN_ROUTE, { cache: 'no-store' }),
 
   submitTicket: (body: TicketSubmitDto) =>
     request<TicketSubmitResultDto>(API_ROUTES.tickets, { method: 'POST', body: JSON.stringify(body), cache: 'no-store' }),

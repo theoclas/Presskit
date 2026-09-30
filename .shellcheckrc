@@ -1,0 +1,3 @@
+# shellcheck (CI, paso "Scripts del VPS"): sigue los ". lib.sh" desde la carpeta del script.
+source-path=SCRIPTDIR
+external-sources=true

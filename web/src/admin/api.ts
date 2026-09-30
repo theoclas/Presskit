@@ -1,4 +1,6 @@
 import type {
+  AdminLegalRecordDto,
+  AdminLegalRecordListItemDto,
   AdminProfileListItemDto,
   AdminStatsDto,
   AdminUserDto,
@@ -7,6 +9,7 @@ import type {
   BookingListItemDto,
   BookingStatus,
   GenreAdminDto,
+  LegalRecordState,
   Paginated,
   TicketDto,
   TicketStatus,
@@ -14,7 +17,9 @@ import type {
   UserStatus,
 } from '@fersua/shared';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { http } from '../lib/http';
+import { useStepUp } from '../auth/useStepUp';
+import { http, stepUpHeaders } from '../lib/http';
+import { withStepUp } from './errors';
 import { cleanParams } from './format';
 
 // Todas las claves del admin empiezan por 'admin': el editor de perfiles invalida ['admin']
@@ -32,6 +37,14 @@ export interface BookingFilters {
 export interface TicketFilters {
   status?: TicketStatus;
   type?: TicketType;
+  /** 'true': solo lo que el api marcó como spam (sin el filtro, el spam no viene). */
+  spam?: 'true';
+  page: number;
+}
+
+export interface LegalRecordFilters {
+  state: LegalRecordState;
+  q?: string;
   page: number;
 }
 
@@ -62,6 +75,8 @@ export const adminKeys = {
   users: (f: UserFilters) => ['admin', 'users', f] as const,
   genres: ['admin', 'genres'] as const,
   audit: (f: AuditFilters) => ['admin', 'audit', f] as const,
+  legalRecords: (f: LegalRecordFilters) => ['admin', 'legal-records', f] as const,
+  legalRecord: (id: string) => ['admin', 'legal-record', id] as const,
   profileOptions: ['admin', 'profiles', 'options'] as const,
 };
 
@@ -153,6 +168,48 @@ export function useAuditLogs(f: AuditFilters) {
       ).data,
     placeholderData: keepPreviousData,
     staleTime: 15_000,
+  });
+}
+
+/** Registros del art. 53: la lista no trae números de documento. */
+export function useLegalRecords(f: LegalRecordFilters) {
+  return useQuery({
+    queryKey: adminKeys.legalRecords(f),
+    queryFn: async ({ signal }) =>
+      (
+        await http.get<Paginated<AdminLegalRecordListItemDto>>('/admin/legal-records', {
+          params: cleanParams({ ...f, pageSize: PAGE_SIZE }),
+          signal,
+        })
+      ).data,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+}
+
+/**
+ * Detalle con el documento completo. El api audita cada lectura: solo se pide al abrirlo, no
+ * se vuelve a pedir solo y sale de la caché al cerrar (gcTime 0).
+ */
+/**
+ * Detalle de un registro del art. 53 (documento, dirección y teléfonos). El api exige step-up
+ * (contraseña + código): null = el admin canceló la confirmación.
+ */
+export function useLegalRecord(id: string | null) {
+  const stepUp = useStepUp();
+  return useQuery({
+    queryKey: adminKeys.legalRecord(id ?? ''),
+    queryFn: async ({ signal }): Promise<AdminLegalRecordDto | null> => {
+      const res = await withStepUp(stepUp, async (t) =>
+        (await http.get<AdminLegalRecordDto>(`/admin/legal-records/${enc(id ?? '')}`, { signal, headers: stepUpHeaders(t) })).data,
+      );
+      return res ? res.value : null;
+    },
+    enabled: !!id,
+    staleTime: Infinity,
+    gcTime: 0,
+    // Un reintento automático volvería a pedir la contraseña sin que el admin lo pidiera.
+    retry: false,
   });
 }
 

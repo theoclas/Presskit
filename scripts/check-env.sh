@@ -85,7 +85,54 @@ while IFS= read -r key; do
   [ "$key" = ADMIN_NOTIFY_EMAIL ] || fail "quita $key de .env: el admin se crea con la CLI interactiva"
 done < <(grep -oE '^ADMIN_[A-Z0-9_]*' "$ENV_FILE" || true)
 
-# 5. Permisos (solo aviso: en Windows/CI no aplica).
+# Indexar con los datos del responsable sin llenar publicaría "[NOMBRE O RAZÓN SOCIAL]" en cada
+# pie legal (docs/diseno/11, M4).
+if [ "$(get SEO_INDEXABLE)" = true ] && grep -q "'\[" "$ROOT_DIR/web/src/public/legal/operator.ts" 2>/dev/null; then
+  fail "SEO_INDEXABLE=true con marcadores legales sin llenar: completa web/src/public/legal/operator.ts antes de indexar (docs/05-cambio-dns.md)"
+fi
+retention="$(get BACKUP_RETENTION_DAYS)"
+if [[ "$retention" =~ ^[0-9]+$ ]] && [ "$retention" -gt 21 ]; then
+  warn "BACKUP_RETENTION_DAYS=$retention pasa de 21: la política de privacidad promete borrar de los respaldos en 8 semanas (docs/04-backups.md)"
+fi
+
+# 5. Copia externa y monitoreo (opcionales). Solo avisos: una copia externa mal configurada no
+#    debe frenar un despliegue (offsite-backup.sh falla con un mensaje claro y el watchdog avisa).
+offsite_repo="$(get OFFSITE_RESTIC_REPOSITORY)"
+if [ -n "$offsite_repo" ]; then
+  offsite_pw="$(get OFFSITE_RESTIC_PASSWORD)"
+  [ "${#offsite_pw}" -ge 20 ] || warn "OFFSITE_RESTIC_PASSWORD falta o es muy corta (mínimo 20; openssl rand -hex 32)"
+  case "$offsite_repo" in
+    b2:?*:*)
+      if [ -z "$(get OFFSITE_B2_ACCOUNT_ID)" ] || [ -z "$(get OFFSITE_B2_ACCOUNT_KEY)" ]; then
+        warn "OFFSITE_RESTIC_REPOSITORY es b2: y faltan OFFSITE_B2_ACCOUNT_ID u OFFSITE_B2_ACCOUNT_KEY"
+      fi
+      ;;
+    s3:?*)
+      if [ -z "$(get OFFSITE_AWS_ACCESS_KEY_ID)" ] || [ -z "$(get OFFSITE_AWS_SECRET_ACCESS_KEY)" ]; then
+        warn "OFFSITE_RESTIC_REPOSITORY es s3: y faltan OFFSITE_AWS_ACCESS_KEY_ID u OFFSITE_AWS_SECRET_ACCESS_KEY"
+      fi
+      ;;
+    rclone:?*:*)
+      rclone_cfg="$(get OFFSITE_RCLONE_CONFIG)"
+      rclone_cfg="${rclone_cfg:-$HOME/.config/rclone/rclone.conf}"
+      [ -f "$rclone_cfg" ] || warn "no existe el archivo de rclone $rclone_cfg (OFFSITE_RCLONE_CONFIG)"
+      ;;
+    /?*) ;;
+    *) warn "OFFSITE_RESTIC_REPOSITORY no reconocido: b2:<bucket>:<carpeta>, rclone:<remoto>:<carpeta>, s3:<url> o una ruta absoluta" ;;
+  esac
+fi
+for key in MONITOR_DISK_MIN_GB MONITOR_BACKUP_MAX_AGE_H MONITOR_TLS_MIN_DAYS MONITOR_OFFSITE_MAX_AGE_H; do
+  v="$(get "$key")"
+  [ -z "$v" ] || [[ "$v" =~ ^[1-9][0-9]*$ ]] || warn "$key debe ser un entero positivo (se usa el valor por defecto)"
+done
+for key in OFFSITE_HEALTHCHECK_URL MONITOR_HEALTHCHECK_URL; do
+  case "$(get "$key")" in
+    '' | https://*) ;;
+    *) warn "$key debe empezar por https://" ;;
+  esac
+done
+
+# 6. Permisos (solo aviso: en Windows/CI no aplica).
 if perms="$(stat -c '%a' "$ENV_FILE" 2>/dev/null)" && [ "$perms" != 600 ] && [ "$perms" != 400 ]; then
   warn "$ENV_FILE tiene permisos $perms; deja 600: chmod 600 $ENV_FILE"
 fi

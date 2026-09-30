@@ -31,6 +31,11 @@
 // | 'profile-suspended'       | dueño                                     | ProfileSuspendedMailParams { reason }        |
 // | 'draft-expiring'          | dueño                                     | DraftExpiringMailParams { daysLeft }         |
 //
+// Plantilla de M4 (operación del VPS, docs/08-monitoreo.md). Sin nombres de archivo ni comandos
+// en el texto: "status.sh" o "backup.sh" parecen dominios y el cliente de correo los enlaza.
+// | 'ops-alert'               | ADMIN_NOTIFY_EMAIL o el correo del admin  | OpsAlertMailParams                           |
+// |                           | (solo la CLI ops:alert, desde el watchdog)|   { title, detail, hint, resolved, test?, at }|
+//
 // 'booking-new-owner' tiene además un tope propio de 5 por destinatario al día
 // (MAIL_TEMPLATE_DAILY_CAPS en mail.service.ts): el 5.º avisa que lo que llegue después irá en
 // un resumen al día siguiente ('booking-digest-owner', BookingDigestJob) y del 6.º en adelante no
@@ -90,6 +95,30 @@ export interface DraftExpiringMailParams {
   /** Días que faltan para el borrado (se redondea y queda en 1 como mínimo). */
   daysLeft: number;
 }
+
+// ------------------------------------------------------------------ parámetros de M4
+
+/**
+ * 'ops-alert': aviso de operación al admin (disco, respaldos, contenedores, certificado, copia
+ * externa). Lo manda solo la CLI `ops:alert`, que llama scripts/watchdog.sh en el VPS: nadie del
+ * público puede provocarlo ni meter texto en él.
+ */
+export interface OpsAlertMailParams {
+  /** Título fijo del tipo de alerta (de la lista cerrada de la CLI). */
+  title: string;
+  /** Detalle corto y sin datos personales que arma el watchdog (se limpia y se corta en 300). */
+  detail: string;
+  /** Qué hacer y cada cuánto se repite: texto fijo de la CLI (no va en el aviso de resuelto). */
+  hint: string;
+  /** true: el problema ya no se detecta. */
+  resolved: boolean;
+  /** true: 'ops:alert --kind test', solo para comprobar que los avisos llegan. */
+  test?: boolean;
+  at: Date;
+}
+
+/** Máximo de caracteres del detalle de un 'ops-alert'. */
+export const OPS_ALERT_DETAIL_MAX = 300;
 
 /** Interno de 'booking-new-owner': lo pone MailService en el último aviso del día. No lo pases. */
 interface BookingNewOwnerRenderParams {
@@ -391,6 +420,34 @@ export const MAIL_TEMPLATES = {
       `Tu borrador se borrará en ${days} ${days === 1 ? 'día' : 'días'} por inactividad.`,
       'Para conservarlo, entra a tu panel y sigue editándolo o envíalo a revisión. Tu cuenta no se borra.',
       { link: `${ctx.publicUrl}/panel`, label: 'Ir a mi panel' },
+    ]);
+  }),
+
+  // ---------------------------------------------------------------- M4: operación
+
+  /**
+   * Al admin: el watchdog del VPS detectó un problema (o dejó de detectarlo). Cupo 'security':
+   * sale primero en la cola. La CLI corre en su propio proceso (un correo por corrida) y además
+   * limita los avisos al día contando la auditoría, así que no gasta el cupo de las alertas de
+   * la cuenta que maneja el api.
+   */
+  'ops-alert': def<OpsAlertMailParams>('security', (p) => {
+    const title = sliceText(cleanText(p.title), 120) || 'Alerta del servidor';
+    const detail = sliceText(cleanText(p.detail), OPS_ALERT_DETAIL_MAX);
+    const hint = sliceText(cleanText(p.hint), 500);
+    if (p.test) {
+      return compose(`Alerta del servidor: ${title}`, [
+        `Esta es una prueba del vigilante del VPS (${formatBogota(p.at)}).`,
+        ...(detail ? [`Detalle: ${detail}`] : []),
+        ...(hint ? [hint] : []),
+      ]);
+    }
+    return compose(p.resolved ? `Resuelto: ${title}` : `Alerta del servidor: ${title}`, [
+      p.resolved
+        ? `El ${formatBogota(p.at)} el vigilante del VPS dejó de detectar este problema.`
+        : `El vigilante del VPS detectó un problema el ${formatBogota(p.at)}.`,
+      ...(detail ? [`Detalle: ${detail}`] : []),
+      ...(p.resolved || !hint ? [] : [hint]),
     ]);
   }),
 } as const;

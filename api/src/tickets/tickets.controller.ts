@@ -1,7 +1,7 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
-import type { TicketSubmitResultDto } from '@fersua/shared';
+import type { TicketSubmitResultDto, TicketTokenDto } from '@fersua/shared';
 import { Public } from '../common/decorators';
 import { TicketSubmitBody } from './ticket-submit.dto';
 import { TicketsService } from './tickets.service';
@@ -10,6 +10,13 @@ import { TicketsService } from './tickets.service';
 @Public()
 export class TicketsController {
   constructor(private readonly tickets: TicketsService) {}
+
+  /** Token del formulario (M4). Sin @PublicCache: cada token es único (no-store por defecto). */
+  @Get('tickets/token')
+  @Throttle({ default: { limit: 30, ttl: 600_000 } })
+  token(): TicketTokenDto {
+    return this.tickets.issueToken();
+  }
 
   /** PQRS, reportes de perfil y solicitudes de datos de un DJ. 5 por hora por IP. */
   @Post('tickets')

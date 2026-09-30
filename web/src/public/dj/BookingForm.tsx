@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ApiError, publicApi } from '../../lib/publicApi';
 import { safeHttpsUrl } from '../../lib/safeUrl';
+import { useFormToken } from '../../lib/useFormToken';
 import { isWhatsappUrl, openWhatsApp } from '../../lib/whatsapp';
 import { BookingPrivacyNotice } from '../legal/PrivacyNotice';
 import { BookingField, fieldId } from './BookingField';
@@ -55,7 +56,7 @@ function resolvePrivacyUrl(url: string | null | undefined): string {
 function ConsentText({ text, href }: { text: string; href: string }) {
   const at = text.indexOf(PRIVACY_PHRASE);
   const link = (label: string) => (
-    <a href={href} target="_blank" rel="noopener">
+    <a href={href} target="_blank" rel="noopener noreferrer">
       {label}
     </a>
   );
@@ -98,48 +99,13 @@ export function BookingForm({
 
   const formRef = useRef<HTMLFormElement>(null);
   const successRef = useRef<HTMLDivElement>(null);
-  const tokenRef = useRef<{ value: string; at: number } | null>(null);
-  const pendingToken = useRef<Promise<string> | null>(null);
 
   const dateRange = useMemo(() => bookingDateRange(todayBogota()), []);
   const fieldKeys = useMemo(() => new Set(fields.map((f) => f.key)), [fields]);
 
-  const ensureToken = useCallback(
-    (force = false): Promise<string> => {
-      const t = tokenRef.current;
-      if (!force && t && Date.now() - t.at < TOKEN_REFRESH_MS) return Promise.resolve(t.value);
-      if (!force && pendingToken.current) return pendingToken.current;
-      const p = publicApi
-        .getBookingToken(slug)
-        .then(({ token }) => {
-          tokenRef.current = { value: token, at: Date.now() };
-          return token;
-        })
-        .finally(() => {
-          if (pendingToken.current === p) pendingToken.current = null;
-        });
-      pendingToken.current = p;
-      return p;
-    },
-    [slug],
-  );
-
-  // El token se pide cuando el formulario entra en pantalla: quien solo mira la página no cuesta nada.
-  useEffect(() => {
-    const el = formRef.current;
-    if (preview || !el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          ensureToken().catch(() => undefined);
-          io.disconnect();
-        }
-      },
-      { rootMargin: '200px 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [ensureToken, preview]);
+  const fetchToken = useCallback(() => publicApi.getBookingToken(slug).then(({ token }) => token), [slug]);
+  const formToken = useFormToken({ formRef, fetchToken, refreshMs: TOKEN_REFRESH_MS, enabled: !preview });
+  const { ensureToken } = formToken;
 
   useEffect(() => {
     if (status === 'done') successRef.current?.focus();
@@ -161,11 +127,6 @@ export function BookingForm({
     if (id) document.getElementById(id)?.focus();
   };
 
-  const refreshTokenLater = () => {
-    tokenRef.current = null;
-    ensureToken(true).catch(() => undefined);
-  };
-
   // El DJ puede renombrar el botón: los avisos citan el texto que el visitante ve.
   const submitLabel = `«${texts.bookingSubmit}»`;
 
@@ -181,7 +142,7 @@ export function BookingForm({
       case 'FORM_EXPIRED':
       case 'FORM_TOKEN_USED':
       case 'FORM_TOKEN_INVALID':
-        refreshTokenLater();
+        formToken.renew();
         setAlert({ kind: 'info', text: `El formulario se renovó. Vuelve a presionar ${submitLabel}.` });
         return;
       default:
@@ -196,7 +157,7 @@ export function BookingForm({
       setAlert({ kind: 'error', text: `${err.message} Tus datos siguen aquí: vuelve a presionar ${submitLabel}.` });
       return;
     }
-    refreshTokenLater();
+    formToken.renew();
     const fieldErrors: Record<string, string> = {};
     for (const [key, code] of Object.entries(err.details ?? {})) {
       if (fieldKeys.has(key)) fieldErrors[key] = fieldMessage(code);
@@ -246,7 +207,7 @@ export function BookingForm({
         token,
         ...(hp ? { hp_x7: hp } : {}),
       });
-      tokenRef.current = null;
+      formToken.discard();
       setResult(res);
       setStatus('done');
       if (res.whatsappUrl) openWhatsApp(res.whatsappUrl);

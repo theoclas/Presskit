@@ -90,10 +90,20 @@ export function OverviewPage() {
                 to="/admin/pqrs"
                 linkText="Atender"
                 footer={
-                  data.overdueTickets > 0 ? (
-                    <Tag color="red" style={{ marginTop: 6 }}>
-                      {data.overdueTickets} vencido{data.overdueTickets === 1 ? '' : 's'}
-                    </Tag>
+                  data.overdueTickets > 0 || data.spamTickets > 0 ? (
+                    <>
+                      {data.overdueTickets > 0 ? (
+                        <Tag color="red" style={{ marginTop: 6 }}>
+                          {data.overdueTickets} vencido{data.overdueTickets === 1 ? '' : 's'}
+                        </Tag>
+                      ) : null}
+                      {/* El spam no cuenta como abierto: se revisa aparte si el admin quiere. */}
+                      {data.spamTickets > 0 ? (
+                        <Link to="/admin/pqrs?spam=1" style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
+                          {data.spamTickets} en spam (30 días)
+                        </Link>
+                      ) : null}
+                    </>
                   ) : null
                 }
               />

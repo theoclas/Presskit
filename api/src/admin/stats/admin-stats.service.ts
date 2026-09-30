@@ -10,16 +10,21 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export class AdminStatsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Tablero del admin. Las solicitudes SPAM no cuentan en los últimos 30 días. */
+  /**
+   * Tablero del admin. Las solicitudes SPAM no cuentan en los últimos 30 días; las que el DJ
+   * borró de su bandeja no cuentan como nuevas. Los tickets marcados como spam no cuentan en
+   * abiertos ni vencidos (la insignia): van aparte, los de los últimos 30 días.
+   */
   async stats(now: Date = new Date()): Promise<AdminStatsDto> {
     const today = dateOnlyToDb(todayBogota(now));
     const since = new Date(now.getTime() - 30 * DAY_MS);
-    const [byStatus, bookingsLast30Days, newBookings, openTickets, overdueTickets, users, withoutLegal] = await Promise.all([
+    const [byStatus, bookingsLast30Days, newBookings, openTickets, overdueTickets, spamTickets, users, withoutLegal] = await Promise.all([
       this.prisma.djProfile.groupBy({ by: ['status'], _count: { _all: true } }),
       this.prisma.bookingRequest.count({ where: { createdAt: { gte: since }, status: { not: 'SPAM' } } }),
-      this.prisma.bookingRequest.count({ where: { status: 'NEW' } }),
-      this.prisma.ticket.count({ where: { status: { in: OPEN_TICKET_STATUSES } } }),
-      this.prisma.ticket.count({ where: { status: { in: OPEN_TICKET_STATUSES }, dueAt: { lt: today } } }),
+      this.prisma.bookingRequest.count({ where: { status: 'NEW', ownerDeletedAt: null } }),
+      this.prisma.ticket.count({ where: { isSpam: false, status: { in: OPEN_TICKET_STATUSES } } }),
+      this.prisma.ticket.count({ where: { isSpam: false, status: { in: OPEN_TICKET_STATUSES }, dueAt: { lt: today } } }),
+      this.prisma.ticket.count({ where: { isSpam: true, createdAt: { gte: since } } }),
       this.prisma.user.count({ where: { role: 'USER' } }),
       // Públicos sin el registro del art. 53 (p. ej. la semilla): el resumen los señala.
       this.prisma.djProfile.findMany({
@@ -40,6 +45,7 @@ export class AdminStatsService {
       newBookings,
       openTickets,
       overdueTickets,
+      spamTickets,
       users,
       approvedWithoutLegal: withoutLegal,
     };

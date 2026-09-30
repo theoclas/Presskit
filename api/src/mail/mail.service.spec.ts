@@ -47,6 +47,7 @@ describe('plantillas de correo', () => {
       'booking-new-owner',
       'draft-expiring',
       'email-changed',
+      'ops-alert',
       'password-changed',
       'profile-approved',
       'profile-rejected',

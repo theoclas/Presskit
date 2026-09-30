@@ -1,6 +1,5 @@
 import type { PublicEventDto } from '@fersua/shared';
 import { useEffect, useRef } from 'react';
-import { EXTERNAL_REL } from '../../lib/safeUrl';
 import { IMAGE_SIZES, ResponsiveImage } from '../components/ResponsiveImage';
 import { closeDialog, openDialog } from './dialog';
 import { eventCtaHref, eventLongDate, eventPlace } from './eventCta';
@@ -52,7 +51,7 @@ export function FlyerDialog({ event, ctaLabel, onClose }: Props) {
           </div>
           <div className="dlg-actions">
             {href ? (
-              <a className="btn btn-primary" href={href} target="_blank" rel={EXTERNAL_REL}>
+              <a className="btn btn-primary" href={href} target="_blank" rel="noopener noreferrer nofollow ugc">
                 {label}
               </a>
             ) : null}

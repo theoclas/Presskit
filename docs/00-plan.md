@@ -30,7 +30,7 @@ resuelve las contradicciones entre esos documentos. Si algo choca, **manda este 
 | Diseño | Plantilla fija + 8 paletas predefinidas. La naranja/rosa actual es la de por defecto |
 | Imágenes | En el VPS, en un volumen Docker. sharp las convierte a WebP con variantes y sin EXIF/GPS |
 | URLs | `fersuastudio.com/<slug>`. Index: grilla de tarjetas estilo Mac Fly, con buscador, filtro por género y destacados |
-| Lanzamiento | Primero `booking.fersuastudio.com`. Luego cambio de DNS del dominio principal. `booking.` queda como alias que redirige 301 al principal |
+| Lanzamiento | **Decisión del 2026-09-30: la plataforma de DJs vive de forma DEFINITIVA en `booking.fersuastudio.com`.** No hay cambio de DNS del dominio principal: `fersuastudio.com` (incluido Allset) se queda en el hosting compartido de Hostinger y no se toca |
 | Semilla | Solo Mac Fly & Mike Bran: perfil APROBADO y destacado **sin dueño** (el admin lo asigna después), slug `macfly-mike-bran`. Allset, Diann & Makinne y Molly quedan fuera |
 | Build | En el VPS, con 2 GB de swap (Fernando lo crea una vez con sudo) |
 | Cambios de un DJ aprobado | Salen al instante, sin retención. Quedan en la auditoría y el admin puede suspender |
@@ -71,7 +71,7 @@ fersuastudio-booking/
 │                             #   form-config-validate, palettes, social-platforms, slug, username, password, routes, dates
 ├─ api/  prisma/{schema.prisma,migrations/}  seed-assets/macfly-mike-bran/  src/…  test/…
 ├─ web/  src/{public,auth,panel,admin,editor-kit,lib,i18n}  tests/{unit,e2e,visual}
-├─ deploy/ edge/{nginx.conf,default.conf,snippets/}  mysql/{my.cnf,init/01-app-user.sh}  host-nginx/{booking.conf,apex.conf,snippets/}
+├─ deploy/ edge/{nginx.conf,default.conf,snippets/}  mysql/{my.cnf,init/01-app-user.sh}  host-nginx/{booking.conf,conf.d/,snippets/}
 ├─ scripts/ prepare-seed-media.mjs  init-env.sh  check-env.sh  deploy.sh  rollback.sh  backup.sh  restore.sh  status.sh
 ├─ docs/ 00-contrato.md  diseno/*.md  01-desarrollo-local.md  02-primer-despliegue.md  03-actualizar-rollback.md
 │        04-backups.md  05-cambio-dns.md  06-seguridad.md  07-correo-spf-dkim-dmarc.md  legal/politica-v1.md
@@ -294,19 +294,19 @@ Los informes completos van a `docs/diseno/legal-*.md` como referencia. En v1 se 
 - Bandeja del DJ y correos de aviso sin texto libre del público. La cola de correo tiene presupuesto diario.
 - Suite e2e de seguridad: IDOR, matriz de guards, asignación masiva, bloqueo, validación del formulario, fixtures de subida maliciosa y escapado del SEO.
 
-**M4 — Endurecimiento y cambio de dominio**
+**M4 — Endurecimiento y dominio definitivo en booking.fersuastudio.com**
 - Microcaché del edge (10 s) para `/`, `/:slug` y `/api/public/djs*`.
-- Respaldo externo (restic hacia Drive o B2) y ensayo de restauración.
-- UptimeRobot + healthchecks.io.
-- Texto legal final.
-- Purgar los datos de prueba de beta.
-- Cambio de DNS según `docs/05-cambio-dns.md`:
-  - bajar el TTL, apuntar el A del dominio a 177.7.40.130, **eliminar el AAAA de Hostinger**, `www` como CNAME;
-  - no tocar MX, SPF ni DKIM;
-  - certbot para el dominio y `www`, `PUBLIC_URL` y `SEO_INDEXABLE=true`;
-  - `booking.` redirige 301 al dominio principal y se envía el sitemap a Search Console.
-- Redirecciones heredadas: `/MacflyMikebran` (cualquier combinación de mayúsculas, con o sin `.html`) → `/macfly-mike-bran`, `/Eventos/MacflyMikeBran/*` → `/macfly-mike-bran#fechas`, `/default.php` → `/`.
-- ⚠ `/Allset`, `/pedido`, `/DiannMakinne` y `/Molly` dejarán de responder en fersuastudio.com. Allset debe quedar alojado en otro sitio antes del cambio.
+- Respaldo externo con restic hacia **Google Drive** (decisión de Fernando; B2 queda como alternativa documentada) y ensayo de restauración.
+- UptimeRobot + healthchecks.io + vigilante del VPS con alertas por correo.
+- Texto legal final (marcadores del responsable).
+- Purgar los datos de prueba si los hubiera en producción.
+- **Sin cambio de DNS del dominio principal** (decisión del 2026-09-30). `fersuastudio.com` y **Allset se quedan en Hostinger tal como están**: no se crean reglas, redirecciones ni páginas 410 para Allset, /pedido ni el sitio viejo. `docs/05-cambio-dns.md` pasa a describir cómo dejar `booking.fersuastudio.com` como dominio definitivo:
+  - `SEO_INDEXABLE=true` en el `.env` del VPS;
+  - quitar `X-Robots-Tag: noindex` del vhost del host (sudo);
+  - enviar el sitemap de booking a Search Console.
+
+  Solo como opción, si Fernando algún día lo pide: enlazar o redirigir desde el sitio viejo de Hostinger (`/MacflyMikebran`) hacia booking.
+- Las redirecciones heredadas dentro de booking siguen: `/MacflyMikebran` → `/macfly-mike-bran`, `/Eventos/MacflyMikeBran/*` → `#fechas`.
 
 **Fase 2 (no entra en v1):** vista previa en vivo con iframe, punto focal y recorte, `__INITIAL_DATA__`, deep link `/:slug/fecha/:id`, zxcvbn, cambio de correo y borrado de cuenta por el propio usuario (en v1 los hace el admin), drag & drop fuera de la galería, Turnstile y build en GHCR.
 

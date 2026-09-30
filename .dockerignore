@@ -13,6 +13,10 @@
 **/coverage
 **/test-results
 **/playwright-report
+# Capturas y medios de la regresión visual: solo los lee Playwright en el PC (tsc -b sí
+# revisa los .ts de tests/visual, por eso esos se quedan).
+web/tests/visual/__screenshots__
+web/tests/visual/fixtures/media
 backups
 .deploy
 .git

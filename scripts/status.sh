@@ -4,6 +4,7 @@
 #
 # Uso: bash scripts/status.sh
 . "$(dirname "$0")/lib.sh"
+. "$ROOT_DIR/scripts/lib-offsite.sh"
 
 require_cmd docker curl
 require_env_file
@@ -45,6 +46,46 @@ fi
 last_media="$(find "$BACKUP_DIR/media" -mindepth 1 -maxdepth 1 -type d -name '20*Z' 2>/dev/null | sort | tail -n 1)"
 [ -n "$last_media" ] && printf 'Última instantánea de medios: %s\n' "$(basename "$last_media")"
 [ -d "$BACKUP_DIR" ] && du -sh "$BACKUP_DIR" 2>/dev/null
+last_drill="$(tail -n 1 "$BACKUP_DIR/drill.log" 2>/dev/null || true)"
+printf 'Último ensayo de restauración: %s\n' "${last_drill:-nunca (bash scripts/restore-drill.sh, una vez al mes)}"
+
+section "Copia externa (restic)"
+hours_ago() { [[ "${1:-}" =~ ^[0-9]+$ ]] && printf 'hace %s h' "$((($(date +%s) - $1) / 3600))" || printf 'nunca'; }
+if offsite_configured; then
+  printf 'Destino:           %s\n' "$(offsite_repo_label)"
+  printf 'Última correcta:   %s (instantánea %s)\n' "$(hours_ago "$(offsite_state_get last_ok)")" "$(offsite_state_get last_snapshot | grep . || echo -)"
+  printf 'Último check:      %s\n' "$(hours_ago "$(offsite_state_get last_check)")"
+  last_fail="$(offsite_state_get last_fail)"
+  last_ok="$(offsite_state_get last_ok)"
+  if [[ "$last_fail" =~ ^[0-9]+$ ]] && [ "$last_fail" -gt "${last_ok:-0}" ]; then
+    warn "La última copia externa falló ($(hours_ago "$last_fail")): tail -n 30 $BACKUP_DIR/offsite.log"
+  fi
+  echo "Instantáneas: bash scripts/offsite-backup.sh snapshots"
+else
+  echo "No configurada (OFFSITE_RESTIC_REPOSITORY en .env; guía en docs/04-backups.md)."
+fi
+
+section "Vigilante (watchdog)"
+WD_DIR="${FERSUA_WATCHDOG_STATE:-$HOME/.fersua-booking-watchdog}"
+if crontab -l 2>/dev/null | grep -q 'scripts/watchdog.sh'; then echo "En el crontab: sí"; else warn "watchdog.sh no está en el crontab (deploy/cron/crontab.example)."; fi
+pause="$(cat "$WD_DIR/pause-until" 2>/dev/null || true)"
+if [[ "$pause" =~ ^[0-9]+$ ]] && [ "$pause" -gt "$(date +%s)" ]; then
+  printf 'En pausa hasta:    %s\n' "$(date -d "@$pause" '+%F %T')"
+fi
+# <tipo>.open: avisado y sin resolver; <tipo>.failed: un envío que no salió (se reintenta).
+active=0
+for f in "$WD_DIR"/*.open; do
+  [ -f "$f" ] || continue
+  active=1
+  printf 'Avisado:           %s (%s)\n' "$(basename "$f" .open)" "$(hours_ago "$(cat "$f")")"
+done
+[ "$active" -eq 1 ] || echo "Sin avisos activos."
+for f in "$WD_DIR"/*.failed; do
+  [ -f "$f" ] || continue
+  warn "El aviso $(basename "$f" .failed) no pudo salir ($(hours_ago "$(cat "$f")")): revisa el correo del api."
+done
+[ -f "$WD_DIR/watchdog.log" ] && { echo "Últimas líneas del log:"; tail -n 5 "$WD_DIR/watchdog.log"; }
+echo "Simulación: bash scripts/watchdog.sh --dry-run"
 
 section "Certificado TLS"
 host="$(env_get PUBLIC_URL '' | sed -E 's#^https?://([^/:]+).*#\1#')"

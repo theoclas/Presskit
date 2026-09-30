@@ -1,5 +1,4 @@
 import type { PublicEventDto } from '@fersua/shared';
-import { EXTERNAL_REL } from '../../lib/safeUrl';
 import { eventCtaHref, eventLongDate, eventPlace, eventShortDate } from './eventCta';
 
 interface Props {
@@ -28,7 +27,7 @@ export function ShowItem({ event, ctaLabel, onOpenFlyer }: Props) {
             {label}
           </button>
         ) : href ? (
-          <a href={href} target="_blank" rel={EXTERNAL_REL}>
+          <a href={href} target="_blank" rel="noopener noreferrer nofollow ugc">
             {label}
           </a>
         ) : null}

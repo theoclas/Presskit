@@ -50,6 +50,7 @@ const booking: BookingListItemDto = {
   contactPhone: '300 123 4567',
   eventDate: '2026-11-14',
   status: 'NEW',
+  ownerDeleted: false,
   createdAt: '2026-09-28T20:10:00.000Z',
 };
 
@@ -77,6 +78,7 @@ function ticket(over: Partial<TicketDto>): TicketDto {
     businessDaysLeft: 10,
     resolution: null,
     resolvedAt: null,
+    isSpam: false,
     createdAt: '2026-09-10T10:00:00.000Z',
     ...over,
   };
@@ -89,6 +91,7 @@ const stats: AdminStatsDto = {
   newBookings: 3,
   openTickets: 3,
   overdueTickets: 1,
+  spamTickets: 0,
   users: 2,
   approvedWithoutLegal: [],
 };

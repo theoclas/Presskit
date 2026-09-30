@@ -98,7 +98,7 @@ function RegistrationClosed() {
 function ConsentText({ text, phrase, href, version }: { text: string; phrase: string; href: string; version: string }) {
   const at = text.indexOf(phrase);
   const link = (label: string): ReactNode => (
-    <a href={href} target="_blank" rel="noopener">
+    <a href={href} target="_blank" rel="noopener noreferrer">
       {label}
     </a>
   );

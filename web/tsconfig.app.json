@@ -18,5 +18,7 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests"],
+  // Las pruebas de Playwright corren en Node: van en tsconfig.visual.json.
+  "exclude": ["tests/visual"]
 }

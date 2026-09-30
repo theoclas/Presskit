@@ -1,7 +1,8 @@
-import { DeleteOutlined, MailOutlined, WhatsAppOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeInvisibleOutlined, MailOutlined, WhatsAppOutlined } from '@ant-design/icons';
 import { BOOKING_STATUSES, type BookingListItemDto, type BookingStatus } from '@fersua/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  Alert,
   App,
   Button,
   DatePicker,
@@ -21,6 +22,7 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { http } from '../../lib/http';
+import { useSyncedState } from '../../lib/useSyncedState';
 import { adminKeys, PAGE_SIZE, useBooking, useBookings, useProfileOptions, type BookingFilters } from '../api';
 import { LoadError, PageHeader, PlainText } from '../components';
 import { errorMessage } from '../errors';
@@ -70,6 +72,15 @@ function useBookingFilters(): [BookingFilters, (patch: Partial<Record<string, st
   return [filters, update];
 }
 
+/** El DJ la borró de su bandeja: el admin conserva la copia hasta la purga de 12 meses. */
+function OwnerDeletedTag() {
+  return (
+    <Tag color="default" icon={<EyeInvisibleOutlined />}>
+      Oculta por el DJ
+    </Tag>
+  );
+}
+
 const STATUS_OPTIONS = [
   { value: '', label: 'Todas (sin spam)' },
   ...BOOKING_STATUSES.map((s) => ({ value: s, label: BOOKING_STATUS[s].label })),
@@ -82,9 +93,7 @@ export function BookingsPage() {
   const profiles = useProfileOptions();
   const isMobile = useIsMobile();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [search, setSearch] = useState(filters.q ?? '');
-
-  useEffect(() => setSearch(filters.q ?? ''), [filters.q]);
+  const [search, setSearch] = useSyncedState(filters.q ?? '');
 
   const columns: TableProps<BookingListItemDto>['columns'] = [
     {
@@ -118,8 +127,13 @@ export function BookingsPage() {
     },
     {
       title: 'Estado',
-      dataIndex: 'status',
-      render: (s: BookingStatus) => <Tag color={BOOKING_STATUS[s].color}>{BOOKING_STATUS[s].label}</Tag>,
+      key: 'status',
+      render: (_, r) => (
+        <Space size={4} wrap>
+          <Tag color={BOOKING_STATUS[r.status].color}>{BOOKING_STATUS[r.status].label}</Tag>
+          {r.ownerDeleted ? <OwnerDeletedTag /> : null}
+        </Space>
+      ),
       width: 110,
     },
     {
@@ -293,6 +307,15 @@ function BookingDrawer({ id, onClose }: { id: string | null; onClose: () => void
       {isPending && id ? <Skeleton active /> : null}
       {data ? (
         <>
+          {data.ownerDeleted ? (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              title={<OwnerDeletedTag />}
+              description="El DJ la quitó de su bandeja. Se conserva aquí hasta que se cumplan los 12 meses de la política de datos."
+            />
+          ) : null}
           <Descriptions
             column={1}
             size="small"

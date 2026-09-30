@@ -10,8 +10,9 @@ import {
   type TicketSubmitResultDto,
   type TicketType,
 } from '@fersua/shared';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { ApiError, publicApi } from '../../lib/publicApi';
+import { useFormToken } from '../../lib/useFormToken';
 import { TicketPrivacyNotice } from './PrivacyNotice';
 
 type PqrsType = Extract<TicketType, 'PQRS_CONSULTA' | 'PQRS_RECLAMO' | 'SOLICITUD_DATOS_DJ'>;
@@ -27,6 +28,12 @@ interface Props {
   mode: 'pqrs' | 'report';
   initialSlug?: string;
 }
+
+// Mismo token que el de booking (vale 2 h en el servidor): se renueva 15 min antes.
+const TOKEN_REFRESH_MS = LIMITS.booking.tokenMaxAgeMs - 15 * 60 * 1000;
+const SUBMIT_LABEL = '«Enviar»';
+
+const fetchTicketToken = () => publicApi.getTicketToken().then(({ token }) => token);
 
 type Values = { type: TicketType; name: string; email: string; phone: string; profileSlug: string; subject: string; message: string };
 
@@ -74,9 +81,13 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
   const [consent, setConsent] = useState(false);
   const [hp, setHp] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [alert, setAlert] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ kind: 'error' | 'info'; text: string } | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<TicketSubmitResultDto | null>(null);
+
+  const formRef = useRef<HTMLFormElement>(null);
+  const formToken = useFormToken({ formRef, fetchToken: fetchTicketToken, refreshMs: TOKEN_REFRESH_MS });
+  const { ensureToken } = formToken;
 
   const needsSlug = values.type === 'REPORTE_PERFIL' || values.type === 'SOLICITUD_DATOS_DJ';
   const set = (key: keyof Values) => (e: { target: { value: string } }) => {
@@ -98,6 +109,47 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
       </p>
     ) : null;
 
+  const handleApiError = (error: unknown) => {
+    if (!(error instanceof ApiError)) {
+      setAlert({ kind: 'error', text: 'Ocurrió un error inesperado. Intenta de nuevo.' });
+      return;
+    }
+    switch (error.code) {
+      case 'FORM_TOO_FAST':
+        setAlert({ kind: 'info', text: `Espera un segundo y vuelve a presionar ${SUBMIT_LABEL}.` });
+        return;
+      case 'FORM_EXPIRED':
+      case 'FORM_TOKEN_USED':
+      case 'FORM_TOKEN_INVALID':
+        formToken.renew();
+        setAlert({ kind: 'info', text: `El formulario se renovó. Vuelve a presionar ${SUBMIT_LABEL}.` });
+        return;
+      default:
+        break;
+    }
+    if (error.statusCode === 429 || error.code === 'RATE_LIMITED') {
+      setAlert({ kind: 'error', text: 'Has enviado varias solicitudes seguidas. Intenta de nuevo en unos minutos.' });
+      return;
+    }
+    if (error.isNetwork) {
+      // El token no se gastó: los datos siguen en el formulario y basta con volver a enviar.
+      setAlert({ kind: 'error', text: `${error.message} Tus datos siguen aquí: vuelve a presionar ${SUBMIT_LABEL}.` });
+      return;
+    }
+    // El servidor pudo gastar el token al rechazar los datos: se pide otro para el reintento.
+    formToken.renew();
+    if (error.details && Object.keys(error.details).length) {
+      const mapped: Record<string, string> = {};
+      for (const key of Object.keys(error.details)) {
+        if (key in values || key === 'consent') mapped[key] = 'Revisa este campo.';
+      }
+      setErrors(mapped);
+      setAlert({ kind: 'error', text: 'Revisa los campos marcados.' });
+      return;
+    }
+    setAlert({ kind: 'error', text: error.message || 'No se pudo enviar la solicitud. Intenta de nuevo.' });
+  };
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (sending) return;
@@ -111,6 +163,7 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
     }
     setSending(true);
     try {
+      const token = await ensureToken();
       const phone = values.phone.trim();
       const res = await publicApi.submitTicket({
         type: values.type,
@@ -121,26 +174,13 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
         subject: values.subject.trim(),
         message: values.message.trim(),
         consent: true,
+        token,
         ...(hp ? { hp_x7: hp } : {}),
       });
+      formToken.discard();
       setDone(res);
     } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.statusCode === 429 || error.code === 'RATE_LIMITED') {
-          setAlert('Has enviado varias solicitudes seguidas. Intenta de nuevo en unos minutos.');
-        } else if (error.details && Object.keys(error.details).length) {
-          const mapped: Record<string, string> = {};
-          for (const key of Object.keys(error.details)) {
-            if (key in values || key === 'consent') mapped[key] = 'Revisa este campo.';
-          }
-          setErrors(mapped);
-          setAlert('Revisa los campos marcados.');
-        } else {
-          setAlert(error.message);
-        }
-      } else {
-        setAlert('Ocurrió un error inesperado. Intenta de nuevo.');
-      }
+      handleApiError(error);
     } finally {
       setSending(false);
     }
@@ -158,7 +198,7 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
   }
 
   return (
-    <form noValidate onSubmit={onSubmit}>
+    <form ref={formRef} noValidate onSubmit={onSubmit} onFocus={() => void ensureToken().catch(() => undefined)}>
       {mode === 'pqrs' ? (
         <>
           <label htmlFor="tk-type">Tipo de solicitud</label>
@@ -256,7 +296,7 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
         />
         <span>
           Autorizo el tratamiento de mis datos para gestionar esta solicitud, según la{' '}
-          <a href={LEGAL_DOCS.privacy.path} target="_blank" rel="noopener">
+          <a href={LEGAL_DOCS.privacy.path} target="_blank" rel="noopener noreferrer">
             Política de Tratamiento de Datos Personales
           </a>
           .
@@ -271,8 +311,8 @@ export function TicketForm({ mode, initialSlug = '' }: Props) {
       </div>
       <div aria-live="polite">
         {alert ? (
-          <p className="form-alert" role="alert">
-            {alert}
+          <p className={alert.kind === 'info' ? 'form-alert form-alert--info' : 'form-alert'} role={alert.kind === 'error' ? 'alert' : undefined}>
+            {alert.text}
           </p>
         ) : null}
       </div>

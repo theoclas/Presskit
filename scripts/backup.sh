@@ -95,10 +95,14 @@ if [ "$DB_ONLY" -eq 0 ]; then
 fi
 
 # ------------------------------------------------------------------ rotación
+# La política de privacidad (§8) promete que un dato borrado sale de todos los respaldos en
+# 8 semanas: ningún dump pasa de 8 semanas, y los manuales (y cualquier otra etiqueta) duran
+# 20 días porque también viajan a la copia externa (offsite-backup.sh explica la cuenta).
 find "$BACKUP_DIR/db" -maxdepth 1 -name 'db_nightly_*.sql.gz' -mtime +"$RETENTION_DAYS" -delete
-find "$BACKUP_DIR/db" -maxdepth 1 -name 'db_manual_*.sql.gz' -mtime +30 -delete
-find "$BACKUP_DIR/weekly" -maxdepth 1 -name 'db_nightly_*.sql.gz' -mtime +56 -delete
-# pre-deploy: los 10 más recientes; pre-restore: los 5 más recientes.
+find "$BACKUP_DIR/db" -maxdepth 1 -name 'db_*.sql.gz' ! -name 'db_nightly_*' ! -name 'db_pre-*' -mtime +19 -delete
+find "$BACKUP_DIR/db" -maxdepth 1 -name 'db_pre-*.sql.gz' -mtime +55 -delete
+find "$BACKUP_DIR/weekly" -maxdepth 1 -name 'db_nightly_*.sql.gz' -mtime +55 -delete
+# Además, pre-deploy: los 10 más recientes; pre-restore: los 5 más recientes.
 keep_newest() {
   find "$BACKUP_DIR/db" -maxdepth 1 -name "$1" -printf '%T@ %p\n' | sort -rn | tail -n +"$(($2 + 1))" |
     cut -d' ' -f2- | xargs -r rm -f

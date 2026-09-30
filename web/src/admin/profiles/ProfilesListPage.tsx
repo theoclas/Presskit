@@ -89,7 +89,7 @@ export function ProfilesListPage({ listPath }: { listPath: string }) {
       if (search.trim() !== q) setParam({ q: search.trim() || null, pagina: null });
     }, 350);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo corre al escribir; q y setParam cambian con cada URL
   }, [search]);
 
   const editPath = (id: string, tab = '') => `${listPath}/${encodeURIComponent(id)}${tab ? `/${tab}` : ''}`;
@@ -194,7 +194,7 @@ export function ProfilesListPage({ listPath }: { listPath: string }) {
         render: (_v, p) => <RowActions profile={p} editPath={editPath} onAction={run} />,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- editPath es una función nueva en cada render que solo depende de listPath
     [listPath, run],
   );
 

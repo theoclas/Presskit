@@ -398,9 +398,13 @@ model BookingRequest {
   consentAt      DateTime
   consentVersion String        @db.VarChar(20)
   ipHash         String        @db.Char(64)
+  /// El DJ la borró de su bandeja (M4): deja de verla, pero el admin la conserva (marcada como
+  /// borrada por el DJ) hasta la purga de 12 meses. El borrado del admin sí es definitivo.
+  ownerDeletedAt DateTime?
   createdAt      DateTime      @default(now())
 
   @@index([profileId, status, createdAt])
+  @@index([profileId, ownerDeletedAt, status])
   @@index([createdAt])
   @@index([ipHash, createdAt])
   @@index([contactEmail])
@@ -494,10 +498,15 @@ model Ticket {
   resolvedAt     DateTime?
   handledById    String?
   handledBy      User?        @relation("TicketHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  /// Honeypot lleno (M4) o marcado a mano por el admin: se guarda, pero no avisa al admin ni
+  /// cuenta en la bandeja, los contadores ni la insignia (el admin puede filtrarlos y desmarcarlos).
+  /// Los topes diarios NO marcan spam: responden 429 (una PQRS no se guarda en silencio).
+  isSpam         Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([status, dueAt])
+  @@index([isSpam, status, dueAt])
   @@index([type, createdAt])
   @@index([email])
 }

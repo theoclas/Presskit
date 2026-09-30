@@ -24,13 +24,44 @@ const MESSAGE_MAX_LINES = 60;
 
 /**
  * Topes diarios (ventana de 24 h, contados en la BD: sobreviven a reinicios, a diferencia del
- * throttler en memoria). Pasado el tope se responde 429 con el correo como alternativa: una
- * PQRS no se puede descartar en silencio como un spam. Deberían vivir en LIMITS.ticket (shared).
+ * throttler en memoria). Deberían vivir en LIMITS.ticket (shared).
+ * Una PQRS tiene plazo legal: pasado un tope NUNCA se guarda en silencio. Quien la envía recibe
+ * un 429 con el correo de contacto como alternativa (como antes de M4). Solo el honeypot se
+ * guarda como spam, sin aviso al admin.
+ * - perIp: tickets de esta IP que no son spam. El honeypot de un bot detrás de la misma IP (CGNAT,
+ *   una oficina) no le cierra el paso a una persona real.
+ * - total: de todas las IP, sin el spam.
+ * - spamPerIp: honeypot de esta IP. Pasado este ya no se guarda (id falso): un solo bot no llena
+ *   la bandeja de spam ni el techo.
+ * - hardTotal (todo, spam incluido): techo contra una avalancha desde muchas IP. Pasado este ya
+ *   no se guarda nada: 429 para una persona y un id falso para el honeypot.
  */
-export const TICKET_DAILY_CAPS = { perIp: 10, total: 200 } as const;
+export const TICKET_DAILY_CAPS = { perIp: 10, total: 200, spamPerIp: 10, hardTotal: 1_000 } as const;
 
-export function ticketCapExceeded(counts: { ip: number; total: number }): boolean {
-  return counts.ip >= TICKET_DAILY_CAPS.perIp || counts.total >= TICKET_DAILY_CAPS.total;
+export interface TicketRecentCounts {
+  /** De esta IP, sin el spam. */
+  ip: number;
+  /** De esta IP, solo el spam. */
+  ipSpam: number;
+  /** De todas las IP, sin el spam. */
+  total: number;
+  /** De todas las IP, spam incluido. */
+  all: number;
+}
+
+/** CAP_HARD: el techo diario; CAP_SPAM_IP: demasiado honeypot desde una IP. */
+export type TicketCapReason = 'CAP_IP' | 'CAP_TOTAL' | 'CAP_SPAM_IP' | 'CAP_HARD';
+
+/**
+ * Qué tope se pasó (null = el ticket se guarda). Con el honeypot lleno solo cuentan el techo y
+ * el tope de spam por IP: los otros dos son para personas reales.
+ */
+export function ticketCapReached(honeypotFilled: boolean, counts: TicketRecentCounts): TicketCapReason | null {
+  if (counts.all >= TICKET_DAILY_CAPS.hardTotal) return 'CAP_HARD';
+  if (honeypotFilled) return counts.ipSpam >= TICKET_DAILY_CAPS.spamPerIp ? 'CAP_SPAM_IP' : null;
+  if (counts.ip >= TICKET_DAILY_CAPS.perIp) return 'CAP_IP';
+  if (counts.total >= TICKET_DAILY_CAPS.total) return 'CAP_TOTAL';
+  return null;
 }
 
 /** Nombre de cada tipo en el aviso al admin (sin texto del público). */
@@ -44,8 +75,9 @@ export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
 const CUID_RANDOM_CHARS = 16;
 
 /**
- * Id falso para el honeypot con la forma de un cuid de Prisma ('c' + 8 de fecha + 16 más, en
- * base 36). Un 'c' + hex delataba al bot que cayó en la trampa (los cuid reales traen g-z).
+ * Id falso para el honeypot cuando ya no se guarda (topes de spam) con la forma de un cuid
+ * de Prisma ('c' + 8 de fecha + 16 más, en base 36). Un 'c' + hex delataba al bot que cayó en
+ * la trampa (los cuid reales traen g-z).
  */
 export function fakeTicketId(now: number = Date.now(), bytes: Uint8Array = randomBytes(CUID_RANDOM_CHARS)): string {
   const time = now.toString(36).padStart(8, '0').slice(-8);

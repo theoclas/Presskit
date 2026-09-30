@@ -17,6 +17,7 @@ import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/AuthProvider';
 import { useStepUp } from '../../auth/useStepUp';
 import { http, stepUpHeaders } from '../../lib/http';
+import { useSyncedState } from '../../lib/useSyncedState';
 import { adminKeys, PAGE_SIZE, useUsers, type UserFilters } from '../api';
 import { LoadError, PageHeader } from '../components';
 import { errorMessage, withStepUp } from '../errors';
@@ -52,14 +53,12 @@ export function UsersPage() {
     page: Number.isInteger(page) && page > 0 ? page : 1,
   };
   const { data, error, isFetching, refetch } = useUsers(filters);
-  const [search, setSearch] = useState(filters.q ?? '');
+  const [search, setSearch] = useSyncedState(filters.q ?? '');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<AdminUserDto | null>(null);
   const [editingEmail, setEditingEmail] = useState<AdminUserDto | null>(null);
   // La contraseña temporal solo vive aquí, y se borra al cerrar el modal.
   const [tempPassword, setTempPassword] = useState<TemporaryPasswordDto | null>(null);
-
-  useEffect(() => setSearch(filters.q ?? ''), [filters.q]);
 
   const update = (patch: Record<string, string | null>) =>
     setParams(
@@ -431,9 +430,15 @@ function EmailModal({ user, onClose, onSaved }: { user: AdminUserDto | null; onC
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Otro usuario (o el mismo al reabrir): el error del intento anterior no aplica.
+  const [errorFor, setErrorFor] = useState(user);
+  if (errorFor !== user) {
+    setErrorFor(user);
+    setError(null);
+  }
+
   useEffect(() => {
     if (user) form.setFieldsValue({ email: user.email ?? '' });
-    setError(null);
   }, [user, form]);
 
   const submit = async (values: { email?: string }) => {
@@ -498,9 +503,13 @@ function DeleteUserModal({
   onConfirmed: (u: AdminUserDto, confirm: string) => void;
 }) {
   const [typed, setTyped] = useState('');
+  // Cada cuenta se confirma desde cero: lo escrito para otra no cuenta.
+  const [typedFor, setTypedFor] = useState(user);
+  if (typedFor !== user) {
+    setTypedFor(user);
+    setTyped('');
+  }
   const matches = !!user && typed.normalize('NFKC').trim().toLowerCase() === user.username;
-
-  useEffect(() => setTyped(''), [user]);
 
   return (
     <Modal

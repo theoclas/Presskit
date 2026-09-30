@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "house",
+    "name": "House",
+    "count": 1
+  },
+  {
+    "slug": "tech-house",
+    "name": "Tech House",
+    "count": 1
+  },
+  {
+    "slug": "minimal-deep-tech",
+    "name": "Minimal Deep Tech",
+    "count": 1
+  },
+  {
+    "slug": "jackin-funky",
+    "name": "Jackin & Funky",
+    "count": 1
+  }
+]

@@ -6,7 +6,7 @@ import type { RequestContext } from '../common/request-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { PublicProfileResolver } from '../public/public-profile.resolver';
 import type { BookingNotifyService } from './booking-notify.service';
-import { BookingTokenService } from './booking-token.service';
+import { FormTokenService } from './form-token.service';
 import { BookingService } from './booking.service';
 
 const PROFILE = {
@@ -60,13 +60,13 @@ function setup(counts: { ipProfile: number; ip: number; profile: number }, opts:
     },
     $transaction: jest.fn(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
   } as unknown as PrismaService;
-  const tokens = new BookingTokenService(config);
+  const tokens = new FormTokenService(config);
   const resolver = new PublicProfileResolver(prisma);
   const ctx = { ipHash: () => 'a'.repeat(64) } as unknown as RequestContext;
   const notify = { newBooking: jest.fn(async () => undefined) };
   const service = new BookingService(prisma, resolver, tokens, ctx, config, notify as unknown as BookingNotifyService);
   // Token emitido hace 5 s para pasar el tiempo mínimo.
-  const token = tokens.issue(PROFILE.slug, Date.now() - 5_000);
+  const token = tokens.issue('booking', PROFILE.slug, Date.now() - 5_000);
   return { service, created, token, tx, notify };
 }
 

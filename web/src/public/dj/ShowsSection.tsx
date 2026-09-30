@@ -1,6 +1,5 @@
 import type { PageTexts, PublicEventDto } from '@fersua/shared';
 import { useState } from 'react';
-import { EXTERNAL_REL } from '../../lib/safeUrl';
 import { FlyerDialog } from './FlyerDialog';
 import { ShowItem } from './ShowItem';
 
@@ -33,7 +32,7 @@ export function ShowsSection({ texts, events, openDateUrl }: Props) {
               <div className="show-date">{texts.openDateLabel}</div>
               <div className="show-place">{texts.openDateText}</div>
               <div className="show-cta">
-                <a href={openDateUrl} target="_blank" rel={EXTERNAL_REL}>
+                <a href={openDateUrl} target="_blank" rel="noopener noreferrer nofollow ugc">
                   {texts.openDateCta}
                 </a>
               </div>

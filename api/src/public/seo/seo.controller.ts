@@ -23,7 +23,8 @@ export class SeoController {
   @Get('shell')
   async page(@Query('path') path: unknown, @Res() res: Response): Promise<void> {
     const result = await this.shell.render(path);
-    // no-cache (no no-store): el edge puede revalidar, pero nunca servir una versión vieja sin preguntar.
+    // no-cache es para el navegador. La microcaché del edge (M4) lo ignora y guarda el shell 10 s
+    // (y lo sirve viejo si el api se cae); para que no lo guarde: no-store, private o X-Accel-Expires: 0.
     res.setHeader('Cache-Control', 'no-cache');
     if (result.status === 301 || !result.indexable) res.setHeader('X-Robots-Tag', 'noindex');
     if (result.status === 301) {

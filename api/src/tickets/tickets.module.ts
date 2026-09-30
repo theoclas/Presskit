@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
+import { BookingModule } from '../booking/booking.module';
 import { PublicModule } from '../public/public.module';
 import { TicketsController } from './tickets.controller';
 import { TicketsService } from './tickets.service';
 
 // Tickets públicos (PQRS / habeas data, reportes de perfil, solicitudes art. 53).
 // La bandeja está en AdminModule; el aviso por correo al admin sale de TicketsService.
+// BookingModule: FormTokenService (el token de formulario, con propósito 'ticket').
 @Module({
-  imports: [PublicModule],
+  imports: [PublicModule, BookingModule],
   controllers: [TicketsController],
   providers: [TicketsService],
 })

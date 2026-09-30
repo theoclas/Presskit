@@ -110,6 +110,14 @@ export interface BookingSubmitResultDto {
   whatsappUrl: string | null;
 }
 
+/**
+ * GET /api/public/tickets/token (no-store). Token de un solo uso del formulario de PQRS y
+ * reportes (M4): el mismo esquema que el de booking, pero no sirve para booking ni al revés.
+ */
+export interface TicketTokenDto {
+  token: string;
+}
+
 export interface TicketSubmitDto {
   type: TicketType;
   name: string;
@@ -120,6 +128,12 @@ export interface TicketSubmitDto {
   subject: string;
   message: string;
   consent: true;
+  /**
+   * De GET /api/public/tickets/token (M4). Vale desde 2 s hasta 2 h después de emitido y una
+   * sola vez: 400 FORM_TOKEN_INVALID / FORM_TOO_FAST / FORM_EXPIRED / FORM_TOKEN_USED.
+   */
+  token: string;
+  /** Honeypot: debe llegar vacío. */
   hp_x7?: string;
 }
 

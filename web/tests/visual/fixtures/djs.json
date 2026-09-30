@@ -1,0 +1,76 @@
+[
+  {
+    "slug": "macfly-mike-bran",
+    "displayName": "Mike Bran & Macfly",
+    "tagline": "Dúo de DJs de Medellín · House, Tech House & Minimal Deep Tech",
+    "city": "Medellín",
+    "palette": "SUNSET",
+    "featured": true,
+    "cardImage": {
+      "id": "fx-card",
+      "width": 1152,
+      "height": 1440,
+      "alt": "Foto de Mike Bran & Macfly",
+      "variants": [
+        {
+          "w": 400,
+          "h": 500,
+          "url": "/media/fixture/card/400.webp"
+        },
+        {
+          "w": 800,
+          "h": 1000,
+          "url": "/media/fixture/card/800.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    "heroImage": {
+      "id": "fx-hero",
+      "width": 2560,
+      "height": 1440,
+      "alt": "Foto de Mike Bran & Macfly",
+      "variants": [
+        {
+          "w": 480,
+          "h": 270,
+          "url": "/media/fixture/hero/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 540,
+          "url": "/media/fixture/hero/960.webp"
+        },
+        {
+          "w": 1440,
+          "h": 810,
+          "url": "/media/fixture/hero/1440.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    "genres": [
+      {
+        "slug": "house",
+        "name": "House"
+      },
+      {
+        "slug": "tech-house",
+        "name": "Tech House"
+      },
+      {
+        "slug": "minimal-deep-tech",
+        "name": "Minimal Deep Tech"
+      },
+      {
+        "slug": "jackin-funky",
+        "name": "Jackin & Funky"
+      }
+    ],
+    "nextEvent": {
+      "date": "2025-11-14",
+      "dateLabel": "14 NOV",
+      "venue": "Ramasound Garden"
+    }
+  }
+]

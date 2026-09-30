@@ -8,6 +8,8 @@ import { AdminBookingsService } from './bookings/admin-bookings.service';
 import { AdminGenresController } from './genres/admin-genres.controller';
 import { AdminGenresService } from './genres/admin-genres.service';
 import { AdminOnlyGuard } from './admin-only.guard';
+import { AdminLegalController } from './legal/admin-legal.controller';
+import { AdminLegalService } from './legal/admin-legal.service';
 import { AdminStatsController } from './stats/admin-stats.controller';
 import { AdminStatsService } from './stats/admin-stats.service';
 import { AdminTicketsController } from './tickets/admin-tickets.controller';
@@ -28,6 +30,7 @@ import { AdminUsersService } from './users/admin-users.service';
     AdminTicketsController,
     AdminAuditController,
     AdminGenresController,
+    AdminLegalController,
   ],
   providers: [
     AdminOnlyGuard,
@@ -37,6 +40,7 @@ import { AdminUsersService } from './users/admin-users.service';
     AdminTicketsService,
     AdminAuditService,
     AdminGenresService,
+    AdminLegalService,
   ],
   exports: [],
 })

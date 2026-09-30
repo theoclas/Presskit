@@ -42,7 +42,8 @@ function listInclude(today: string) {
       take: 1,
       select: { date: true },
     },
-    _count: { select: { bookings: { where: { status: 'NEW' } } } },
+    // Sin leer: las que el DJ borró de su bandeja (borrado suave) ya no cuentan.
+    _count: { select: { bookings: { where: { status: 'NEW', ownerDeletedAt: null } } } },
   } satisfies Prisma.DjProfileInclude;
 }
 
@@ -181,7 +182,8 @@ export class AdminProfilesService {
    * perfil (cascada: integrantes, redes, galería, rider, fechas, solicitudes, redirecciones)
    * en una transacción, y SOLO después del commit borrar las carpetas en disco.
    * - No se puede con un reporte o una solicitud de datos (art. 53) abiertos sobre el perfil:
-   *   primero se atienden (después no habría perfil al que referirse).
+   *   primero se atienden (después no habría perfil al que referirse). Los marcados como spam
+   *   no frenan el borrado.
    * - El registro del art. 53 NO se borra: queda sin perfil, con el slug y el nombre de ese
    *   momento, y el job de retención lo purga a los 12 meses (docs/diseno/11 §5).
    */
@@ -192,7 +194,7 @@ export class AdminProfilesService {
       throw Errors.badRequest('CONFIRM_MISMATCH', 'Escribe la dirección exacta del perfil para confirmar el borrado.');
     }
     const openTickets = await this.prisma.ticket.count({
-      where: { profileId, type: { in: [...PROFILE_TICKET_TYPES] }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      where: { profileId, isSpam: false, type: { in: [...PROFILE_TICKET_TYPES] }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
     });
     if (openTickets) {
       throw Errors.conflict(

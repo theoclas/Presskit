@@ -13,6 +13,7 @@ export const bookingListSelect = {
   contactPhone: true,
   eventDate: true,
   status: true,
+  ownerDeletedAt: true,
   createdAt: true,
 } satisfies Prisma.BookingRequestSelect;
 
@@ -36,6 +37,8 @@ export function toBookingListItem(row: ListRow): BookingListItemDto {
     contactPhone: row.contactPhone,
     eventDate: row.eventDate ? dateOnlyFromDb(row.eventDate) : null,
     status: row.status,
+    // Solo la marca: la fecha del borrado del DJ no le sirve a nadie en la bandeja.
+    ownerDeleted: row.ownerDeletedAt !== null,
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -84,6 +84,7 @@ const booking: BookingListItemDto = {
   contactPhone: '+57 (300) 123-4567',
   eventDate: '2026-11-14',
   status: 'NEW',
+  ownerDeleted: false,
   createdAt: '2026-09-28T20:10:00.000Z',
 };
 

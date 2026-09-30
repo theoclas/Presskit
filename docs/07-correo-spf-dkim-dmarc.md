@@ -52,4 +52,4 @@ nslookup -type=TXT _dmarc.fersuastudio.com 8.8.8.8
 - Envía un correo real (p. ej. "olvidé mi contraseña") a Gmail → "Mostrar original": SPF, DKIM y DMARC en **PASS**.
 - mail-tester.com: apunta a 9/10 o más.
 - Revisa el límite diario de envío de tu plan de Hostinger: si se agota, los correos de restablecer contraseña también fallan.
-- En el cambio de dominio **no se tocan** MX, SPF, DKIM ni DMARC.
+- La app no cambia MX, SPF, DKIM ni DMARC: el dominio principal y su correo se quedan en Hostinger (decisión del 2026-09-30).

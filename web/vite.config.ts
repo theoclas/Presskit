@@ -53,12 +53,21 @@ export default defineConfig({
   build: {
     sourcemap: false,
     target: 'es2022',
+    // El chunk de AntD (ui-kit) pesa ~1,1 MB (~350 kB gzip) y solo lo baja quien entra a /admin o
+    // /panel; el límite de 500 kB avisaría en cada build sin que haya nada que hacer.
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
         manualChunks(id) {
           // React, router y TanStack cambian poco: van aparte para aprovechar la caché del navegador.
           if (/[\\/]node_modules[\\/](react|react-dom|react-router|scheduler|cookie|set-cookie-parser|@tanstack)[\\/]/.test(id)) {
             return 'vendor';
+          }
+          // AntD y sus componentes base: un chunk propio que comparten /admin y /panel y que el
+          // navegador guarda en caché entre despliegues. Nunca entra en la carga pública. No se
+          // llama 'antd': ci:bundle busca ese nombre en la entrada, que lista los chunks diferidos.
+          if (/[\\/]node_modules[\\/](antd|@ant-design|@rc-component|rc-[a-z-]+)[\\/]/.test(id)) {
+            return 'ui-kit';
           }
           return undefined;
         },

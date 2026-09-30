@@ -18,7 +18,7 @@ import { LEGAL_DOCS, addDays, defaultFormConfig, todayBogota } from '@fersua/sha
 import { AppModule } from '../src/app.module';
 import { PasswordHasher } from '../src/auth/password/password-hasher.service';
 import { SessionService } from '../src/auth/tokens/session.service';
-import { BookingTokenService } from '../src/booking/booking-token.service';
+import { FormTokenService } from '../src/booking/form-token.service';
 import { AppConfig } from '../src/config/app-config.service';
 import { OwnerEditBudget, OWNER_EDITS_PER_WINDOW } from '../src/common/guards/owner-edit-budget.guard';
 import { MailService } from '../src/mail/mail.service';
@@ -129,7 +129,7 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
 
   function submitBooking(slug: string, fields: Record<string, string>, extra: Record<string, unknown> = {}) {
     // Token emitido hace 5 s: pasa el tiempo mínimo de llenado sin dormir la prueba.
-    const token = app.get(BookingTokenService).issue(slug, Date.now() - 5_000);
+    const token = app.get(FormTokenService).issue('booking', slug, Date.now() - 5_000);
     return request(server)
       .post(`/api/public/djs/${slug}/booking-requests`)
       .set('Origin', origin)

@@ -9,6 +9,10 @@
 // 4. deploy/edge/default.conf: se emula la selección de location de nginx y se comprueba que
 //    las rutas de API_ROUTES (@fersua/shared) caen en el location con el límite correcto.
 // 5. Scripts .sh con LF, y el init de MySQL con bit de ejecución en git.
+// 6. Microcaché del edge (M4): solo en las lecturas públicas sin cookies, nunca en
+//    booking-token, booking-requests, tickets ni rutas con sesión; X-Cache-Status presente;
+//    clave con esquema, host y URI; cabe en el tmpfs del edge. Sin reglas para Allset ni
+//    /pedido: las atiende el shell (decisión del 2026-09-30, dominio definitivo en booking.).
 //
 // Sin dependencias: el compose se lee con un parser mínimo por indentación (el archivo lo
 // mantenemos nosotros y usa YAML simple).
@@ -176,7 +180,25 @@ function parseLocations(text) {
   return locs;
 }
 
-const locations = parseLocations(defaultConf.replace(/^\s*#.*$/gm, ''));
+const stripConfComments = (text) => text.replace(/^\s*#.*$/gm, '');
+const snippetPath = (name) => `deploy/edge/snippets/${name}`;
+
+// Un include de un snippet con locations se reemplaza por su contenido:
+// nginx evalúa esas regex en la posición del include. Los de cabeceras o proxy se dejan tal
+// cual (las comprobaciones buscan el nombre del snippet en el cuerpo del location).
+const expandedDefaultConf = defaultConf.replace(
+  /^[ \t]*include\s+\/etc\/nginx\/snippets\/([A-Za-z0-9_.-]+\.conf);[ \t]*$/gm,
+  (line, name) => {
+    if (!existsSync(resolve(root, snippetPath(name)))) {
+      fail(`default.conf incluye snippets/${name}, que no existe en deploy/edge/snippets/`);
+      return line;
+    }
+    const body = stripConfComments(read(snippetPath(name)));
+    return /(^|\s)location\s/.test(body) ? body : line;
+  },
+);
+
+const locations = parseLocations(stripConfComments(expandedDefaultConf));
 
 /** Selección de location como nginx: exacto, prefijo más largo (^~ corta), regex en orden. */
 function selectLocation(uri) {
@@ -276,6 +298,180 @@ for (const loc of locations) {
   if (servesContent && !isPlainReturn) {
     check(loc.body.includes('security-headers.conf'), `location ${loc.mod} ${loc.pattern} no incluye security-headers.conf`);
   }
+}
+
+// ---------------------------------------------------------------------------- microcaché (M4)
+const MICRO = 'microcache.conf';
+const usesMicro = (body) => new RegExp(`include\\s+\\S*${MICRO.replace('.', '\\.')};`).test(body);
+const describeLoc = (loc) => (loc ? `${loc.mod} ${loc.pattern}`.trim() : '(ninguno)');
+
+/** El location elegido y los named a los que salta con try_files (p. ej. @shell). */
+function reachedLocations(uri) {
+  const loc = selectLocation(uri);
+  if (!loc) return [];
+  const out = [loc];
+  for (const m of loc.body.matchAll(/try_files\s[^;]*?(@[A-Za-z0-9_]+)\s*;/g)) {
+    const named = locations.find((l) => l.pattern === m[1]);
+    if (named) out.push(named);
+  }
+  return out;
+}
+const cachedLoc = (uri) => reachedLocations(uri).find((l) => usesMicro(l.body)) ?? null;
+
+const microText = existsSync(resolve(root, snippetPath(MICRO))) ? stripConfComments(read(snippetPath(MICRO))) : '';
+check(microText, `falta deploy/edge/snippets/${MICRO}`);
+const directive = (text, name) =>
+  [...text.matchAll(new RegExp(`^\\s*${name}\\s+([^;]*);`, 'gm'))].map((m) => m[1].trim());
+
+// Qué se cachea: páginas públicas (shell), lecturas anónimas del api, sitemap y robots.
+const mustCache = [
+  ['/', 'la portada (shell)'],
+  ['/macfly-mike-bran', 'la página de un DJ (@shell)'],
+  ['/MacflyMikebran.html', 'un slug viejo (301 del shell)'],
+  ['/sitemap.xml', 'sitemap'],
+  ['/robots.txt', 'robots'],
+];
+// Qué nunca se cachea: tokens, formularios, sesión, admin, estáticos y el api por fuera de
+// sus lecturas públicas. Además, toda ruta de API_ROUTES que no esté en la lista de arriba.
+const neverCache = [
+  '/api/public/djs/abc/extra',
+  '/api/me',
+  '/api/me/profile',
+  '/api/me/profile/media',
+  '/api/admin/profiles',
+  '/api/admin/profiles/ckabc123/media',
+  '/api/admin/users',
+  '/panel/perfil',
+  '/_preview',
+  '/index.html',
+  '/assets/index-abc123.js',
+  '/media/abc123/k9x/480.webp',
+  '/healthz',
+];
+if (R) {
+  const cacheableApi = new Set([R.publicDjs, R.publicGenres, R.publicDj('abc')]);
+  mustCache.push(
+    [R.publicDjs, 'la lista de DJs'],
+    [`${R.publicDjs}/`, 'la lista de DJs con barra final'],
+    [R.publicDj('macfly-mike-bran'), 'la ficha de un DJ'],
+    [R.publicDj('MacflyMikebran'), 'la ficha con un slug viejo (301)'],
+    [R.publicGenres, 'los géneros'],
+  );
+  neverCache.push(
+    R.bookingToken('abc'),
+    R.bookingToken('macfly-mike-bran'),
+    `${R.bookingToken('abc')}/`,
+    R.bookingToken('ABC'),
+    R.bookingToken('abc').toUpperCase(),
+    R.bookingRequests('abc'),
+    `${R.bookingRequests('abc')}/`,
+    R.tickets,
+    `${R.tickets}/`,
+    `${R.tickets}/token`,
+    R.shell,
+  );
+  // Cualquier ruta nueva de API_ROUTES (p. ej. el token de PQRS) queda fuera de la caché
+  // salvo que se agregue a propósito a las listas de arriba.
+  for (const [name, value] of Object.entries(R)) {
+    const uri = typeof value === 'function' ? value('abc') : value;
+    if (typeof uri === 'string' && !cacheableApi.has(uri)) neverCache.push(uri);
+    else if (typeof uri !== 'string') fail(`API_ROUTES.${name} no es una ruta (string o función)`);
+  }
+}
+
+for (const [uri, desc] of mustCache) {
+  check(cachedLoc(uri), `microcaché: ${desc} ("${uri}") debería usar ${MICRO} (cae en ${reachedLocations(uri).map(describeLoc).join(' -> ') || '(ninguno)'})`);
+}
+for (const uri of new Set(neverCache)) {
+  const loc = cachedLoc(uri);
+  check(!loc, `microcaché: "${uri}" NUNCA debe cachearse y cae en location ${describeLoc(loc)} con ${MICRO}`);
+}
+
+// Cada location con microcaché: sin cookies, con cabeceras de seguridad y con un rewrite que
+// le pase al api la misma URI de la clave (ver microcache.conf: envenenamiento con //api o %64).
+const reachedByMust = new Set(mustCache.flatMap(([uri]) => reachedLocations(uri)));
+for (const loc of locations.filter((l) => usesMicro(l.body))) {
+  const name = describeLoc(loc);
+  check(reachedByMust.has(loc), `location ${name} usa ${MICRO} pero no está en mustCache de check-compose: agrégalo a propósito o quítale la caché`);
+  check(loc.body.includes('proxy-api-public.conf'), `location ${name} con microcaché debe usar proxy-api-public.conf (sin cookies)`);
+  check(!/proxy-api\.conf;/.test(loc.body), `location ${name} con microcaché no puede usar proxy-api.conf (reenvía cookies)`);
+  check(loc.body.includes('security-headers.conf'), `location ${name} con microcaché debe incluir security-headers.conf`);
+  check(/^\s*rewrite\s+\S+\s+\S+\s+break;/m.test(loc.body), `location ${name} con microcaché necesita un "rewrite ... break" (URI normalizada = clave)`);
+  // El ? final descarta la query del cliente: sin él, /api/public/djs?x=<azar> es un MISS (y una
+  // consulta a la BD) en cada petición.
+  check(
+    /^\s*rewrite\s+\S+\s+\S+\?\s+break;/m.test(loc.body),
+    `location ${name} con microcaché: el rewrite debe terminar en "?" (descarta la query del cliente, que si no salta la caché)`,
+  );
+}
+
+// Las directivas de caché viven solo en microcache.conf (y proxy_cache_path en nginx.conf).
+const cacheDirective = /^\s*(proxy_cache(?!_path)\w*|proxy_no_cache|proxy_ignore_headers)\s/m;
+check(!cacheDirective.test(stripConfComments(defaultConf)), `default.conf tiene directivas de caché sueltas: van en snippets/${MICRO}`);
+check(!cacheDirective.test(stripConfComments(nginxConf)), `nginx.conf tiene directivas de caché del nivel http: van en snippets/${MICRO}`);
+for (const f of readdirSync(resolve(root, 'deploy/edge/snippets')).filter((n) => n.endsWith('.conf') && n !== MICRO)) {
+  check(!cacheDirective.test(stripConfComments(read(snippetPath(f)))), `snippets/${f} tiene directivas de caché: van en ${MICRO}`);
+}
+
+// Contenido de microcache.conf.
+check(directive(microText, 'proxy_cache').join() === 'micro', 'microcache.conf debe tener "proxy_cache micro;"');
+const cacheKey = (directive(microText, 'proxy_cache_key')[0] ?? '').replace(/^"|"$/g, '');
+for (const v of ['$edge_scheme', '$host', '$uri', '$args']) {
+  check(cacheKey.includes(v), `la clave de la caché (${cacheKey || 'no definida'}) debe incluir ${v}`);
+}
+for (const valid of directive(microText, 'proxy_cache_valid')) {
+  const parts = valid.split(/\s+/);
+  const time = parts.pop();
+  const seconds = /^(\d+)s$/.test(time) ? Number(time.slice(0, -1)) : Infinity;
+  check(seconds <= 10, `proxy_cache_valid ${valid}: la microcaché es de 10 s como máximo`);
+  check(parts.length > 0 && parts.every((c) => ['200', '301', '404'].includes(c)), `proxy_cache_valid ${valid}: solo 200, 301 y 404 (nunca any, 302 ni errores)`);
+}
+check(directive(microText, 'proxy_cache_valid').length > 0, 'microcache.conf debe fijar proxy_cache_valid');
+check(directive(microText, 'proxy_cache_lock').join() === 'on', 'microcache.conf debe tener proxy_cache_lock on');
+check(directive(microText, 'proxy_cache_bypass').some((v) => v.includes('$http_authorization')), 'proxy_cache_bypass debe incluir $http_authorization');
+const noCache = directive(microText, 'proxy_no_cache').join(' ');
+for (const v of ['$http_authorization', '$upstream_http_set_cookie', '$edge_upstream_nostore']) {
+  check(noCache.includes(v), `proxy_no_cache debe incluir ${v}`);
+}
+const ignored = directive(microText, 'proxy_ignore_headers').join(' ').split(/\s+/).filter(Boolean);
+for (const h of ['Set-Cookie', 'Vary']) {
+  check(!ignored.some((i) => i.toLowerCase() === h.toLowerCase()), `proxy_ignore_headers no puede ignorar ${h}`);
+}
+check(
+  directive(microText, 'add_header').some((v) => /^X-Cache-Status\s+\$upstream_cache_status\s+always$/.test(v)),
+  'microcache.conf debe agregar "X-Cache-Status $upstream_cache_status always"',
+);
+
+// nginx.conf: la zona en /tmp (tmpfs), la marca no-store/private y el esquema de la clave.
+const cachePath = directive(nginxConf, 'proxy_cache_path');
+check(cachePath.length === 1, `nginx.conf debe tener un solo proxy_cache_path (hay ${cachePath.length})`);
+if (cachePath[0]) {
+  const cp = cachePath[0];
+  check(/^\/tmp\//.test(cp), `proxy_cache_path debe estar en /tmp (el edge es read_only): ${cp}`);
+  check(/\bkeys_zone=micro:\d+m\b/.test(cp), 'proxy_cache_path debe definir keys_zone=micro');
+  check(/\buse_temp_path=off\b/.test(cp), 'proxy_cache_path debe usar use_temp_path=off');
+  const maxSize = cp.match(/\bmax_size=(\d+)m\b/);
+  const tmpfs = listValues(services.edge?.tmpfs).map((t) => t.match(/^\/tmp:.*\bsize=(\d+)m\b/)).find(Boolean);
+  check(maxSize && tmpfs, 'no pude leer max_size de proxy_cache_path (en MB) o el tmpfs /tmp del edge en compose');
+  if (maxSize && tmpfs) {
+    check(
+      Number(maxSize[1]) * 2 <= Number(tmpfs[1]),
+      `la microcaché (max_size=${maxSize[1]}m) debe caber en la mitad del tmpfs del edge (${tmpfs[1]}m): /tmp también guarda los temporales de nginx`,
+    );
+  }
+}
+const nostoreMap = nginxConf.match(/map\s+\$upstream_http_cache_control\s+\$edge_upstream_nostore\s*\{([^}]*)\}/);
+check(nostoreMap && /no-store/.test(nostoreMap[1]) && /private/.test(nostoreMap[1]), 'nginx.conf debe marcar $edge_upstream_nostore cuando el api manda no-store o private');
+check(/map\s+\$http_x_forwarded_proto\s+\$edge_scheme\s*\{/.test(nginxConf), 'nginx.conf debe definir $edge_scheme (esquema de la clave)');
+
+// ---------------------------------------------------------------------------- URLs del sitio viejo
+// Decisión del 2026-09-30: booking.fersuastudio.com es el dominio definitivo y fersuastudio.com
+// (con Allset) se queda en Hostinger. Nada de reglas, 410 ni redirecciones para Allset o /pedido:
+// aquí son una ruta más y las atiende el shell (404 si no hay un DJ con ese slug), igual que
+// /DiannMakinne y /Molly, que pueden llegar a ser slugs de DJs.
+for (const uri of ['/Allset', '/allset', '/Allset.html', '/pedido', '/pedido.html', '/DiannMakinne', '/Molly', '/Molly.html', '/MOLLY']) {
+  const reached = reachedLocations(uri);
+  check(reached.some((l) => l.pattern === '@shell'), `"${uri}" debe ir al shell (cae en ${reached.map(describeLoc).join(' -> ') || '(ninguno)'})`);
 }
 
 // ---------------------------------------------------------------------------- scripts .sh

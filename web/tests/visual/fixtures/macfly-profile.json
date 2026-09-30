@@ -1,0 +1,691 @@
+{
+  "slug": "macfly-mike-bran",
+  "displayName": "Mike Bran & Macfly",
+  "palette": "SUNSET",
+  "texts": {
+    "navTag": "Booking",
+    "navArtists": "Artistas",
+    "navEvents": "Fechas",
+    "navBooking": "Solicitud",
+    "heroLabel": "DJs",
+    "heroTitle": "Electronic club show",
+    "heroSubtitle": "Mike Bran & Macfly son un dúo de DJs originarios de Medellín, dedicados a llevar energía y buen ritmo a cualquier tipo de escenario. Con una gran versatilidad horaria, ofrecen sets inmersivos cargados de groove y atmósferas electrónicas que conectan con el público desde el primer beat.",
+    "heroNote": "",
+    "heroPrimaryCta": "WhatsApp Booking",
+    "heroWhatsappMessage": "Hola quiero cotizar booking",
+    "heroSecondaryCta": "Enviar solicitud",
+    "heroPhotoAlt": "Show de Mike Bran & Macfly",
+    "heroCaptionLeft": "Live club show",
+    "heroCaptionRight": "2024 / 2025",
+    "riderCardLabel": "Live Setup",
+    "riderCardTitle": "Specs",
+    "riderButton": "Rider Técnico",
+    "riderTitle": "",
+    "galleryCardLabel": "Media",
+    "galleryCardTitle": "Highlights",
+    "galleryButton": "Photos",
+    "galleryTitle": "Galería",
+    "artistsTitle": "Artistas",
+    "artistsSubtitle": "Bookea a cada DJ por separado o el show completo.",
+    "eventsTitle": "Fechas",
+    "eventsSubtitle": "Agenda actual y espacios abiertos para nuevas reservas.",
+    "eventsNote": "Para otras fechas o giras, envía tu idea de evento y coordinamos agenda completa.",
+    "eventsEmpty": "Pronto anunciaremos nuevas fechas.",
+    "eventCtaLabel": "Book",
+    "eventWhatsappMessage": "Quiero estar en el evento de {evento} ({fecha})",
+    "openDateLabel": "Disponible",
+    "openDateText": "Abrir nueva fecha",
+    "openDateCta": "Reservar",
+    "openDateWhatsappMessage": "",
+    "bookingTitle": "Solicitud de booking",
+    "bookingSubtitle": "Completa los datos básicos y te responderemos con la propuesta y condiciones.",
+    "bookingSubmit": "Enviar solicitud",
+    "bookingWhatsappButton": "Hablar por WhatsApp",
+    "bookingWhatsappMessage": "Hola quiero booking",
+    "bookingDisclaimer": "Te contactaremos por email o WhatsApp con info de disponibilidad, cachet y rider técnico.",
+    "bookingSuccess": "¡Solicitud enviada! Ahora te llevamos a WhatsApp para continuar.",
+    "footerText": "Mike Bran & Macfly — Booking"
+  },
+  "heroImage": {
+    "id": "fx-hero",
+    "width": 2560,
+    "height": 1440,
+    "alt": "Show de Mike Bran & Macfly",
+    "variants": [
+      {
+        "w": 480,
+        "h": 270,
+        "url": "/media/fixture/hero/480.webp"
+      },
+      {
+        "w": 960,
+        "h": 540,
+        "url": "/media/fixture/hero/960.webp"
+      },
+      {
+        "w": 1440,
+        "h": 810,
+        "url": "/media/fixture/hero/1440.webp"
+      }
+    ],
+    "ogUrl": null
+  },
+  "genres": [
+    {
+      "slug": "house",
+      "name": "House"
+    },
+    {
+      "slug": "tech-house",
+      "name": "Tech House"
+    },
+    {
+      "slug": "minimal-deep-tech",
+      "name": "Minimal Deep Tech"
+    },
+    {
+      "slug": "jackin-funky",
+      "name": "Jackin & Funky"
+    }
+  ],
+  "socials": [],
+  "members": [
+    {
+      "id": "fx-member-1",
+      "name": "Mike Bran",
+      "role": "House / Tech / Jackin · DJ",
+      "description": "Un sonido cargado de groove y energía, con atmósferas alegres y melodías emotivas que iluminan cualquier dancefloor.",
+      "photo": {
+        "id": "fx-member-mikebran",
+        "width": 1564,
+        "height": 2560,
+        "alt": "Mike Bran",
+        "variants": [
+          {
+            "w": 240,
+            "h": 393,
+            "url": "/media/fixture/member-mikebran/240.webp"
+          },
+          {
+            "w": 480,
+            "h": 786,
+            "url": "/media/fixture/member-mikebran/480.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "socials": [
+        {
+          "platform": "INSTAGRAM",
+          "label": "Instagram",
+          "url": "https://www.instagram.com/mikebran_/"
+        },
+        {
+          "platform": "SOUNDCLOUD",
+          "label": "SoundCloud",
+          "url": "https://soundcloud.com/macfly-mike-bran/grood-taste-dj-contest-district-2025"
+        }
+      ]
+    },
+    {
+      "id": "fx-member-2",
+      "name": "Macfly",
+      "role": "Tech House / Minimal deep Tech / House · DJ",
+      "description": "Energía marcada por bajos firmes, capas sintéticas con atmósferas que generan tensión y movimiento.",
+      "photo": {
+        "id": "fx-member-macfly",
+        "width": 853,
+        "height": 1280,
+        "alt": "Macfly",
+        "variants": [
+          {
+            "w": 240,
+            "h": 360,
+            "url": "/media/fixture/member-macfly/240.webp"
+          },
+          {
+            "w": 480,
+            "h": 720,
+            "url": "/media/fixture/member-macfly/480.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "socials": [
+        {
+          "platform": "INSTAGRAM",
+          "label": "Instagram",
+          "url": "https://www.instagram.com/macfly_ofc/"
+        },
+        {
+          "platform": "SOUNDCLOUD",
+          "label": "SoundCloud",
+          "url": "https://soundcloud.com/macfly-mike-bran/grood-taste-dj-contest-district-2025"
+        }
+      ]
+    }
+  ],
+  "riderItems": [
+    {
+      "name": "DJM V10",
+      "note": null
+    },
+    {
+      "name": "ALLEN HEATH XONE 92/96",
+      "note": null
+    },
+    {
+      "name": "DJM 900NXS2",
+      "note": null
+    },
+    {
+      "name": "CDJ 3000",
+      "note": null
+    },
+    {
+      "name": "CDJ 2000 NEXUS 2",
+      "note": null
+    },
+    {
+      "name": "XDJ XZ/RX3",
+      "note": null
+    },
+    {
+      "name": "RMX 1000",
+      "note": null
+    }
+  ],
+  "gallery": [
+    {
+      "id": "fx-gallery-1",
+      "width": 2080,
+      "height": 1170,
+      "alt": "Mike Bran & Macfly — foto 1",
+      "variants": [
+        {
+          "w": 480,
+          "h": 270,
+          "url": "/media/fixture/gallery-1/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 540,
+          "url": "/media/fixture/gallery-1/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 900,
+          "url": "/media/fixture/gallery-1/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-2",
+      "width": 1221,
+      "height": 812,
+      "alt": "Mike Bran & Macfly — foto 2",
+      "variants": [
+        {
+          "w": 480,
+          "h": 319,
+          "url": "/media/fixture/gallery-2/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 638,
+          "url": "/media/fixture/gallery-2/960.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-3",
+      "width": 2560,
+      "height": 1707,
+      "alt": "Mike Bran & Macfly — foto 3",
+      "variants": [
+        {
+          "w": 480,
+          "h": 320,
+          "url": "/media/fixture/gallery-3/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 640,
+          "url": "/media/fixture/gallery-3/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 1067,
+          "url": "/media/fixture/gallery-3/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-4",
+      "width": 2560,
+      "height": 1707,
+      "alt": "Mike Bran & Macfly — foto 4",
+      "variants": [
+        {
+          "w": 480,
+          "h": 320,
+          "url": "/media/fixture/gallery-4/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 640,
+          "url": "/media/fixture/gallery-4/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 1067,
+          "url": "/media/fixture/gallery-4/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-5",
+      "width": 2560,
+      "height": 1707,
+      "alt": "Mike Bran & Macfly — foto 5",
+      "variants": [
+        {
+          "w": 480,
+          "h": 320,
+          "url": "/media/fixture/gallery-5/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 640,
+          "url": "/media/fixture/gallery-5/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 1067,
+          "url": "/media/fixture/gallery-5/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-6",
+      "width": 2560,
+      "height": 1707,
+      "alt": "Mike Bran & Macfly — foto 6",
+      "variants": [
+        {
+          "w": 480,
+          "h": 320,
+          "url": "/media/fixture/gallery-6/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 640,
+          "url": "/media/fixture/gallery-6/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 1067,
+          "url": "/media/fixture/gallery-6/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-7",
+      "width": 2560,
+      "height": 1707,
+      "alt": "Mike Bran & Macfly — foto 7",
+      "variants": [
+        {
+          "w": 480,
+          "h": 320,
+          "url": "/media/fixture/gallery-7/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 640,
+          "url": "/media/fixture/gallery-7/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 1067,
+          "url": "/media/fixture/gallery-7/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    },
+    {
+      "id": "fx-gallery-8",
+      "width": 2560,
+      "height": 1707,
+      "alt": "Mike Bran & Macfly — foto 8",
+      "variants": [
+        {
+          "w": 480,
+          "h": 320,
+          "url": "/media/fixture/gallery-8/480.webp"
+        },
+        {
+          "w": 960,
+          "h": 640,
+          "url": "/media/fixture/gallery-8/960.webp"
+        },
+        {
+          "w": 1600,
+          "h": 1067,
+          "url": "/media/fixture/gallery-8/1600.webp"
+        }
+      ],
+      "ogUrl": null
+    }
+  ],
+  "events": [
+    {
+      "id": "fx-event-1",
+      "date": "2025-11-14",
+      "dateLabel": "14 NOV",
+      "time": null,
+      "title": null,
+      "venue": "Ramasound Garden",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2025-11-14",
+        "width": 899,
+        "height": 1599,
+        "alt": "Flyer: Ramasound Garden — 14 NOV",
+        "variants": [
+          {
+            "w": 540,
+            "h": 960,
+            "url": "/media/fixture/flyer-2025-11-14/540.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Ramasound%20Garden%20(14%20de%20noviembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-2",
+      "date": "2025-11-16",
+      "dateLabel": "16 NOV",
+      "time": null,
+      "title": null,
+      "venue": "Paramount Records x Nakai Rooftop",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2025-11-16",
+        "width": 879,
+        "height": 1599,
+        "alt": "Flyer: Paramount Records x Nakai Rooftop — 16 NOV",
+        "variants": [
+          {
+            "w": 540,
+            "h": 982,
+            "url": "/media/fixture/flyer-2025-11-16/540.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Paramount%20Records%20x%20Nakai%20Rooftop%20(16%20de%20noviembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-3",
+      "date": "2025-11-27",
+      "dateLabel": "27 NOV",
+      "time": null,
+      "title": null,
+      "venue": "Viuz",
+      "city": null,
+      "flyer": null,
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Viuz%20(27%20de%20noviembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-4",
+      "date": "2025-11-29",
+      "dateLabel": "29 NOV",
+      "time": null,
+      "title": null,
+      "venue": "Grooveland x La terraza.deepink",
+      "city": null,
+      "flyer": null,
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Grooveland%20x%20La%20terraza.deepink%20(29%20de%20noviembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-5",
+      "date": "2025-11-30",
+      "dateLabel": "30 NOV",
+      "time": null,
+      "title": null,
+      "venue": "Sonorama",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2025-11-30",
+        "width": 720,
+        "height": 1280,
+        "alt": "Flyer: Sonorama — 30 NOV",
+        "variants": [
+          {
+            "w": 540,
+            "h": 960,
+            "url": "/media/fixture/flyer-2025-11-30/540.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Sonorama%20(30%20de%20noviembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-6",
+      "date": "2025-12-19",
+      "dateLabel": "19 DIC",
+      "time": null,
+      "title": null,
+      "venue": "Viuz",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2025-12-19",
+        "width": 1080,
+        "height": 1350,
+        "alt": "Flyer: Viuz — 19 DIC",
+        "variants": [
+          {
+            "w": 540,
+            "h": 675,
+            "url": "/media/fixture/flyer-2025-12-19/540.webp"
+          },
+          {
+            "w": 1080,
+            "h": 1350,
+            "url": "/media/fixture/flyer-2025-12-19/1080.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Viuz%20(19%20de%20diciembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-7",
+      "date": "2025-12-26",
+      "dateLabel": "26 DIC",
+      "time": null,
+      "title": null,
+      "venue": "Baren",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2025-12-26",
+        "width": 2048,
+        "height": 2560,
+        "alt": "Flyer: Baren — 26 DIC",
+        "variants": [
+          {
+            "w": 540,
+            "h": 675,
+            "url": "/media/fixture/flyer-2025-12-26/540.webp"
+          },
+          {
+            "w": 1080,
+            "h": 1350,
+            "url": "/media/fixture/flyer-2025-12-26/1080.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Baren%20(26%20de%20diciembre%20de%202025)"
+      }
+    },
+    {
+      "id": "fx-event-8",
+      "date": "2026-01-24",
+      "dateLabel": "24 ENE",
+      "time": null,
+      "title": null,
+      "venue": "Viuz",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2026-01-24",
+        "width": 810,
+        "height": 1440,
+        "alt": "Flyer: Viuz — 24 ENE",
+        "variants": [
+          {
+            "w": 540,
+            "h": 960,
+            "url": "/media/fixture/flyer-2026-01-24/540.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Viuz%20(24%20de%20enero%20de%202026)"
+      }
+    },
+    {
+      "id": "fx-event-9",
+      "date": "2026-01-25",
+      "dateLabel": "25 ENE",
+      "time": null,
+      "title": null,
+      "venue": "Sonorama",
+      "city": null,
+      "flyer": {
+        "id": "fx-flyer-2026-01-25",
+        "width": 900,
+        "height": 1600,
+        "alt": "Flyer: Sonorama — 25 ENE",
+        "variants": [
+          {
+            "w": 540,
+            "h": 960,
+            "url": "/media/fixture/flyer-2026-01-25/540.webp"
+          }
+        ],
+        "ogUrl": null
+      },
+      "cta": {
+        "type": "WHATSAPP",
+        "label": "Book",
+        "url": "https://wa.me/573505209860?text=Quiero%20estar%20en%20el%20evento%20de%20Sonorama%20(25%20de%20enero%20de%202026)"
+      }
+    }
+  ],
+  "show": {
+    "gallery": true,
+    "rider": true,
+    "events": true,
+    "openDateRow": true,
+    "form": true
+  },
+  "whatsapp": {
+    "heroUrl": "https://wa.me/573505209860?text=Hola%20quiero%20cotizar%20booking",
+    "openDateUrl": "https://wa.me/573505209860",
+    "bookingUrl": "https://wa.me/573505209860?text=Hola%20quiero%20booking"
+  },
+  "bookingForm": {
+    "fields": [
+      {
+        "key": "fullName",
+        "type": "text",
+        "label": "Nombre y empresa / productora",
+        "placeholder": "Tu nombre",
+        "required": true,
+        "maxLength": 80,
+        "autocomplete": "name"
+      },
+      {
+        "key": "email1",
+        "type": "email",
+        "label": "Email",
+        "placeholder": "tu@correo.com",
+        "required": true,
+        "maxLength": 254,
+        "autocomplete": "email"
+      },
+      {
+        "key": "eventDate",
+        "type": "date",
+        "label": "Fecha del evento",
+        "placeholder": null,
+        "required": false,
+        "maxLength": 10,
+        "min": 0,
+        "max": 730
+      },
+      {
+        "key": "city",
+        "type": "text",
+        "label": "Ciudad / Lugar evento",
+        "placeholder": "Ciudad, país • Lugar evento",
+        "required": false,
+        "maxLength": 100,
+        "autocomplete": "address-level2"
+      },
+      {
+        "key": "message",
+        "type": "textarea",
+        "label": "Detalles del evento",
+        "placeholder": "Tipo de evento, horario, duración del set, presupuesto, requisitos técnicos...",
+        "required": false,
+        "maxLength": 2000
+      }
+    ],
+    "consentText": "Autorizo el tratamiento de mis datos personales para gestionar esta solicitud, conforme a la Política de Tratamiento de Datos Personales (Ley 1581 de 2012).",
+    "consentVersion": "2026-09",
+    "privacyUrl": "/privacidad",
+    "portalNotice": "Fersua Studio es un portal de contacto: no presta el servicio del DJ ni recibe pagos. El acuerdo se hace directamente con el artista."
+  },
+  "updatedAt": "2025-10-30T17:00:00.000Z"
+}

@@ -65,7 +65,13 @@ function initialState(): State {
   const user = getSessionUser();
   // Otra instancia ya abrió la sesión (el estado vive en lib/http, no en el componente).
   if (user && getAccessToken()) return { status: 'authenticated', user };
+  // Sin marca de sesión y en una ruta pública no hay refresh que esperar.
+  if (needsNoRefresh()) return { status: 'anonymous', user: null };
   return { status: 'loading', user: null };
+}
+
+function needsNoRefresh(): boolean {
+  return !hasSessionHint() && !isProtectedPath(window.location.pathname);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -96,10 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // visitante anónimo nunca provoca un 401.
   useEffect(() => {
     if (getSessionUser() && getAccessToken()) return;
-    if (!hasSessionHint() && !isProtectedPath(window.location.pathname)) {
-      setState({ status: 'anonymous', user: null });
-      return;
-    }
+    if (needsNoRefresh()) return;
     let alive = true;
     refreshSession().catch(() => {
       clearLocalSession();

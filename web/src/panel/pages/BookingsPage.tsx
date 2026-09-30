@@ -218,7 +218,7 @@ function BookingDrawer({ id, onClose }: { id: string | null; onClose: () => void
       await http.delete(`${OWNER_BASE}/bookings/${encodeURIComponent(id ?? '')}`);
     },
     onSuccess: async () => {
-      message.success('Solicitud eliminada');
+      message.success('Se quitó de tu bandeja');
       client.removeQueries({ queryKey: panelKeys.booking(id ?? '') });
       onClose();
       await invalidate();
@@ -251,7 +251,7 @@ function BookingDrawer({ id, onClose }: { id: string | null; onClose: () => void
             ) : null}
             <Popconfirm
               title="¿Eliminar esta solicitud?"
-              description="Esta acción no se puede deshacer."
+              description="Se ocultará de tu bandeja. El administrador conserva una copia según la política de datos."
               okText="Eliminar"
               cancelText="Cancelar"
               okButtonProps={{ danger: true, loading: remove.isPending }}

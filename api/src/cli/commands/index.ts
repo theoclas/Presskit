@@ -3,6 +3,7 @@ import { adminCreateCommand } from './admin-create.command';
 import { adminResetMfaCommand } from './admin-reset-mfa.command';
 import { adminResetPasswordCommand } from './admin-reset-password.command';
 import { adminUnlockCommand } from './admin-unlock.command';
+import { opsAlertCommand } from './ops-alert.command';
 import { seedGenresCommand } from './seed-genres.command';
 import { seedMacflyCommand } from './seed-macfly.command';
 
@@ -14,4 +15,5 @@ export const COMMANDS: readonly CliCommand[] = [
   adminResetPasswordCommand,
   adminUnlockCommand,
   adminResetMfaCommand,
+  opsAlertCommand,
 ];

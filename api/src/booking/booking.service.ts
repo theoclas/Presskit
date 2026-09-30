@@ -19,7 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicProfileResolver } from '../public/public-profile.resolver';
 import { waNumberOf } from '../public/public.mappers';
 import { BookingNotifyService } from './booking-notify.service';
-import { BookingTokenService, FormTokenError } from './booking-token.service';
+import { FormTokenError, FormTokenService } from './form-token.service';
 import type { BookingSubmitBody } from './booking-submit.dto';
 import {
   checkFieldsShape,
@@ -50,7 +50,7 @@ export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly resolver: PublicProfileResolver,
-    private readonly tokens: BookingTokenService,
+    private readonly tokens: FormTokenService,
     private readonly requestContext: RequestContext,
     private readonly config: AppConfig,
     private readonly notify: BookingNotifyService,
@@ -68,14 +68,14 @@ export class BookingService {
 
   async issueToken(rawSlug: string): Promise<BookingTokenDto> {
     const profile = await this.formProfile(rawSlug);
-    return { token: this.tokens.issue(profile.slug) };
+    return { token: this.tokens.issue('booking', profile.slug) };
   }
 
   async submit(rawSlug: string, body: BookingSubmitBody, req: Request): Promise<BookingSubmitResultDto> {
     const profile = await this.formProfile(rawSlug);
 
-    // 1. Token: firma, slug y edad (2 s – 2 h). El nonce se consume al guardar.
-    const token = this.tokens.verify(body.token, profile.slug);
+    // 1. Token: firma, propósito, slug y edad (2 s – 2 h). El nonce se consume al guardar.
+    const token = this.tokens.verify(body.token, 'booking', profile.slug);
 
     // 2. Autorización de datos (Ley 1581): exactamente true.
     if (body.consent !== true) {

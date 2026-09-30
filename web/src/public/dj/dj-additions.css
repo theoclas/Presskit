@@ -185,6 +185,9 @@
   font-family: inherit;
   font-size: 12px;
   padding: 6px 10px;
+  /* El <a> de la plantilla es inline: su padding no agranda la fila. El botón (fechas con
+     flyer) sí; el margen negativo lo compensa y las filas miden lo mismo que en la original. */
+  margin-block: -6px;
   border-radius: 999px;
   border: 1px solid rgb(var(--text-rgb) / .5);
   background: transparent;

@@ -1,4 +1,4 @@
-import { payloadFields, statusChange, toBookingDetail } from './booking-view';
+import { payloadFields, statusChange, toBookingDetail, toBookingListItem } from './booking-view';
 
 describe('payloadFields', () => {
   it('devuelve las filas bien formadas y descarta el resto', () => {
@@ -59,6 +59,7 @@ describe('toBookingDetail', () => {
       contactPhone: '3001234567',
       eventDate: new Date('2026-11-14T00:00:00.000Z'),
       status: 'NEW',
+      ownerDeletedAt: null,
       createdAt: new Date('2026-09-29T12:00:00.000Z'),
       payload: [{ key: 'name', label: 'Nombre', value: 'Ana' }],
       consentAt: new Date('2026-09-29T12:00:00.000Z'),
@@ -69,5 +70,24 @@ describe('toBookingDetail', () => {
     expect(dto.fields).toEqual([{ key: 'name', label: 'Nombre', value: 'Ana' }]);
     expect(dto.readAt).toBeNull();
     expect(dto.createdAt).toBe('2026-09-29T12:00:00.000Z');
+    expect(dto.ownerDeleted).toBe(false);
+  });
+});
+
+describe('toBookingListItem', () => {
+  it('borrada por el DJ: solo la marca ownerDeleted, sin la fecha', () => {
+    const dto = toBookingListItem({
+      id: 'cbooking00000000000000002',
+      profile: { id: 'cprofile00000000000000001', slug: 'dj-uno', displayName: 'DJ Uno' },
+      contactName: 'Beto',
+      contactEmail: 'beto@example.test',
+      contactPhone: null,
+      eventDate: null,
+      status: 'READ',
+      ownerDeletedAt: new Date('2026-09-30T12:00:00.000Z'),
+      createdAt: new Date('2026-09-29T12:00:00.000Z'),
+    });
+    expect(dto.ownerDeleted).toBe(true);
+    expect(dto).not.toHaveProperty('ownerDeletedAt');
   });
 });

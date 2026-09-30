@@ -33,6 +33,9 @@ const ACTIONS: Record<string, string> = {
   'admin.booking.status': 'Cambió el estado de una solicitud',
   'admin.booking.delete': 'Borró una solicitud',
   'admin.ticket.update': 'Atendió una PQRS o reporte',
+  // Registros del art. 53 (M4)
+  'admin.legal.view': 'Consultó un registro legal (art. 53)',
+  'admin.legal.disclose': 'Entregó los datos de un DJ a un solicitante (art. 53)',
   'admin.genre.create': 'Creó un género',
   'admin.genre.update': 'Editó un género',
   'admin.genre.delete': 'Borró un género',
@@ -49,6 +52,7 @@ const ACTIONS: Record<string, string> = {
   'system.profile.rejected_purged': 'Borró un perfil rechazado inactivo',
   'system.user.unverified_purged': 'Borró una cuenta que no confirmó su correo',
   'system.booking.retention_purged': 'Borró solicitudes vencidas (12 meses) y spam viejo',
+  'system.ops_alert': 'Envió una alerta de operación (servidor)',
   'system.mail.cap_reached': 'Se agotó un cupo diario de correos (revisa si hay registros falsos)',
 };
 

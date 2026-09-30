@@ -38,6 +38,11 @@ export class TicketSubmitBody implements TicketSubmitDto {
   @Equals(true, { message: 'Debes autorizar el tratamiento de tus datos.' })
   consent!: true;
 
+  /** De GET /api/public/tickets/token; lo verifica FormTokenService (propósito 'ticket'). */
+  @IsString()
+  @MaxLength(300)
+  token!: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(200)

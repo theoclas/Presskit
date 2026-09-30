@@ -1,9 +1,12 @@
 # shellcheck shell=bash
+# Las variables de este archivo las usan los scripts que lo cargan (shellcheck lo ve solo).
+# shellcheck disable=SC2034
 # Funciones comunes de los scripts del VPS. Se carga con:  . "$(dirname "$0")/lib.sh"
 # Deja el directorio de trabajo en la raíz del repo.
 
 set -Eeuo pipefail
 # Con set -e un fallo corta el script sin decir nada: esto al menos indica dónde.
+# shellcheck disable=SC2154  # fersua_rc se asigna dentro del mismo trap
 trap 'fersua_rc=$?; printf "[%s] ERROR: falló un comando en %s:%s (código %s)\n" "$(date "+%F %T")" "${BASH_SOURCE[0]##*/}" "$LINENO" "$fersua_rc" >&2' ERR
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,9 +14,11 @@ cd "$ROOT_DIR"
 
 # shellcheck disable=SC2034  # las usan los demás scripts
 COMPOSE_FILE_PATH="$ROOT_DIR/docker-compose.prod.yml"
-# FERSUA_PROJECT_NAME, FERSUA_COMPOSE_EXTRA, FERSUA_MEDIA_VOLUME, FERSUA_SKIP_BUILDER_PRUNE:
-# solo para probar los scripts en local contra un stack desechable. En el VPS no se usan.
+# FERSUA_PROJECT_NAME, FERSUA_COMPOSE_EXTRA, FERSUA_MEDIA_VOLUME, FERSUA_SKIP_BUILDER_PRUNE,
+# FERSUA_ENV_FILE: solo para probar los scripts en local contra un stack desechable (o con un
+# .env de prueba fuera del repo). En el VPS no se usan.
 PROJECT_NAME="${FERSUA_PROJECT_NAME:-fersua-booking}"
+DOTENV_FILE="${FERSUA_ENV_FILE:-$ROOT_DIR/.env}"
 API_IMAGE="fersua-booking-api"
 EDGE_IMAGE="fersua-booking-edge"
 STAGE_IMAGE="fersua-booking-stage"
@@ -36,13 +41,13 @@ require_cmd() {
 }
 
 require_env_file() {
-  [ -f "$ROOT_DIR/.env" ] || die "No existe .env. Créalo con: bash scripts/init-env.sh"
+  [ -f "$DOTENV_FILE" ] || die "No existe .env. Créalo con: bash scripts/init-env.sh"
 }
 
 # Lee una clave de un archivo .env SIN ejecutarlo (source correría lo que haya dentro).
 # Uso: env_get CLAVE [valor_por_defecto] [archivo]
 env_get() {
-  local key="$1" default="${2-}" file="${3:-$ROOT_DIR/.env}" line val
+  local key="$1" default="${2-}" file="${3:-$DOTENV_FILE}" line val
   line="$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1 || true)"
   val="${line#*=}"
   if [ "${#val}" -ge 2 ]; then
@@ -56,10 +61,12 @@ env_get() {
 
 # docker compose siempre con el archivo y el proyecto de producción, aunque la shell tenga
 # otras variables COMPOSE_*. El .env de la raíz se usa para interpolar.
-dc() {
-  docker compose --project-directory "$ROOT_DIR" -f "$COMPOSE_FILE_PATH" \
-    ${FERSUA_COMPOSE_EXTRA:+-f "$FERSUA_COMPOSE_EXTRA"} -p "$PROJECT_NAME" "$@"
-}
+# DC_CMD es la misma línea como arreglo, para usarla con `timeout` (que no ejecuta funciones).
+DC_CMD=(docker compose --project-directory "$ROOT_DIR" -f "$COMPOSE_FILE_PATH")
+[ -z "${FERSUA_COMPOSE_EXTRA:-}" ] || DC_CMD+=(-f "$FERSUA_COMPOSE_EXTRA")
+[ -z "${FERSUA_ENV_FILE:-}" ] || DC_CMD+=(--env-file "$FERSUA_ENV_FILE")
+DC_CMD+=(-p "$PROJECT_NAME")
+dc() { "${DC_CMD[@]}" "$@"; }
 
 edge_port() { env_get EDGE_PORT 8090; }
 
@@ -116,8 +123,11 @@ db_sql() {
 }
 
 # Conteo de filas de las tablas principales (para comparar un respaldo con su restauración).
+# restore-drill.sh reutiliza la consulta y las etiquetas (el orden de las dos debe coincidir).
 # shellcheck disable=SC2016  # los backticks son de SQL
+DB_COUNTS_SQL='SELECT (SELECT COUNT(*) FROM `User`), (SELECT COUNT(*) FROM DjProfile), (SELECT COUNT(*) FROM `Event`), (SELECT COUNT(*) FROM BookingRequest), (SELECT COUNT(*) FROM MediaAsset), (SELECT COUNT(*) FROM Ticket);'
+# shellcheck disable=SC2034  # la usa restore-drill.sh
+DB_COUNTS_LABELS='User DjProfile Event BookingRequest MediaAsset Ticket'
 db_counts() {
-  printf '%s\n' 'SELECT (SELECT COUNT(*) FROM `User`), (SELECT COUNT(*) FROM DjProfile), (SELECT COUNT(*) FROM `Event`), (SELECT COUNT(*) FROM BookingRequest), (SELECT COUNT(*) FROM MediaAsset), (SELECT COUNT(*) FROM Ticket);' |
-    db_sql -N -B "$1" | tr '\t' ' '
+  printf '%s\n' "$DB_COUNTS_SQL" | db_sql -N -B "$1" | tr '\t' ' '
 }

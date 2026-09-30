@@ -12,6 +12,7 @@ import { AccountPage } from './pages/AccountPage';
 import { AuditPage } from './pages/AuditPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { GenresPage } from './pages/GenresPage';
+import { LegalRecordsPage } from './pages/LegalRecordsPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { TicketsPage } from './pages/TicketsPage';
 import { UsersPage } from './pages/UsersPage';
@@ -70,6 +71,7 @@ export function AdminApp() {
                 />
                 <Route path="solicitudes" element={<BookingsPage />} />
                 <Route path="pqrs" element={<TicketsPage />} />
+                <Route path="registros-legales" element={<LegalRecordsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
                 <Route path="generos" element={<GenresPage />} />
                 <Route path="auditoria" element={<AuditPage />} />

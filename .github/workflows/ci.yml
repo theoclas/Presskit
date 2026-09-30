@@ -80,6 +80,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck --workspaces --if-present
 
+      # ESLint: SQL armado con texto y console en el api; HTML crudo y target=_blank en la web.
+      - name: Lint (api y web)
+        run: |
+          npm run lint -w api
+          npm run lint -w web
+
       - name: api (build + test)
         run: |
           npm run build -w api
@@ -136,8 +142,12 @@ jobs:
           npm run build:shared
           npm run ci:compose
 
-      - name: Scripts del VPS (init-env, check-env, compose config)
+      # shellcheck viene en ubuntu-latest. Solo advertencias y errores (.shellcheckrc sigue lib.sh):
+      # respaldos, copia externa y vigilante corren solo en el VPS, sin otra prueba antes.
+      - name: Scripts del VPS (shellcheck, init-env, check-env, compose config)
         run: |
+          shellcheck --version | head -2
+          shellcheck -S warning scripts/*.sh deploy/mysql/init/*.sh
           bash scripts/init-env.sh
           sed -i "s|^SMTP_PASS=.*|SMTP_PASS='ci-dummy'|" .env
           bash scripts/check-env.sh

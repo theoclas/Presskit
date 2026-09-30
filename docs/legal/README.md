@@ -30,10 +30,13 @@ toman de ahí:
 
 Confirma también dos datos que el texto da por hechos:
 
-- Que Hostinger presta el servidor (VPS) y el correo. Si cambias de proveedor, edita la sección 5
-  de la política.
+- Que Hostinger presta el servidor (VPS) y el correo, y que la copia externa cifrada de los
+  respaldos va a Google Drive. Si cambias de proveedor (p. ej. a Backblaze B2), edita la sección 5
+  de la política **antes** de activar la copia en el VPS.
 - Que los plazos de conservación siguen siendo 12 meses para solicitudes y 14 días / 8 semanas
-  para respaldos. Si cambian en el código o en los backups, edita la sección 8 de la política.
+  para respaldos, contando la copia externa (`scripts/backup.sh` y `scripts/offsite-backup.sh`
+  están ajustados a ese plazo). Si cambian en el código o en los backups, edita la sección 8 de la
+  política.
 
 `OPERATOR_HAS_PLACEHOLDERS` (en `operator.ts`) vale `true` mientras quede algún corchete. Sirve
 para mostrar un aviso en desarrollo o para frenar el despliegue a producción.

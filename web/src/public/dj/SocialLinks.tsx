@@ -1,5 +1,5 @@
 import { SOCIAL_PLATFORMS, type SocialLinkDto } from '@fersua/shared';
-import { EXTERNAL_REL, safeHttpsUrl } from '../../lib/safeUrl';
+import { safeHttpsUrl } from '../../lib/safeUrl';
 import { SocialIcon } from '../components/SocialIcon';
 
 interface Props {
@@ -23,7 +23,7 @@ export function SocialLinks({ links, className, ownerName }: Props) {
             key={`${l.platform}-${i}`}
             href={l.href}
             target="_blank"
-            rel={EXTERNAL_REL}
+            rel="noopener noreferrer nofollow ugc"
             aria-label={ownerName ? `${label} de ${ownerName} (se abre en otra pestaña)` : undefined}
           >
             <SocialIcon platform={l.platform} />

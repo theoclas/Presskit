@@ -330,6 +330,11 @@ export interface BookingListItemDto {
   contactPhone: string | null;
   eventDate: string | null;
   status: BookingStatus;
+  /**
+   * true si el DJ la borró de su bandeja (M4, borrado suave): el admin la sigue viendo hasta
+   * la purga de 12 meses. En la bandeja del dueño siempre es false (esas no se listan).
+   */
+  ownerDeleted: boolean;
   createdAt: string;
 }
 
@@ -356,12 +361,78 @@ export interface TicketDto {
   businessDaysLeft: number;
   resolution: string | null;
   resolvedAt: string | null;
+  /**
+   * Honeypot lleno (M4) o marcado por el admin: no avisó al admin y no sale en la bandeja ni en
+   * los contadores salvo con el filtro `spam`. Los topes diarios no marcan spam (responden 429).
+   */
+  isSpam: boolean;
   createdAt: string;
+  /**
+   * Solo en el detalle de una SOLICITUD_DATOS_DJ con el perfil vigente: cuántas solicitudes de
+   * booking a ese DJ traen el mismo correo que el ticket (señal de que quien pide lo contrató,
+   * art. 53). null si no aplica. Es un conteo: no trae datos de esas solicitudes.
+   */
+  matchingBookings?: number | null;
 }
 
 export interface UpdateTicketInput {
   status: TicketStatus;
   resolution?: string | null;
+  /** Marcar o desmarcar como spam (M4). Desmarcar no envía el aviso que no salió. */
+  isSpam?: boolean;
+}
+
+// ---------------------------------------------------------------- registros del art. 53 (M4)
+
+/** active = unido a un perfil; closed = conservado después de borrar el perfil (12 meses). */
+export type LegalRecordState = 'active' | 'closed';
+
+/**
+ * Fila de GET /api/admin/legal-records. Sin documento, dirección ni teléfonos: esos solo salen
+ * en el detalle, que queda en la auditoría.
+ */
+export interface AdminLegalRecordListItemDto {
+  id: string;
+  state: LegalRecordState;
+  /** Perfil actual (null si se borró). */
+  profileId: string | null;
+  /** Slug y nombre del perfil: los actuales o, si se borró, los de ese momento. */
+  slug: string | null;
+  displayName: string | null;
+  /** Estado del perfil actual (null si se borró). */
+  profileStatus: ProfileStatus | null;
+  /** Nombre o razón social del responsable. */
+  legalName: string;
+  /** Cuándo se borró el perfil (null = activo). */
+  closedAt: string | null;
+  /** Desde cuándo lo puede borrar la purga diaria (closedAt + 12 meses; null = activo). */
+  purgeAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** GET /api/admin/legal-records/:id: datos completos; cada lectura queda en la auditoría. */
+export interface AdminLegalRecordDto extends AdminLegalRecordListItemDto {
+  docType: DocType;
+  docNumber: string;
+  address: string;
+  phones: string[];
+}
+
+/** Cuerpo de POST /api/admin/tickets/:id/disclose-dj. */
+export interface DiscloseDjInput {
+  /** El admin declara que verificó que quien pide contrató al DJ y quiere presentar una queja. */
+  confirmed: true;
+}
+
+/** POST /api/admin/tickets/:id/disclose-dj (con step-up). */
+export interface DiscloseDjResultDto {
+  record: AdminLegalRecordDto;
+  /**
+   * Respuesta en texto plano para copiar y enviar al solicitante: los datos de identificación
+   * del DJ según el art. 53 de la Ley 1480. Mostrarla como texto, nunca como HTML.
+   */
+  responseTemplate: string;
 }
 
 export interface AuditLogDto {
@@ -382,6 +453,8 @@ export interface AdminStatsDto {
   newBookings: number;
   openTickets: number;
   overdueTickets: number;
+  /** Tickets marcados como spam en los últimos 30 días (no cuentan en openTickets; M4). */
+  spamTickets: number;
   users: number;
   /** Perfiles públicos sin el registro del art. 53 (máx. 10), para avisar en el resumen. */
   approvedWithoutLegal: { id: string; slug: string; displayName: string }[];

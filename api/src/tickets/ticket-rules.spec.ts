@@ -1,4 +1,10 @@
-import { TICKET_DAILY_CAPS, fakeTicketId, ticketCapExceeded, ticketDueDate, validateTicketFields } from './ticket-rules';
+import {
+  TICKET_DAILY_CAPS,
+  fakeTicketId,
+  ticketDueDate,
+  ticketCapReached,
+  validateTicketFields,
+} from './ticket-rules';
 
 const ok = {
   name: '  Ana   Pérez ',
@@ -72,10 +78,28 @@ describe('honeypot y topes', () => {
     expect(fakeTicketId(now)).not.toBe(id);
   });
 
-  it('tope diario por IP y total', () => {
-    expect(ticketCapExceeded({ ip: 0, total: 0 })).toBe(false);
-    expect(ticketCapExceeded({ ip: TICKET_DAILY_CAPS.perIp - 1, total: 5 })).toBe(false);
-    expect(ticketCapExceeded({ ip: TICKET_DAILY_CAPS.perIp, total: 5 })).toBe(true);
-    expect(ticketCapExceeded({ ip: 0, total: TICKET_DAILY_CAPS.total })).toBe(true);
+  it('topes de personas: por IP y total, sin contar el spam; debajo, se guarda', () => {
+    const quiet = { ip: 0, ipSpam: 0, total: 0, all: 0 };
+    expect(ticketCapReached(false, quiet)).toBeNull();
+    expect(ticketCapReached(false, { ...quiet, ip: TICKET_DAILY_CAPS.perIp - 1, total: 5, all: 5 })).toBeNull();
+    expect(ticketCapReached(false, { ...quiet, ip: TICKET_DAILY_CAPS.perIp, total: 5, all: 5 })).toBe('CAP_IP');
+    expect(ticketCapReached(false, { ...quiet, total: TICKET_DAILY_CAPS.total, all: TICKET_DAILY_CAPS.total })).toBe('CAP_TOTAL');
+    // El spam de la misma IP (un bot detrás de un CGNAT) no frena a una persona.
+    expect(ticketCapReached(false, { ...quiet, ipSpam: 500, all: 500 })).toBeNull();
+  });
+
+  it('honeypot: solo lo frenan su tope por IP y el techo', () => {
+    const quiet = { ip: 0, ipSpam: 0, total: 0, all: 0 };
+    expect(ticketCapReached(true, quiet)).toBeNull();
+    expect(ticketCapReached(true, { ...quiet, ip: TICKET_DAILY_CAPS.perIp, total: TICKET_DAILY_CAPS.total })).toBeNull();
+    expect(ticketCapReached(true, { ...quiet, ipSpam: TICKET_DAILY_CAPS.spamPerIp })).toBe('CAP_SPAM_IP');
+  });
+
+  it('el techo diario cuenta todo, spam incluido, y manda sobre los demás', () => {
+    const quiet = { ip: 0, ipSpam: 0, total: 0, all: 0 };
+    expect(ticketCapReached(false, { ...quiet, all: TICKET_DAILY_CAPS.hardTotal - 1 })).toBeNull();
+    expect(ticketCapReached(false, { ...quiet, ip: TICKET_DAILY_CAPS.perIp, all: TICKET_DAILY_CAPS.hardTotal })).toBe('CAP_HARD');
+    expect(ticketCapReached(true, { ...quiet, all: TICKET_DAILY_CAPS.hardTotal })).toBe('CAP_HARD');
+    expect(TICKET_DAILY_CAPS.hardTotal).toBeGreaterThan(TICKET_DAILY_CAPS.total);
   });
 });

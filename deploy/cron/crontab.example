@@ -5,3 +5,17 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Respaldo nocturno: BD + instantánea de medios + rotación + ping a healthchecks.io.
 15 8 * * * cd /home/deploy/apps/fersuastudio-booking && bash scripts/backup.sh nightly >> /home/deploy/backups/fersua-booking/backup.log 2>&1
+
+# Copia externa cifrada (restic a B2 o Google Drive) 30 min después del nocturno (03:45 en Bogotá):
+# copia incremental, retención 14 diarias y 6 semanales y, una vez por semana, restic check. Sin
+# OFFSITE_RESTIC_REPOSITORY en .env solo dice "no configurada" y termina (docs/04-backups.md).
+45 8 * * * cd /home/deploy/apps/fersuastudio-booking && bash scripts/offsite-backup.sh nightly >> /home/deploy/backups/fersua-booking/offsite.log 2>&1
+
+# Vigilante cada 10 min: disco, respaldos, contenedores, certificado y copia externa. Avisa por
+# correo (ops:alert) como mucho una vez por tipo al día y solo escribe en el log si hay algo.
+# El log va en su propia carpeta: si faltara la de respaldos, el cron igual corre y avisa.
+*/10 * * * * mkdir -p /home/deploy/.fersua-booking-watchdog && cd /home/deploy/apps/fersuastudio-booking && bash scripts/watchdog.sh >> /home/deploy/.fersua-booking-watchdog/watchdog.log 2>&1
+
+# Opcional: ensayo de restauración automático el día 1 de cada mes (04:30 en Bogotá). Levanta un
+# MySQL desechable unos minutos; el resultado queda en drill.log y en bash scripts/status.sh.
+# 30 9 1 * * cd /home/deploy/apps/fersuastudio-booking && bash scripts/restore-drill.sh >> /home/deploy/backups/fersua-booking/drill-cron.log 2>&1

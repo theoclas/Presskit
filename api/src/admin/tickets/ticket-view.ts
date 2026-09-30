@@ -25,6 +25,7 @@ export const ticketSelect = {
   dueAt: true,
   resolution: true,
   resolvedAt: true,
+  isSpam: true,
   createdAt: true,
 } satisfies Prisma.TicketSelect;
 
@@ -53,6 +54,7 @@ export function toTicketDto(row: TicketRow, now: Date = new Date()): TicketDto {
     businessDaysLeft: businessDaysLeft(todayBogota(reference), due),
     resolution: row.resolution,
     resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+    isSpam: row.isSpam,
     createdAt: row.createdAt.toISOString(),
   };
 }

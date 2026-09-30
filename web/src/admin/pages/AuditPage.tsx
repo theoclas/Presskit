@@ -1,8 +1,8 @@
 import type { AuditLogDto } from '@fersua/shared';
 import { AutoComplete, DatePicker, Input, Select, Table, Tooltip, Typography, type TableProps } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { useSyncedState } from '../../lib/useSyncedState';
 import { PAGE_SIZE, useAuditLogs, useProfileOptions, type AuditFilters } from '../api';
 import { auditActionLabel, auditTargetLabel } from '../auditLabels';
 import { LoadError, PageHeader } from '../components';
@@ -54,11 +54,8 @@ export function AuditPage() {
   const { data, error, isFetching, refetch } = useAuditLogs(filters);
   const profiles = useProfileOptions();
   const isMobile = useIsMobile();
-  const [actionText, setActionText] = useState(filters.action ?? '');
-  const [actorText, setActorText] = useState(filters.actor ?? '');
-
-  useEffect(() => setActionText(filters.action ?? ''), [filters.action]);
-  useEffect(() => setActorText(filters.actor ?? ''), [filters.actor]);
+  const [actionText, setActionText] = useSyncedState(filters.action ?? '');
+  const [actorText, setActorText] = useSyncedState(filters.actor ?? '');
 
   const update = (patch: Record<string, string | null>) =>
     setParams(

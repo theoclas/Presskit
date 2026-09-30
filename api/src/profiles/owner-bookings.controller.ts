@@ -47,6 +47,7 @@ export class OwnerBookingsController {
     return this.bookings.updateStatus(profileId, actor, id, body);
   }
 
+  /** Borrado suave e idempotente (M4): el admin la conserva, marcada, hasta la purga de 12 meses. */
   @Delete(':id')
   @HttpCode(204)
   @Throttle(OWNER_INBOX_MUTATION_THROTTLE)

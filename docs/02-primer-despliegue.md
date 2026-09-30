@@ -3,8 +3,9 @@
 Etiquetas: **[PC]** tu computador · **[hPanel]** panel de Hostinger · **[VPS sudo]** tú en el VPS con
 sudo · **[VPS deploy]** el usuario `deploy` en el VPS (el que ya corre Docker para HabitFer/Dashboard).
 
-Resultado: el sitio en `https://booking.fersuastudio.com`, con Mac Fly & Mike Bran, sin tocar
-todavía el dominio principal (eso es `docs/05-cambio-dns.md`).
+Resultado: el sitio en `https://booking.fersuastudio.com`, con Mac Fly & Mike Bran. Es el dominio
+definitivo (decisión del 2026-09-30): `fersuastudio.com` y Allset se quedan en Hostinger. Pasar de
+beta a indexable está en `docs/05-cambio-dns.md`.
 
 ```
 Internet ─► nginx del host (:443, certbot) ─► 127.0.0.1:8090 ─► edge (nginx) ─► api ─► db
@@ -43,7 +44,7 @@ en git, `npm run ci:compose` (y la CI) fallan si el bit falta.
    echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-swappiness.conf && sudo sysctl --system
    ```
 
-2. **IPv6**: `ip -6 addr show scope global`. Anota si hay dirección: decide el AAAA en el cambio de DNS.
+2. **IPv6**: `ip -6 addr show scope global`. Anota si hay dirección: solo importa si algún día quieres un AAAA para `booking` (paso A1).
 3. **Puerto libre**: `ss -ltnp | grep ':8090 '` no debe imprimir nada.
 4. **Docker 26 o más nuevo** (el edge monta el volumen con `subpath`; recomendado 28+):
    `docker version --format '{{.Server.Version}}'` y `docker compose version` (2.26+).
@@ -217,8 +218,8 @@ curl -sI $B/admin | grep -iE '^HTTP|content-security' | head -n 3  # 200 y un so
 
 ## H. Lo que viene después
 
-- **Monitoreo**: UptimeRobot (gratis) sobre `https://booking.fersuastudio.com/api/health`, y la URL de
-  healthchecks.io en `BACKUP_HEALTHCHECK_URL`.
+- **M4** (endurecimiento): sección J. Trae la copia externa, el vigilante y el monitoreo externo
+  (`docs/04-backups.md` y `docs/08-monitoreo.md`).
 - **Antes de lanzar**: completar los marcadores `[...]` de los textos legales y cargar fechas nuevas de Mac Fly.
 - **M3**: registro abierto de DJs, su panel en `/panel` y la recuperación de contraseña por correo.
   Se despliega con un `deploy.sh` normal (no trae migraciones) y el registro se abre aparte (sección I).
@@ -262,3 +263,43 @@ perfiles ya creados siguen funcionando; solo se frenan los registros nuevos.
 (`system.mail.cap_reached`) con el cupo `verify`, hubo más de 80 correos de confirmación en el día: casi
 seguro una ola de registros falsos. Ese día el registro ya responde "intenta mañana"; conviene cerrarlo
 como arriba y revisar las cuentas nuevas en Usuarios.
+
+## J. [VPS deploy] Desplegar M4 (endurecimiento)
+
+Trae la migración `20260930120000_m4_hardening` (spam en tickets y borrado suave de solicitudes del
+DJ): `deploy.sh` la aplica sola, después del respaldo automático previo.
+
+Cambios que se notan: el detalle de «Registros legales» pide la contraseña y el código (como la
+entrega de datos del DJ); una PQRS que pasa los topes diarios recibe un 429 con el correo de
+contacto (ya no se guarda como spam en silencio); los avisos del admin (PQRS nuevas y alertas del
+vigilante) van a `ADMIN_NOTIFY_EMAIL` o, vacío, al correo del admin.
+
+```bash
+cd ~/apps/fersuastudio-booking && bash scripts/deploy.sh
+B=https://booking.fersuastudio.com
+curl -s $B/api/health                                                                    # version = el commit nuevo
+for i in 1 2; do curl -s -o /dev/null -D - $B/macfly-mike-bran | grep -i '^x-cache-status'; done   # MISS, HIT
+curl -s -o /dev/null -D - $B/api/public/tickets/token | grep -iE '^HTTP|^cache-control|^x-cache'  # 200, no-store, sin X-Cache-Status
+docker compose exec -T api node dist/cli/main.js ops:alert --kind test --detail "Prueba desde el VPS"   # llega un correo al admin
+```
+
+- Las páginas públicas quedan en la microcaché del edge 10 s: un cambio del DJ (o una suspensión)
+  tarda hasta 10 s en verse. Si urge: `docker compose restart edge`.
+- Un formulario de booking abierto antes del despliegue falla una vez con "vuelve a enviar" (el token
+  cambió de formato); la web pide uno nuevo sola.
+
+**Después, en este orden** (cada paso está en su guía):
+
+1. **Crontab:** `crontab -e` y agrega las líneas nuevas de `deploy/cron/crontab.example` (copia externa
+   a las `45 8` y vigilante cada 10 min). La del vigilante, **solo con M4 ya desplegado**: antes el api
+   no tiene `ops:alert` y cada aviso fallaría.
+2. **Copia externa en Google Drive:** remoto de rclone en tu PC, el archivo al VPS, las líneas
+   `OFFSITE_*` en `.env`, `bash scripts/offsite-backup.sh manual` y
+   `bash scripts/restore-drill.sh --from-offsite` (`docs/04-backups.md`, "Copia fuera del VPS"). La
+   política de privacidad publicada con M4 ya nombra a Google Drive (§5): no actives la copia con un
+   proveedor distinto sin cambiar antes la política.
+3. **Monitoreo externo:** los dos monitores de UptimeRobot y los tres checks de healthchecks.io, con sus
+   URLs en `.env` (`docs/08-monitoreo.md`). **`MONITOR_HEALTHCHECK_URL` es obligatorio:** es lo único
+   que avisa si la base de datos se cae (el vigilante no puede mandar el correo sin ella y la
+   microcaché puede tapar la caída ante UptimeRobot).
+4. `bash scripts/status.sh`: respaldos, copia externa, último ensayo y vigilante en verde.

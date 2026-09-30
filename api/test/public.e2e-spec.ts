@@ -9,8 +9,10 @@ import { randomBytes } from 'node:crypto';
 import request from 'supertest';
 import { WA_URL_RE, addDays, defaultFormConfig, todayBogota } from '@fersua/shared';
 import { AppModule } from '../src/app.module';
+import { FormTokenService } from '../src/booking/form-token.service';
 import { AppConfig } from '../src/config/app-config.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { TICKET_TOKEN_SCOPE } from '../src/tickets/tickets.service';
 
 const run = randomBytes(4).toString('hex');
 const SLUG = `e2e-dj-${run}`;
@@ -177,6 +179,8 @@ describe('API pública (e2e)', () => {
 
   it('tickets: reporte con slug viejo (201) y sobre un perfil oculto (400)', async () => {
     const server = app.getHttpServer();
+    // Token del formulario (M4) emitido hace 5 s: pasa el tiempo mínimo sin dormir la prueba.
+    const token = () => app.get(FormTokenService).issue('ticket', TICKET_TOKEN_SCOPE, Date.now() - 5_000);
     const base = {
       name: 'Prueba e2e',
       email: 'e2e@example.com',
@@ -187,7 +191,7 @@ describe('API pública (e2e)', () => {
     const ok = await request(server)
       .post('/api/public/tickets')
       .set('Origin', origin)
-      .send({ ...base, type: 'REPORTE_PERFIL', profileSlug: OLD_SLUG })
+      .send({ ...base, type: 'REPORTE_PERFIL', profileSlug: OLD_SLUG, token: token() })
       .expect(201);
     ticketIds.push(ok.body.id);
     expect(ok.body.dueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -197,7 +201,7 @@ describe('API pública (e2e)', () => {
     const hidden = await request(server)
       .post('/api/public/tickets')
       .set('Origin', origin)
-      .send({ ...base, type: 'REPORTE_PERFIL', profileSlug: HIDDEN_SLUG });
+      .send({ ...base, type: 'REPORTE_PERFIL', profileSlug: HIDDEN_SLUG, token: token() });
     expect(hidden.status).toBe(400);
     expect(hidden.body.details).toEqual({ profileSlug: 'NOT_FOUND' });
   });

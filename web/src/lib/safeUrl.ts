@@ -26,5 +26,5 @@ export function safeImageUrl(url: unknown): string | null {
   return safeHttpsUrl(url);
 }
 
-/** rel para cualquier enlace externo puesto por un DJ. */
-export const EXTERNAL_REL = 'noopener noreferrer nofollow ugc';
+// Los enlaces externos que pone un DJ llevan rel="noopener noreferrer nofollow ugc" escrito en
+// el JSX (no en una constante) para que ESLint (react/jsx-no-target-blank) lo pueda verificar.

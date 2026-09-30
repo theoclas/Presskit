@@ -116,7 +116,8 @@ export class BookingDigestJob {
         });
         const to = ownerRecipientOf(profile?.user);
         if (!profile?.notifyByEmail || !to) continue;
-        const count = await this.prisma.bookingRequest.count({ where: { profileId: g.profileId, status: 'NEW' } });
+        // Las que el DJ borró de su bandeja (borrado suave) no cuentan como sin leer.
+        const count = await this.prisma.bookingRequest.count({ where: { profileId: g.profileId, status: 'NEW', ownerDeletedAt: null } });
         if (count && this.mail.send(to.email, 'booking-digest-owner', { count })) sent++;
       }
       if (sent) this.log.log(`resúmenes de solicitudes enviados: ${sent}`);

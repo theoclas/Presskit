@@ -16,11 +16,11 @@ function RightsLinks() {
   return (
     <>
       Puedes conocer, actualizar, rectificar y suprimir tus datos y revocar la autorización en{' '}
-      <a href={LEGAL_DOCS.pqrs.path} target="_blank" rel="noopener">
+      <a href={LEGAL_DOCS.pqrs.path} target="_blank" rel="noopener noreferrer">
         PQRS y habeas data
       </a>
       . No incluyas datos sensibles ni de menores de edad.{' '}
-      <a href={LEGAL_DOCS.privacy.path} target="_blank" rel="noopener">
+      <a href={LEGAL_DOCS.privacy.path} target="_blank" rel="noopener noreferrer">
         Política completa
       </a>
       .
