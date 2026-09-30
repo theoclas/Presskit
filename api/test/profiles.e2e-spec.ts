@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import sharp from 'sharp';
 import request from 'supertest';
-import { LIMITS, addDays, defaultFormConfig, todayBogota } from '@fersua/shared';
+import { LEGAL_DOCS, LIMITS, addDays, defaultFormConfig, todayBogota } from '@fersua/shared';
 import { AppModule } from '../src/app.module';
 import { PasswordHasher } from '../src/auth/password/password-hasher.service';
 import { SessionService } from '../src/auth/tokens/session.service';
@@ -21,6 +21,35 @@ import { StorageService } from '../src/media/storage.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 const run = randomBytes(4).toString('hex');
+const MAILPIT = (process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025').replace(/\/+$/, '');
+
+/**
+ * Los DJ de prueba tienen correo verificado, así que aprobar o suspender les escribe (M3). Si hay
+ * un mailpit local, al final se borran solo los correos de estos buzones. Nunca hace fallar la prueba.
+ */
+async function deleteMailpitMessages(addresses: string[]): Promise<void> {
+  try {
+    const ids: string[] = [];
+    for (const address of addresses) {
+      const r = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${address}"`)}&limit=100`, {
+        signal: AbortSignal.timeout(1_500),
+      });
+      if (!r.ok) return;
+      const body = (await r.json()) as { messages?: { ID: string }[] };
+      ids.push(...(body.messages ?? []).map((m) => m.ID));
+    }
+    if (ids.length) {
+      await fetch(`${MAILPIT}/api/v1/messages`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ IDs: ids }),
+        signal: AbortSignal.timeout(1_500),
+      });
+    }
+  } catch {
+    // Sin mailpit (p. ej. en CI): no hay nada que limpiar.
+  }
+}
 const SLUG_A = `e2e-pa-${run}`;
 const SLUG_B = `e2e-pb-${run}`;
 
@@ -31,6 +60,7 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
   let server: ReturnType<INestApplication['getHttpServer']>;
 
   const userIds: string[] = [];
+  const userEmails: string[] = [];
   const profileIds: string[] = [];
   let profileA = '';
   let profileB = '';
@@ -50,10 +80,24 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
   async function createUser(role: 'USER' | 'ADMIN'): Promise<{ id: string; username: string; password: string }> {
     const username = `e2e${role === 'ADMIN' ? 'adm' : 'dj'}${randomBytes(4).toString('hex')}`;
     const password = randomBytes(18).toString('base64url');
+    // Los DJ, como si se hubieran registrado en M3: correo verificado (subir fotos y enviar a
+    // revisión lo exigen) y términos vigentes aceptados (TermsGuard).
+    const owner =
+      role === 'USER'
+        ? {
+            email: `${username}@example.test`,
+            emailVerifiedAt: new Date(),
+            termsVersion: LEGAL_DOCS.artistTerms.version,
+            termsAcceptedAt: new Date(),
+            privacyVersion: LEGAL_DOCS.privacy.version,
+            privacyAcceptedAt: new Date(),
+          }
+        : {};
     const user = await prisma.user.create({
-      data: { username, role, passwordHash: await app.get(PasswordHasher).hash(password) },
+      data: { username, role, passwordHash: await app.get(PasswordHasher).hash(password), ...owner },
     });
     userIds.push(user.id);
+    if (user.email) userEmails.push(user.email);
     return { id: user.id, username, password };
   }
 
@@ -118,6 +162,8 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
         if (exists) {
           await prisma.$transaction(async (tx) => {
             await media.removeAllForProfile(id, tx);
+            // Su registro legal primero: borrar el perfil directo lo dejaría huérfano (SetNull).
+            await tx.djLegalInfo.deleteMany({ where: { profileId: id } });
             await tx.djProfile.delete({ where: { id } });
           });
         }
@@ -129,6 +175,9 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     }
     await app?.close();
+    // Los avisos salen en segundo plano: se les da un momento para llegar antes de borrarlos.
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await deleteMailpitMessages(userEmails);
   });
 
   // ------------------------------------------------------------------ alcance y roles
@@ -412,10 +461,28 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     expect(back.body).toMatchObject({ status: 'APPROVED', statusReason: null });
   });
 
-  it('el dueño envía a revisión solo con el perfil completo', async () => {
+  it('el dueño envía a revisión solo con correo verificado, registro legal y el perfil completo', async () => {
+    // M3: primero el correo, después el registro legal y por último el resto del checklist.
+    const ownerB = await prisma.djProfile.findUniqueOrThrow({ where: { id: profileB }, select: { userId: true } });
+    await prisma.user.update({ where: { id: ownerB.userId! }, data: { emailVerifiedAt: null } });
+    try {
+      expect((await send('post', '/api/me/profile/submit', tokenB).expect(403)).body.code).toBe('EMAIL_NOT_VERIFIED');
+    } finally {
+      await prisma.user.update({ where: { id: ownerB.userId! }, data: { emailVerifiedAt: new Date() } });
+    }
+    expect((await send('post', '/api/me/profile/submit', tokenB).expect(409)).body.code).toBe('LEGAL_INFO_REQUIRED');
+
+    await send('put', '/api/me/profile/legal-info', tokenB, {
+      legalName: 'Persona de Prueba B',
+      docType: 'CC',
+      docNumber: '1023456780',
+      address: 'Calle 4 # 5-6, Medellín',
+      phones: ['+57 300 111 2244'],
+    }).expect(200);
     const r = await send('post', '/api/me/profile/submit', tokenB).expect(409);
     expect(r.body.code).toBe('PROFILE_INCOMPLETE');
-    expect(r.body.details).toMatchObject({ heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED', legalInfo: 'REQUIRED' });
+    expect(r.body.details).toMatchObject({ heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED' });
+    expect(r.body.details.legalInfo).toBeUndefined();
     // Enviar a revisión no existe en el montaje del admin.
     await send('post', `/api/admin/profiles/${profileB}/submit`, tokenAdmin).expect(404);
   });

@@ -8,6 +8,7 @@ import { PublicShell } from '../public/layouts/PublicShell';
 import { useAuth } from './AuthProvider';
 import { destinationAfterLogin } from './destinations';
 import { PasswordInput } from './PasswordInput';
+import { useRegistrationStatus } from './registration';
 import './auth.css';
 
 const GENERIC_LOGIN_ERROR = 'Usuario o contraseña incorrectos';
@@ -54,6 +55,8 @@ export function LoginPage() {
   const [alert, setAlert] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
+  // "Crea tu cuenta" solo si el registro está abierto (si la consulta falla, no se muestra).
+  const registrationOpen = useRegistrationStatus().data?.open === true;
 
   // Con sesión (recién ingresó o ya la tenía) se va a su área; `next` pasa por isSafeNextPath.
   useEffect(() => {
@@ -267,8 +270,19 @@ export function LoginPage() {
             <button className="btn btn-primary" type="submit" disabled={sending}>
               {sending ? 'Ingresando…' : 'Ingresar'}
             </button>
+            <Link className="link-btn" to="/recuperar">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
         </form>
+        {registrationOpen ? (
+          <p className="auth-foot">
+            ¿Todavía no tienes cuenta? <Link to="/registro">Crea tu cuenta</Link>
+          </p>
+        ) : null}
+        <p className="auth-note">
+          Solo usamos una cookie técnica para mantener tu sesión. <Link to="/privacidad#cookies">Cookies</Link>
+        </p>
         <p className="auth-foot">
           <Link to="/">Volver al inicio</Link>
         </p>

@@ -390,6 +390,12 @@ describe('contrato de sesión', () => {
     expect(API_ROUTES.authMfa).toBe('/api/auth/mfa');
     expect(API_ROUTES.authStepUp).toBe('/api/auth/step-up');
     expect(API_ROUTES.authLogout).toBe('/api/auth/logout');
+    expect(API_ROUTES.authVerifyEmail).toBe('/api/auth/verify-email');
+    expect(API_ROUTES.authResendVerification).toBe('/api/auth/resend-verification');
+    expect(API_ROUTES.authAcceptTerms).toBe('/api/auth/accept-terms');
+    expect(API_ROUTES.authRegistration).toBe('/api/auth/registration');
+    // Retención de M3: el aviso llega antes del borrado.
+    expect(LIMITS.retention.draftWarnDays).toBeLessThan(LIMITS.retention.draftIdleDays);
     expect(AUTH_HEADERS).toEqual({ xhrName: 'X-Requested-With', xhrValue: 'fersua', stepUp: 'X-Step-Up' });
     expect(LIMITS.admin.pageSizeMax).toBeGreaterThanOrEqual(LIMITS.admin.pageSizeDefault);
     expect(LIMITS.genres.nameMin).toBeLessThan(LIMITS.genres.nameMax);

@@ -18,6 +18,7 @@ import { RequestContext } from '../common/request-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublicProfileResolver } from '../public/public-profile.resolver';
 import { waNumberOf } from '../public/public.mappers';
+import { BookingNotifyService } from './booking-notify.service';
 import { BookingTokenService, FormTokenError } from './booking-token.service';
 import type { BookingSubmitBody } from './booking-submit.dto';
 import {
@@ -52,6 +53,7 @@ export class BookingService {
     private readonly tokens: BookingTokenService,
     private readonly requestContext: RequestContext,
     private readonly config: AppConfig,
+    private readonly notify: BookingNotifyService,
   ) {}
 
   /** Perfil visible con el formulario activo; si no, 404 (no se distingue para no revelar nada). */
@@ -123,6 +125,10 @@ export class BookingService {
 
     // Sin datos personales en el log: solo ids, slug y el motivo si fue SPAM.
     this.log.log(`booking.created id=${id} profile=${profile.slug}${spam ? ` spam=${spam}` : ''}`);
+
+    // Aviso al DJ (M3) solo por solicitudes reales. En segundo plano: no demora ni puede tumbar
+    // la respuesta (el servicio nunca lanza).
+    if (!spam) void this.notify.newBooking(id, profile.id, contact.contactName);
 
     // La solicitud ya está guardada y el nonce gastado: un fallo armando el enlace nunca puede
     // convertirse en un 500 (el visitante reintentaría y duplicaría la solicitud).

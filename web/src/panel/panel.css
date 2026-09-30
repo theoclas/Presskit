@@ -1,0 +1,246 @@
+/* Panel del DJ (AntD, el mismo tema oscuro del admin). Solo lo carga el chunk del panel. */
+
+html[data-surface="panel"] body {
+  background: #020617;
+  color: #f9fafb;
+}
+
+.panel-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.panel-sider {
+  border-right: 1px solid rgb(148 163 184 / .18);
+}
+
+.panel-sider .ant-layout-sider-children {
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+.panel-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 18px 20px 14px;
+  white-space: nowrap;
+}
+
+/* En el Drawer móvil la marca va en la cabecera, que ya tiene su padding. */
+.ant-drawer .panel-brand {
+  padding: 0;
+}
+
+.panel-brand-name {
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: #f9fafb;
+}
+
+.panel-brand-tag {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #f97316;
+}
+
+.panel-menu {
+  border-inline-end: 0 !important;
+}
+
+.panel-nav-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgb(148 163 184 / .18);
+}
+
+.panel-header-spacer {
+  flex: 1;
+}
+
+.panel-user {
+  max-width: 40vw;
+  color: rgb(249 250 251 / .85);
+}
+
+/* Área táctil de 44 px (AntD deja los botones de solo icono en 32 px de ancho). */
+.panel-header .panel-menu-btn.ant-btn {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+}
+
+.panel-content {
+  padding: 24px;
+  outline: none;
+  min-width: 0;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.panel-email-banner {
+  margin-bottom: 16px;
+}
+
+.panel-page-head {
+  margin-bottom: 16px;
+}
+
+.panel-page-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #f9fafb;
+}
+
+.panel-page-sub {
+  margin-top: 6px;
+}
+
+.panel-row-clickable {
+  cursor: pointer;
+}
+
+/* Texto que viene de usuarios: siempre texto plano, respetando saltos de línea. */
+.panel-plain {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.panel-reason {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgb(15 23 42 / .6);
+  border: 1px solid rgb(148 163 184 / .2);
+}
+
+.panel-checklist {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.panel-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid rgb(148 163 184 / .12);
+}
+
+.panel-checklist li:first-child {
+  border-top: 0;
+}
+
+.panel-checklist li[data-done="true"] .panel-check-text > span:first-child {
+  color: rgb(249 250 251 / .65);
+}
+
+.panel-check-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.panel-check-ok {
+  color: #22c55e;
+  font-size: 16px;
+  margin-top: 3px;
+}
+
+.panel-check-todo {
+  color: #f59e0b;
+  font-size: 16px;
+  margin-top: 3px;
+}
+
+.panel-problem-list {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+
+.panel-ok {
+  color: #22c55e;
+}
+
+.panel-slug-prefix {
+  color: rgb(249 250 251 / .55);
+  white-space: nowrap;
+}
+
+.panel-onboarding {
+  max-width: 640px;
+}
+
+/* Pantallas sin menú (términos): tarjeta centrada. */
+.panel-center {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.panel-center-card {
+  width: 100%;
+  max-width: 600px;
+}
+
+.panel-boot {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  color: #9ca3af;
+  font-family: "Inter Variable", Inter, system-ui, sans-serif;
+  font-size: 14px;
+}
+
+@media (max-width: 767px) {
+  .panel-content {
+    padding: 16px 12px;
+  }
+
+  .panel-user {
+    max-width: 30vw;
+  }
+
+  /* El aviso del correo apila los botones debajo del texto en pantallas angostas. */
+  .panel-email-banner.ant-alert {
+    flex-wrap: wrap;
+  }
+
+  .panel-email-banner .ant-alert-actions {
+    margin-inline-start: 0;
+    margin-top: 8px;
+    width: 100%;
+  }
+}

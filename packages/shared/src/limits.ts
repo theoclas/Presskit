@@ -77,6 +77,10 @@ export const LIMITS = {
     verifyTokenHours: 48,
     tempPasswordHours: 72,
     draftIdleDays: 30,
+    /** Borrador sin actividad: aviso por correo el día 21 (se borra el día draftIdleDays). */
+    draftWarnDays: 21,
+    /** Perfil rechazado sin actividad: se borra. */
+    rejectedIdleDays: 30,
     /** Registro del art. 53 de un perfil borrado: se conserva y luego se purga. */
     legalInfoMonths: 12,
     unverifiedUserDays: 14,

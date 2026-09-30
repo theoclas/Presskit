@@ -139,3 +139,51 @@
     padding: 20px 16px 16px;
   }
 }
+
+/* M3: registro, recuperación y enlaces de los correos. */
+
+.djp .auth-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.djp .auth-hint a,
+.djp .auth-note a {
+  color: var(--text);
+}
+
+/* Mensaje de estado (éxito o aviso) con el borde del acento, como el envío del booking. */
+.djp .auth-notice {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--accent-rgb) / .6);
+  background: rgb(var(--surface-rgb) / .95);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.djp .auth-consents {
+  margin-top: 10px;
+}
+
+.djp .auth-consents label.consent {
+  margin: 12px 0 2px;
+  font-size: 13px;
+}
+
+.djp .consent-version {
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.djp .auth-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+

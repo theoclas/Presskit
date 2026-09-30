@@ -1,7 +1,7 @@
 import { DOC_TYPES, isValidPhone, LIMITS, normalizeDocNumber, type DocType, type LegalInfoDto, type LegalInfoInput } from '@fersua/shared';
 import { DeleteOutlined, LockOutlined, PlusOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Form, Input, Row, Select, Space, Spin, Typography } from 'antd';
+import { Alert, Button, Card, Checkbox, Col, Form, Input, Row, Select, Space, Spin, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import { describeError, http, useAfterSave } from '../api';
 import { SAVED_MESSAGE, useFeedback } from '../feedback';
@@ -120,19 +120,28 @@ function LegalInfoForm({ dto, actor }: { dto: LegalInfoDto; actor: 'admin' | 'ow
         style={{ marginBottom: 16 }}
         title={
           actor === 'owner'
-            ? 'Privado: solo lo ven tú y el administrador. Requerido para aprobar (art. 53 Ley 1480).'
+            ? 'Privado: solo lo ve el administrador (además de ti). Es obligatorio para enviar tu perfil a revisión (art. 53 Ley 1480).'
             : 'Privado: solo lo ven el dueño del perfil y el administrador. Requerido para publicar (art. 53 Ley 1480).'
         }
         description={
           actor === 'owner'
-            ? 'Identifica a quien responde por las contrataciones de este perfil. No aparece en tu página.'
+            ? 'Identifica a quien responde por las contrataciones de este perfil. Nunca aparece en tu página; solo se entrega a quien te contrató si presenta una queja, o a una autoridad.'
             : 'Identifica a quien responde por las contrataciones de este perfil. No aparece en la página pública.'
         }
       />
       {dto.updatedAt ? (
         <Typography.Paragraph type="secondary">Última actualización: {formatDateTime(dto.updatedAt)}</Typography.Paragraph>
       ) : (
-        <Alert type="warning" showIcon style={{ marginBottom: 16 }} title="Todavía no hay datos legales: el perfil no se puede aprobar." />
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={
+            actor === 'owner'
+              ? 'Todavía no has cargado tus datos legales: sin ellos no puedes enviar tu perfil a revisión.'
+              : 'Todavía no hay datos legales: el perfil no se puede aprobar.'
+          }
+        />
       )}
       <Form<LegalValues>
         form={form}
@@ -228,6 +237,22 @@ function LegalInfoForm({ dto, actor }: { dto: LegalInfoDto; actor: 'admin' | 'ow
             </>
           )}
         </Form.List>
+        {actor === 'owner' ? (
+          // Declaración del dueño al guardar (docs/diseno/11 §2.4). No se envía: solo habilita guardar.
+          <Form.Item
+            name="truthful"
+            valuePropName="checked"
+            style={{ marginTop: 16, marginBottom: 0 }}
+            rules={[
+              {
+                validator: (_r, v: unknown) =>
+                  v === true ? Promise.resolve() : Promise.reject(new Error('Marca la casilla para guardar tus datos.')),
+              },
+            ]}
+          >
+            <Checkbox>Declaro que estos datos son veraces y me obligo a mantenerlos actualizados.</Checkbox>
+          </Form.Item>
+        ) : null}
         <SaveBar dirty={dirty} saving={saving} onSave={() => form.submit()} onDiscard={discard} saveLabel="Guardar datos legales" />
       </Form>
     </Card>

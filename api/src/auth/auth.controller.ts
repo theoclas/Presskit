@@ -11,7 +11,7 @@ import { XRequestedWithGuard } from './xhr.guard';
 
 const FIFTEEN_MIN = 15 * 60_000;
 
-/** Contrato en docs/api-m2.md. forgot/reset/register/verify-email llegan en M3. */
+/** Contrato en docs/api-m2.md. Registro, verificación, olvido/restablecimiento y términos (M3): AccountController. */
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}

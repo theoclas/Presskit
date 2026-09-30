@@ -2,12 +2,10 @@ import { APP_TOP_LEVEL_ROUTES } from '@fersua/shared';
 import type { ComponentType } from 'react';
 import type { RouteObject } from 'react-router';
 import { PublicFallback, PublicLayout } from './public/layouts/PublicLayout';
-import { ComingSoonPage } from './public/pages/ComingSoonPage';
 import { ErrorPage } from './public/pages/ErrorPage';
 import { DjPage } from './public/pages/DjPage';
 import { IndexPage } from './public/pages/IndexPage';
 import { NotFoundPage } from './public/pages/NotFoundPage';
-import { PanelSoonPage } from './public/pages/PanelSoonPage';
 
 type TopLevel = (typeof APP_TOP_LEVEL_ROUTES)[number];
 type LazyPage = () => Promise<{ Component: ComponentType }>;
@@ -16,10 +14,17 @@ type LazyPage = () => Promise<{ Component: ComponentType }>;
 const legal = (pick: (m: typeof import('./public/legal/LegalPages')) => ComponentType): LazyPage => () =>
   import('./public/legal/LegalPages').then((m) => ({ Component: pick(m) }));
 
-// Ingreso y admin: chunks aparte. axios, antd y dayjs solo llegan por aquí (ver scripts/ci/check-bundle.mjs).
+// Ingreso, cuenta, panel y admin: chunks aparte. axios, antd y dayjs solo llegan por aquí (ver scripts/ci/check-bundle.mjs).
 const loginPage: LazyPage = () => import('./auth/LoginPage').then((m) => ({ Component: m.LoginPage }));
+const registerPage: LazyPage = () => import('./auth/RegisterPage').then((m) => ({ Component: m.RegisterPage }));
+const forgotPasswordPage: LazyPage = () =>
+  import('./auth/ForgotPasswordPage').then((m) => ({ Component: m.ForgotPasswordPage }));
+const resetPasswordPage: LazyPage = () =>
+  import('./auth/ResetPasswordPage').then((m) => ({ Component: m.ResetPasswordPage }));
+const verifyEmailPage: LazyPage = () => import('./auth/VerifyEmailPage').then((m) => ({ Component: m.VerifyEmailPage }));
 const changePasswordPage: LazyPage = () =>
   import('./auth/ChangePasswordPage').then((m) => ({ Component: m.ChangePasswordPage }));
+const panelApp: LazyPage = () => import('./panel/PanelApp').then((m) => ({ Component: m.PanelApp }));
 const adminApp: LazyPage = () => import('./admin/AdminApp').then((m) => ({ Component: m.AdminApp }));
 const previewPage: LazyPage = () => import('./public/pages/PreviewPage').then((m) => ({ Component: m.PreviewPage }));
 const authRoot: LazyPage = () => import('./auth/AuthRoot').then((m) => ({ Component: m.AuthRoot }));
@@ -34,22 +39,22 @@ interface TopLevelDef {
 
 /**
  * Una entrada por cada ruta de APP_TOP_LEVEL_ROUTES (el Record obliga a cubrirlas todas).
- * Registro, recuperación y panel del DJ llegan en M3: por ahora muestran "Próximamente" (el
- * panel, un aviso de que la cuenta está lista y que el equipo edita la página).
+ * Las páginas de cuenta (registro, recuperar, restablecer, verificar correo) y el panel del DJ
+ * van dentro de AuthRoot: usan el cliente http y la sesión (registrarse deja la sesión iniciada).
  */
 const TOP_LEVEL: Record<TopLevel, TopLevelDef> = {
   login: { lazy: loginPage, auth: true },
-  registro: { Component: ComingSoonPage },
-  recuperar: { Component: ComingSoonPage },
-  restablecer: { Component: ComingSoonPage },
+  registro: { lazy: registerPage, auth: true },
+  recuperar: { lazy: forgotPasswordPage, auth: true },
+  restablecer: { lazy: resetPasswordPage, auth: true },
   'cambiar-clave': { lazy: changePasswordPage, auth: true },
-  'verificar-correo': { Component: ComingSoonPage },
+  'verificar-correo': { lazy: verifyEmailPage, auth: true },
   privacidad: { lazy: legal((m) => m.PrivacyPage) },
   terminos: { lazy: legal((m) => m.TermsPage) },
   'terminos-artistas': { lazy: legal((m) => m.ArtistTermsPage) },
   pqrs: { lazy: legal((m) => m.PqrsPage) },
   reportar: { lazy: legal((m) => m.ReportPage) },
-  panel: { Component: PanelSoonPage, splat: true },
+  panel: { lazy: panelApp, splat: true, auth: true },
   admin: { lazy: adminApp, splat: true, auth: true },
   _preview: { lazy: previewPage, auth: true },
 };

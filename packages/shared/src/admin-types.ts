@@ -40,6 +40,10 @@ export interface MeDto {
   profile: { id: string; slug: string; status: ProfileStatus } | null;
   /** Versión de términos aceptada; si difiere de LEGAL_DOCS.artistTerms.version, hay que re-aceptar. */
   termsVersion: string | null;
+  /** Versión aceptada de la Política de Tratamiento de Datos (M3). */
+  privacyVersion?: string | null;
+  /** true si los términos o la política aceptados no son los vigentes (M3: la web pide re-aceptar). */
+  termsOutdated?: boolean;
 }
 
 export interface LoginInput {

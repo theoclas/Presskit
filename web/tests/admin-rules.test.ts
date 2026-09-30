@@ -43,6 +43,11 @@ describe('auditoría en español', () => {
     expect(auditActionLabel('profile.update')).toBe('Editó el perfil (el DJ)');
     expect(auditActionLabel('security.mfa_failed')).toBe('Código de verificación incorrecto');
     expect(auditActionLabel('algo.nuevo')).toBe('algo.nuevo');
+    // M3: acciones del dueño y del sistema.
+    expect(auditActionLabel('profile.withdraw')).toBe('Retiró el perfil de la revisión (el DJ)');
+    expect(auditActionLabel('profile.booking.status')).toBe('Cambió el estado de una solicitud (el DJ)');
+    expect(auditActionLabel('system.user.unverified_purged')).toBe('Borró una cuenta que no confirmó su correo');
+    expect(auditActionLabel('auth.register')).toBe('Se registró');
     expect(auditTargetLabel('DjProfile')).toBe('Perfil');
     expect(auditTargetLabel('User')).toBe('Cuenta');
     expect(auditTargetLabel('Otro')).toBe('Otro');

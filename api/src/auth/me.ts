@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { MeDto } from '@fersua/shared';
+import { isTermsOutdated } from './terms';
 
 /** Campos que necesita MeDto; el mismo select sirve para login, refresh y /auth/me. */
 export const ME_SELECT = {
@@ -11,6 +12,7 @@ export const ME_SELECT = {
   mustChangePassword: true,
   mfaEnabledAt: true,
   termsVersion: true,
+  privacyVersion: true,
   profile: { select: { id: true, slug: true, status: true } },
 } satisfies Prisma.UserSelect;
 
@@ -28,5 +30,8 @@ export function toMeDto(u: MeRow): MeDto {
     // El admin no es dueño de perfiles: aunque la BD tuviera uno, no se expone como suyo.
     profile: u.role === 'USER' && u.profile ? { id: u.profile.id, slug: u.profile.slug, status: u.profile.status } : null,
     termsVersion: u.termsVersion,
+    privacyVersion: u.privacyVersion,
+    // M3: la web muestra la re-aceptación (y el TermsGuard frena /api/me/**) mientras sea true.
+    termsOutdated: isTermsOutdated(u),
   };
 }

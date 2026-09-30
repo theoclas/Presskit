@@ -39,6 +39,11 @@ export const API_ROUTES = {
   authStepUp: '/api/auth/step-up',
   authForgot: '/api/auth/forgot-password',
   authReset: '/api/auth/reset-password',
+  // M3 (docs/api-m3.md). verify-email y resend-verification van en la zona auth del edge.
+  authRegistration: '/api/auth/registration',
+  authVerifyEmail: '/api/auth/verify-email',
+  authResendVerification: '/api/auth/resend-verification',
+  authAcceptTerms: '/api/auth/accept-terms',
 } as const;
 
 /**

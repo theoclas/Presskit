@@ -147,7 +147,7 @@ const WHATSAPP_RULES = [
 ];
 
 export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
-  const { base } = useEditorScope();
+  const { base, actor } = useEditorScope();
   const { message } = useFeedback();
   const afterSave = useAfterSave();
   const initial = useMemo(() => profileFormValues(profile), [profile]);
@@ -317,7 +317,13 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
                 <SwitchRow label="Al enviar el formulario, abrir WhatsApp con el resumen" />
               </Form.Item>
               <Form.Item name="notifyByEmail" valuePropName="checked" style={{ marginBottom: 0 }}>
-                <SwitchRow label="Avisar por correo cada solicitud nueva al dueño (se activa con el panel de DJs; por ahora no se envían)" />
+                <SwitchRow
+                  label={
+                    actor === 'owner'
+                      ? 'Avisarme por correo cuando llegue una solicitud nueva (necesitas el correo confirmado)'
+                      : 'Avisar por correo cada solicitud nueva al dueño (solo si tiene dueño con el correo confirmado)'
+                  }
+                />
               </Form.Item>
             </Card>
           </Col>

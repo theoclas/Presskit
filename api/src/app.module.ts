@@ -12,6 +12,7 @@ import { MustChangePasswordGuard } from './common/guards/must-change-password.gu
 import { OriginGuard } from './common/guards/origin.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { StepUpGuard } from './common/guards/step-up.guard';
+import { TermsGuard } from './common/guards/terms.guard';
 import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor';
 import { AppConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.controller';
@@ -85,9 +86,10 @@ export function pathOnly(url: string | undefined): string {
     { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: OriginGuard },
     // Sesión y autorización, en este orden (docs/api-m2.md). StepUpGuard solo actúa en
-    // rutas con @RequireStepUp.
+    // rutas con @RequireStepUp. TermsGuard (M3) solo en /api/me/** para rol USER.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: MustChangePasswordGuard },
+    { provide: APP_GUARD, useClass: TermsGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: StepUpGuard },
     { provide: APP_INTERCEPTOR, useClass: CacheControlInterceptor },

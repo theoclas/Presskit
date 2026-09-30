@@ -3,7 +3,15 @@ import { createTransport, type Transporter } from 'nodemailer';
 import { isValidEmail, normalizeEmail } from '@fersua/shared';
 import { AppConfig } from '../config/app-config.service';
 import { sha256Hex } from '../common/crypto';
-import { mailPriority, renderMail, type MailContent, type MailPriority, type MailTemplateName, type MailTemplateParams } from './mail-templates';
+import {
+  mailPriority,
+  renderMail,
+  type MailContent,
+  type MailPriority,
+  type MailRenderParams,
+  type MailTemplateName,
+  type MailTemplateParams,
+} from './mail-templates';
 
 /** Esperas antes de cada reintento: 1 s, 10 s, 60 s (tres reintentos y se descarta). */
 export const MAIL_RETRY_DELAYS_MS = [1_000, 10_000, 60_000] as const;
@@ -18,6 +26,15 @@ export const MAIL_DAILY_BUDGET = 300;
 export const MAIL_DAILY_NORMAL_BUDGET = 250;
 /** Por destinatario, al día y por prioridad. */
 export const MAIL_PER_RECIPIENT_PER_DAY = 10;
+/**
+ * Topes propios de algunas plantillas, por destinatario y al día (además de los de arriba).
+ * Avisos de booking al DJ: máximo 5; el 5.º dice que no habrá más avisos hasta mañana (la
+ * plantilla recibe `lastOfDay`) y del 6.º en adelante se omiten en silencio: las solicitudes
+ * siguen en el panel. Así un bot que llena el formulario de un DJ no le inunda el buzón.
+ */
+export const MAIL_TEMPLATE_DAILY_CAPS: Readonly<Partial<Record<MailTemplateName, number>>> = {
+  'booking-new-owner': 5,
+};
 
 interface Job {
   id: number;
@@ -50,6 +67,7 @@ export class MailService implements OnModuleDestroy {
   private day = '';
   private sentToday = 0;
   private readonly perRecipient = new Map<string, number>();
+  private readonly perTemplate = new Map<string, number>();
 
   constructor(private readonly config: AppConfig) {}
 
@@ -57,13 +75,26 @@ export class MailService implements OnModuleDestroy {
   send<K extends MailTemplateName>(to: string | null | undefined, template: K, params: MailTemplateParams<K>): boolean {
     if (this.closed || !to || !isValidEmail(to)) return false;
     const recipient = normalizeEmail(to);
+    this.rollDay();
+    const cap = MAIL_TEMPLATE_DAILY_CAPS[template];
+    const capKey = `${template}|${recipient}`;
+    const capUsed = cap === undefined ? 0 : (this.perTemplate.get(capKey) ?? 0);
+    if (cap !== undefined && capUsed >= cap) {
+      this.log.debug(`aviso omitido por el tope diario de la plantilla: ${template} a ${tag(recipient)}`);
+      return false;
+    }
     if (!this.takeBudget(recipient, mailPriority(template))) {
       this.log.warn(`correo descartado por cupo diario: ${template} a ${tag(recipient)}`);
       return false;
     }
+    let renderParams = params as unknown as MailRenderParams<K>;
+    if (cap !== undefined) {
+      this.perTemplate.set(capKey, capUsed + 1);
+      if (capUsed + 1 === cap) renderParams = { ...renderParams, lastOfDay: true };
+    }
     let content: MailContent;
     try {
-      content = renderMail(template, params, { publicUrl: this.config.publicUrl });
+      content = renderMail(template, renderParams, { publicUrl: this.config.publicUrl });
     } catch (err) {
       this.log.error(`plantilla ${template} falló: ${err instanceof Error ? err.message : String(err)}`);
       return false;
@@ -160,13 +191,19 @@ export class MailService implements OnModuleDestroy {
     return this.transport;
   }
 
-  private takeBudget(recipient: string, priority: MailPriority): boolean {
+  /** Los cupos se reinician cada día (UTC). */
+  private rollDay(): void {
     const today = new Date().toISOString().slice(0, 10);
     if (today !== this.day) {
       this.day = today;
       this.sentToday = 0;
       this.perRecipient.clear();
+      this.perTemplate.clear();
     }
+  }
+
+  private takeBudget(recipient: string, priority: MailPriority): boolean {
+    this.rollDay();
     const key = `${priority}|${recipient}`;
     const mine = this.perRecipient.get(key) ?? 0;
     const globalCap = priority === 'security' ? MAIL_DAILY_BUDGET : MAIL_DAILY_NORMAL_BUDGET;

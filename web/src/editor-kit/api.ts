@@ -16,14 +16,19 @@ const CODE_MESSAGES: Record<string, string> = {
   LEGAL_INFO_REQUIRED: 'Falta el registro de datos legales (art. 53 Ley 1480). Cárgalo en «Datos legales» antes de aprobar.',
   SLUG_TAKEN: 'Esa dirección ya la usa otro perfil.',
   CANCELED: 'Se canceló la solicitud.',
+  // Solo le pasa al dueño (M3): subir fotos exige el correo confirmado.
+  EMAIL_NOT_VERIFIED: 'Para subir fotos primero confirma tu correo: abre el enlace que te enviamos o pide uno nuevo en el aviso de arriba.',
 };
+
+/** Códigos cuyo mensaje propio reemplaza siempre el del api. */
+const ALWAYS_CUSTOM = new Set(['QUOTA_EXCEEDED', 'PAYLOAD_TOO_LARGE', 'LEGAL_INFO_REQUIRED', 'EMAIL_NOT_VERIFIED']);
 
 /** ApiErrorDto con un mensaje listo para mostrar. */
 export function describeError(err: unknown): ApiErrorDto & { canceled: boolean } {
   const e = apiError(err);
   const custom = CODE_MESSAGES[e.code];
   let message = e.message;
-  if (custom && (e.code === 'QUOTA_EXCEEDED' || e.code === 'PAYLOAD_TOO_LARGE' || e.code === 'LEGAL_INFO_REQUIRED' || !message)) {
+  if (custom && (ALWAYS_CUSTOM.has(e.code) || !message)) {
     message = custom;
   }
   if (e.statusCode === 409 && e.code === 'CONFLICT') {

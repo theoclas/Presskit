@@ -1,20 +1,30 @@
+import { defaultFormConfig } from '@fersua/shared';
 import type { AppError } from '../common/errors';
 import type { ScopedProfileId } from '../common/scope/profile-scope.guard';
 import type { MediaService } from '../media/media.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { EditorActor } from './editor-actor';
+import type { ProfileNotifier } from './profile-notifier.service';
 import { ProfileStatusService } from './profile-status.service';
 import type { ProfileStore } from './profile-store.service';
 
 const PID = 'cmprofile0000000000000001' as ScopedProfileId;
 const admin: EditorActor = { id: 'cmadmin00000000000000001', username: 'fersua', asAdmin: true, ip: '127.0.0.1' };
 
-function setup(profile: { status: string; legalInfo: { id: string } | null }, opts: { txFails?: boolean; updated?: number } = {}) {
+type ProfileRow = { status: string; legalInfo: { id: string } | null } & Record<string, unknown>;
+
+function setup(
+  profile: ProfileRow,
+  opts: { txFails?: boolean; updated?: number; owner?: { email: string | null; emailVerifiedAt: Date | null } | null } = {},
+) {
   const tx = {
     djProfile: { updateMany: jest.fn().mockResolvedValue({ count: opts.updated ?? 1 }) },
     mediaAsset: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
   };
-  const prisma = { djProfile: { findUnique: jest.fn().mockResolvedValue(profile) } } as unknown as PrismaService;
+  const prisma = {
+    djProfile: { findUnique: jest.fn().mockResolvedValue(profile) },
+    user: { findUnique: jest.fn().mockResolvedValue(opts.owner === undefined ? { email: 'dj@example.com', emailVerifiedAt: new Date() } : opts.owner) },
+  } as unknown as PrismaService;
   const undo = jest.fn().mockResolvedValue(undefined);
   const media = {
     moveProfileMedia: jest.fn().mockResolvedValue({ ids: ['m1', 'm2'], undo }),
@@ -28,9 +38,13 @@ function setup(profile: { status: string; legalInfo: { id: string } | null }, op
     }),
     record: jest.fn().mockResolvedValue(undefined),
     status: jest.fn().mockResolvedValue(profile.status),
-    loadEditor: jest.fn().mockResolvedValue({ id: PID }),
+    loadEditor: jest.fn().mockResolvedValue({ id: PID, displayName: 'DJ Prueba', slug: 'dj-prueba' }),
   } as unknown as ProfileStore & { record: jest.Mock };
-  return { service: new ProfileStatusService(prisma, store, media), tx, media, undo, store };
+  const notifier = {
+    profileSubmitted: jest.fn().mockResolvedValue(undefined),
+    statusChanged: jest.fn().mockResolvedValue(undefined),
+  } as unknown as ProfileNotifier & { profileSubmitted: jest.Mock; statusChanged: jest.Mock };
+  return { service: new ProfileStatusService(prisma, store, media, notifier), tx, media, undo, store, notifier };
 }
 
 describe('ProfileStatusService', () => {
@@ -135,5 +149,112 @@ describe('ProfileStatusService', () => {
     expect(work).toHaveBeenCalledWith(tx);
     expect(media.moveProfileMedia).not.toHaveBeenCalled();
     expect(tx.djProfile.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+const owner: EditorActor = { id: 'cmowner00000000000000001', username: 'dj', asAdmin: false, ip: '127.0.0.1' };
+
+/** Perfil completo según publishChecklist (formulario por defecto, un género, un integrante). */
+function completeProfile(overrides: Record<string, unknown> = {}): ProfileRow {
+  return {
+    status: 'DRAFT',
+    displayName: 'DJ Prueba',
+    slug: 'dj-prueba',
+    texts: {},
+    heroImageId: 'hero1',
+    whatsappNumber: null,
+    bookingForm: defaultFormConfig(),
+    legalInfo: { id: 'l1' },
+    _count: { members: 1, genres: 1 },
+    ...overrides,
+  };
+}
+
+describe('ProfileStatusService (dueño, M3)', () => {
+  it('enviar sin correo verificado → 403 EMAIL_NOT_VERIFIED, antes que cualquier otro faltante', async () => {
+    for (const ownerRow of [null, { email: null, emailVerifiedAt: null }, { email: 'dj@example.com', emailVerifiedAt: null }]) {
+      const { service, media, notifier } = setup(completeProfile({ legalInfo: null, heroImageId: null }), { owner: ownerRow });
+      const err = (await service.submit(PID, owner).catch((e: unknown) => e)) as AppError;
+      expect(err.getStatus()).toBe(403);
+      expect(err.code).toBe('EMAIL_NOT_VERIFIED');
+      expect(media.moveProfileMedia).not.toHaveBeenCalled();
+      expect(notifier.profileSubmitted).not.toHaveBeenCalled();
+    }
+  });
+
+  it('enviar sin registro legal → 409 LEGAL_INFO_REQUIRED; con otros faltantes → 409 PROFILE_INCOMPLETE con el detalle', async () => {
+    const noLegal = setup(completeProfile({ legalInfo: null, heroImageId: null }));
+    const legalErr = (await noLegal.service.submit(PID, owner).catch((e: unknown) => e)) as AppError;
+    expect(legalErr.getStatus()).toBe(409);
+    expect(legalErr.code).toBe('LEGAL_INFO_REQUIRED');
+
+    const incomplete = setup(completeProfile({ heroImageId: null, _count: { members: 0, genres: 0 } }));
+    const err = (await incomplete.service.submit(PID, owner).catch((e: unknown) => e)) as AppError;
+    expect(err.getStatus()).toBe(409);
+    expect(err.code).toBe('PROFILE_INCOMPLETE');
+    expect(err.details).toEqual({ heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED' });
+    expect(incomplete.media.moveProfileMedia).not.toHaveBeenCalled();
+  });
+
+  it('enviar desde un estado que no lo permite → 409 INVALID_TRANSITION', async () => {
+    for (const status of ['PENDING_REVIEW', 'APPROVED', 'SUSPENDED']) {
+      const { service } = setup(completeProfile({ status }));
+      await expect(service.submit(PID, owner)).rejects.toMatchObject({ code: 'INVALID_TRANSITION' });
+    }
+  });
+
+  it('enviar completo: DRAFT → PENDING_REVIEW, audita profile.submit y avisa al admin', async () => {
+    const { service, tx, store, notifier, media } = setup(completeProfile({ status: 'REJECTED' }));
+    await service.submit(PID, owner);
+    expect(media.moveProfileMedia).toHaveBeenCalledWith(PID, false);
+    const call = tx.djProfile.updateMany.mock.calls[0]![0];
+    expect(call.where).toEqual({ id: PID, status: { in: ['DRAFT', 'REJECTED'] } });
+    expect(call.data).toMatchObject({ status: 'PENDING_REVIEW', statusReason: null, submittedAt: expect.any(Date) });
+    expect(store.record).toHaveBeenCalledWith(tx, PID, owner, 'submit', { meta: { from: 'REJECTED', to: 'PENDING_REVIEW' } });
+    expect(notifier.profileSubmitted).toHaveBeenCalledWith(PID, { displayName: 'DJ Prueba', slug: 'dj-prueba' });
+  });
+
+  it('retirar: solo desde PENDING_REVIEW, vuelve a DRAFT y limpia submittedAt', async () => {
+    const { service, tx, store } = setup({ status: 'PENDING_REVIEW', legalInfo: null });
+    await service.withdraw(PID, owner);
+    const call = tx.djProfile.updateMany.mock.calls[0]![0];
+    expect(call.where).toEqual({ id: PID, status: { in: ['PENDING_REVIEW'] } });
+    expect(call.data).toEqual({ submittedAt: null, status: 'DRAFT' });
+    expect(store.record).toHaveBeenCalledWith(tx, PID, owner, 'withdraw', { meta: { from: 'PENDING_REVIEW', to: 'DRAFT' } });
+
+    for (const status of ['DRAFT', 'REJECTED', 'APPROVED', 'SUSPENDED']) {
+      const other = setup({ status, legalInfo: null });
+      await expect(other.service.withdraw(PID, owner)).rejects.toMatchObject({ code: 'INVALID_TRANSITION' });
+      expect(other.tx.djProfile.updateMany).not.toHaveBeenCalled();
+    }
+  });
+
+  it('aprobar, rechazar, suspender y reactivar avisan al dueño después del commit (con el motivo limpio)', async () => {
+    const approved = setup({ status: 'PENDING_REVIEW', legalInfo: { id: 'l1' } });
+    await approved.service.approve(PID, admin);
+    expect(approved.notifier.statusChanged).toHaveBeenCalledWith(PID, 'approve', null);
+
+    const rejected = setup({ status: 'PENDING_REVIEW', legalInfo: null });
+    await rejected.service.reject(PID, admin, '  Falta   una foto de portada.  ');
+    expect(rejected.notifier.statusChanged).toHaveBeenCalledWith(PID, 'reject', 'Falta una foto de portada.');
+
+    const suspended = setup({ status: 'APPROVED', legalInfo: null });
+    await suspended.service.suspend(PID, admin, 'Contenido reportado por un tercero.');
+    expect(suspended.notifier.statusChanged).toHaveBeenCalledWith(PID, 'suspend', 'Contenido reportado por un tercero.');
+
+    const back = setup({ status: 'SUSPENDED', legalInfo: { id: 'l1' } });
+    await back.service.reinstate(PID, admin);
+    expect(back.notifier.statusChanged).toHaveBeenCalledWith(PID, 'reinstate', null);
+
+    // Si la transacción falla, no hay aviso.
+    const failed = setup({ status: 'PENDING_REVIEW', legalInfo: { id: 'l1' } }, { txFails: true });
+    await expect(failed.service.approve(PID, admin)).rejects.toThrow('deadlock simulado');
+    expect(failed.notifier.statusChanged).not.toHaveBeenCalled();
+  });
+
+  it('borrar la cuenta dueña (suspensión automática) no le escribe a nadie', async () => {
+    const { service, notifier } = setup({ status: 'APPROVED', legalInfo: null });
+    await service.suspendForOwnerRemoval(PID, admin, async () => undefined);
+    expect(notifier.statusChanged).not.toHaveBeenCalled();
   });
 });

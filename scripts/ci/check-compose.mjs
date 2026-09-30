@@ -220,6 +220,9 @@ if (R) {
     [R.authRegister, 'zone=auth', 'registro con límite auth'],
     [R.authForgot, 'zone=auth', 'forgot-password con límite auth'],
     [R.authReset, 'zone=auth', 'reset-password con límite auth'],
+    [R.authVerifyEmail, 'zone=auth', 'verify-email (token del correo) con límite auth'],
+    [R.authResendVerification, 'zone=auth', 'resend-verification (envía correo) con límite auth'],
+    [R.authRegistration, 'proxy-api.conf', 'estado del registro al api'],
     [R.tickets, 'zone=tickets', 'tickets con límite tickets'],
     // Express no distingue mayúsculas ni la barra final: esas variantes tampoco se escapan.
     [`${R.authLogin}/`, 'zone=auth', 'login con barra final'],
@@ -257,7 +260,7 @@ if (R) {
   // Las rutas de sesión leen o fijan la cookie de refresh: nunca deben caer en un location
   // que la borra (proxy-api-public.conf). Sin cookie, logout no revocaría nada y mfa o
   // change-password no podrían abrir la sesión.
-  for (const uri of [R.authRefresh, R.authLogout, R.authLogin, R.authMfa, R.authChangePassword, R.authStepUp]) {
+  for (const uri of [R.authRefresh, R.authLogout, R.authLogin, R.authMfa, R.authChangePassword, R.authStepUp, R.authRegister, R.authReset]) {
     const loc = selectLocation(uri);
     check(
       loc && loc.body.includes('proxy-api.conf') && !loc.body.includes('proxy-api-public.conf'),

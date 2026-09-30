@@ -13,6 +13,12 @@ const ACTIONS: Record<string, string> = {
   'security.account_locked': 'Cuenta bloqueada por intentos fallidos',
   'security.mfa_failed': 'Código de verificación incorrecto',
   'security.refresh_reuse': 'Sesión robada o reusada: se cerró',
+  // Registro y autoservicio de la cuenta (M3)
+  'auth.register': 'Se registró',
+  'auth.email_verified': 'Confirmó su correo',
+  'auth.password_reset_requested': 'Pidió restablecer la contraseña',
+  'auth.password_reset': 'Restableció su contraseña con el enlace del correo',
+  'auth.terms_accepted': 'Aceptó los términos y la política de datos',
   // Cuentas (admin)
   'admin.user.create': 'Creó una cuenta',
   'admin.user.email': 'Cambió el correo de una cuenta',
@@ -38,6 +44,10 @@ const ACTIONS: Record<string, string> = {
   'seed.genres': 'Cargó los géneros iniciales',
   'seed.macfly': 'Cargó el perfil de Mac Fly & Mike Bran',
   'system.legal_info_purged': 'Purgó registros legales vencidos',
+  'system.profile.draft_warned': 'Avisó que el borrador se borrará por inactividad',
+  'system.profile.draft_purged': 'Borró un borrador inactivo',
+  'system.profile.rejected_purged': 'Borró un perfil rechazado inactivo',
+  'system.user.unverified_purged': 'Borró una cuenta que no confirmó su correo',
 };
 
 /** Cambios de un perfil: 'profile.<x>' (el dueño) o 'admin.profile.<x>' (el admin). */
@@ -66,6 +76,9 @@ const PROFILE_ACTIONS: Record<string, string> = {
   'gallery.delete': 'Quitó una foto de la galería',
   'gallery.order': 'Reordenó la galería',
   submit: 'Envió a revisión',
+  withdraw: 'Retiró el perfil de la revisión',
+  'booking.status': 'Cambió el estado de una solicitud',
+  'booking.delete': 'Borró una solicitud',
   approve: 'Aprobó el perfil',
   reject: 'Rechazó el perfil',
   suspend: 'Suspendió el perfil',

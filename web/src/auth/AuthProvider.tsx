@@ -1,4 +1,4 @@
-import type { LoginResultDto, MeDto, SessionDto } from '@fersua/shared';
+import type { AcceptTermsInput, LoginResultDto, MeDto, RegisterInput, SessionDto } from '@fersua/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -27,6 +27,13 @@ export interface AuthContextValue {
   refreshMe(): Promise<void>;
   /** Para respuestas que traen una sesión nueva (p. ej. cambiar la contraseña). */
   setSession(session: SessionDto): void;
+  /**
+   * POST /auth/register: la cuenta nace con sesión iniciada. Devuelve la sesión, o null si el
+   * api respondió sin una (honeypot lleno: misma apariencia, pero no se creó nada).
+   */
+  register(input: RegisterInput): Promise<SessionDto | null>;
+  /** POST /auth/accept-terms: re-aceptación de las versiones vigentes (MeDto.termsOutdated). */
+  acceptTerms(input?: AcceptTermsInput): Promise<MeDto>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,6 +41,19 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /** Rutas que solo tienen sentido con sesión: ahí se intenta el refresh aunque falte la marca. */
 function isProtectedPath(path: string): boolean {
   return /^\/(admin|panel|cambiar-clave|_preview)(\/|$)/.test(path);
+}
+
+/** El registro con honeypot lleno responde 201 sin una sesión real: ahí no se aplica nada. */
+function isSessionDto(v: unknown): v is SessionDto {
+  if (!v || typeof v !== 'object') return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.accessToken === 'string' &&
+    o.accessToken.length > 0 &&
+    typeof o.expiresIn === 'number' &&
+    !!o.user &&
+    typeof o.user === 'object'
+  );
 }
 
 interface State {
@@ -119,9 +139,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setSession = useCallback((session: SessionDto) => applySession(session), []);
 
+  const register = useCallback(async (input: RegisterInput): Promise<SessionDto | null> => {
+    const { data } = await http.post<unknown>('/auth/register', input);
+    if (!isSessionDto(data)) return null;
+    applySession(data);
+    return data;
+  }, []);
+
+  const acceptTerms = useCallback(
+    async (input: AcceptTermsInput = { acceptTerms: true, acceptPrivacy: true }): Promise<MeDto> => {
+      const { data } = await http.post<MeDto>('/auth/accept-terms', input);
+      setSessionUser(data);
+      setState({ status: 'authenticated', user: data });
+      return data;
+    },
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user: state.user, status: state.status, login, verifyMfa, logout, refreshMe, setSession }),
-    [state, login, verifyMfa, logout, refreshMe, setSession],
+    () => ({
+      user: state.user,
+      status: state.status,
+      login,
+      verifyMfa,
+      logout,
+      refreshMe,
+      setSession,
+      register,
+      acceptTerms,
+    }),
+    [state, login, verifyMfa, logout, refreshMe, setSession, register, acceptTerms],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

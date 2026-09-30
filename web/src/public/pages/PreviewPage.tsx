@@ -1,7 +1,7 @@
 import { DEFAULT_PALETTE, type ProfileStatus, type PublicDjProfileDto } from '@fersua/shared';
 import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { RequireAuth } from '../../auth/guards';
 import { apiError, http, shouldRetryHttp } from '../../lib/http';
 import { usePalette } from '../../lib/palette';
@@ -10,7 +10,7 @@ import { DjPublicView } from '../dj/DjPublicView';
 import { LegalFooter } from '../legal/LegalFooter';
 import { NotFoundPage } from './NotFoundPage';
 
-// /_preview?profile=<id> (admin) — y en M3 /_preview sin parámetro para el dueño (/me/profile).
+// /_preview?profile=<id> (admin) y /_preview sin parámetro para el dueño (M3: /me/profile/preview).
 // Carga diferida dentro de AuthRoot: axios entra aquí, nunca en el bundle público.
 // Sin antd: se ve igual que la página pública, con una franja arriba que avisa que es una vista previa.
 
@@ -70,16 +70,21 @@ export function PreviewPage() {
   );
 }
 
-function PreviewStatus({ text, onRetry }: { text: string; onRetry?: () => void }) {
+function PreviewStatus({ text, onRetry, toPanel }: { text: string; onRetry?: () => void; toPanel?: boolean }) {
   return (
     <div className="djp">
       <div className="shell">
-        <section className="page-panel" role={onRetry ? 'alert' : 'status'}>
+        <section className="page-panel" role={onRetry || toPanel ? 'alert' : 'status'}>
           <p>{text}</p>
           {onRetry ? (
             <button type="button" className="btn btn-primary" onClick={onRetry}>
               Reintentar
             </button>
+          ) : null}
+          {toPanel ? (
+            <Link className="btn btn-primary" to="/panel">
+              Ir a mi panel
+            </Link>
           ) : null}
         </section>
       </div>
@@ -87,7 +92,15 @@ function PreviewStatus({ text, onRetry }: { text: string; onRetry?: () => void }
   );
 }
 
+/** Errores del dueño con salida propia (en vez de la 404 genérica que ve el admin). */
+function ownerErrorText(code: string): string | null {
+  if (code === 'NO_PROFILE') return 'Aún no tienes un perfil DJ. Créalo desde tu panel para ver la vista previa.';
+  if (code === 'TERMS_ACCEPTANCE_REQUIRED') return 'Acepta los documentos legales actualizados en tu panel para ver la vista previa.';
+  return null;
+}
+
 function PreviewContent({ profileId }: { profileId: string | null }) {
+  const owner = profileId === null;
   const base = previewBase(profileId);
   const query = useQuery({
     // Bajo la clave del editor: guardar en el editor (misma pestaña) la invalida.
@@ -105,6 +118,8 @@ function PreviewContent({ profileId }: { profileId: string | null }) {
   if (query.isPending) return <PreviewStatus text="Cargando vista previa…" />;
   if (query.isError || !dj) {
     const e = apiError(query.error);
+    const ownerText = owner ? ownerErrorText(e.code) : null;
+    if (ownerText) return <PreviewStatus text={ownerText} toPanel />;
     if (e.statusCode === 404 || e.statusCode === 403) return <NotFoundPage />;
     return <PreviewStatus text={e.message} onRetry={() => void query.refetch()} />;
   }
@@ -113,7 +128,7 @@ function PreviewContent({ profileId }: { profileId: string | null }) {
   return (
     <>
       <div role="status" aria-live="polite" style={bannerStyle}>
-        <strong>Vista previa — así se verá la página</strong>
+        <strong>{owner ? 'Vista previa — así se verá tu página' : 'Vista previa — así se verá la página'}</strong>
         {status ? <span>{STATUS_TEXT[status]}</span> : null}
         <span>El formulario no se envía.</span>
         <button

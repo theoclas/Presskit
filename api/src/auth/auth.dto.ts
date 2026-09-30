@@ -4,7 +4,7 @@ import type { ChangePasswordInput, LoginInput, MfaVerifyInput, StepUpInput } fro
 // Límites de forma, no de política: la política (longitud mínima, lista de comunes) la aplica
 // el servicio con validatePassword para dar códigos de error útiles. 512 deja margen para que
 // NFKC expanda caracteres; después se corta en 128 normalizados.
-const PASSWORD_MAX_RAW = 512;
+export const PASSWORD_MAX_RAW = 512;
 
 export class LoginBody implements LoginInput {
   @IsString()

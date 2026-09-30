@@ -5,6 +5,7 @@ import type { AppConfig } from '../config/app-config.service';
 import type { RequestContext } from '../common/request-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { PublicProfileResolver } from '../public/public-profile.resolver';
+import type { BookingNotifyService } from './booking-notify.service';
 import { BookingTokenService } from './booking-token.service';
 import { BookingService } from './booking.service';
 
@@ -62,10 +63,11 @@ function setup(counts: { ipProfile: number; ip: number; profile: number }, opts:
   const tokens = new BookingTokenService(config);
   const resolver = new PublicProfileResolver(prisma);
   const ctx = { ipHash: () => 'a'.repeat(64) } as unknown as RequestContext;
-  const service = new BookingService(prisma, resolver, tokens, ctx, config);
+  const notify = { newBooking: jest.fn(async () => undefined) };
+  const service = new BookingService(prisma, resolver, tokens, ctx, config, notify as unknown as BookingNotifyService);
   // Token emitido hace 5 s para pasar el tiempo mínimo.
   const token = tokens.issue(PROFILE.slug, Date.now() - 5_000);
-  return { service, created, token, tx };
+  return { service, created, token, tx, notify };
 }
 
 const req = { ip: '203.0.113.7', headers: {} } as unknown as Request;
@@ -73,7 +75,7 @@ const fields = { fullName: 'Ana Pérez', email1: 'ANA@correo.com', message: 'Fie
 
 describe('BookingService.submit', () => {
   it('guarda una solicitud normal con estado NEW y devuelve el enlace de WhatsApp', async () => {
-    const { service, created, token } = setup({ ipProfile: 0, ip: 0, profile: 0 });
+    const { service, created, token, notify } = setup({ ipProfile: 0, ip: 0, profile: 0 });
     const res = await service.submit('DJ-Prueba', { fields, consent: true, token }, req);
     expect(res.id).toBe('req1');
     expect(res.whatsappUrl).toMatch(WA_URL_RE);
@@ -85,6 +87,8 @@ describe('BookingService.submit', () => {
       consentVersion: expect.any(String),
       ipHash: 'a'.repeat(64),
     });
+    // Aviso al DJ (M3): id, perfil y el nombre tal como quedó guardado (la plantilla lo sanea).
+    expect(notify.newBooking).toHaveBeenCalledWith('req1', 'prof1', 'Ana Pérez');
   });
 
   it('pasado el tope por IP y perfil, guarda como SPAM y responde igual (sin 429)', async () => {
@@ -101,10 +105,12 @@ describe('BookingService.submit', () => {
   });
 
   it('honeypot lleno: SPAM con respuesta normal (incluye whatsappUrl)', async () => {
-    const { service, created, token } = setup({ ipProfile: 0, ip: 0, profile: 0 });
+    const { service, created, token, notify } = setup({ ipProfile: 0, ip: 0, profile: 0 });
     const res = await service.submit('dj-prueba', { fields, consent: true, token, hp_x7: 'http://spam.example' }, req);
     expect(res.whatsappUrl).toMatch(WA_URL_RE);
     expect(created[0]).toMatchObject({ status: 'SPAM' });
+    // El spam nunca le escribe al DJ.
+    expect(notify.newBooking).not.toHaveBeenCalled();
   });
 
   it('un token reutilizado da 400 FORM_TOKEN_USED', async () => {

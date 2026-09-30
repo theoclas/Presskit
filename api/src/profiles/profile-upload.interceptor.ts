@@ -6,11 +6,13 @@ import { Errors } from '../common/errors';
 import type { ScopedProfileId } from '../common/scope/profile-scope.guard';
 import { MediaErrors } from '../media/media.errors';
 import { UploadGate, declaredLengthTooLarge, discardRequestBody, readImageUpload } from '../media/upload.interceptor';
+import { PrismaService } from '../prisma/prisma.service';
 import { quotaExceeded } from './profile-media.service';
 import { quotaError } from './profile-rules';
+import { emailNotVerified } from './profile-status.service';
 import { ProfileStore } from './profile-store.service';
 
-type UploadRequest = AuthedRequest & { scopedProfileId?: ScopedProfileId };
+type UploadRequest = AuthedRequest & { scopedProfileId?: ScopedProfileId; actingAsAdmin?: boolean };
 
 /**
  * POST .../media [me|adm]. Todo lo que se puede decidir sin el archivo se decide ANTES de que
@@ -28,6 +30,7 @@ export class ProfileUploadInterceptor implements NestInterceptor {
   constructor(
     private readonly gate: UploadGate,
     private readonly store: ProfileStore,
+    private readonly prisma: PrismaService,
   ) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
@@ -41,6 +44,9 @@ export class ProfileUploadInterceptor implements NestInterceptor {
       throw err;
     };
     if (!userId || !profileId) return reject(Errors.forbidden());
+    // Dueño (montaje /me): sin correo verificado no se sube nada (H3: el registro abierto no puede
+    // llenar el disco). El admin no pasa por aquí: su montaje lo marca ProfileScopeGuard.
+    if (req.actingAsAdmin !== true && !(await this.emailVerified(userId))) return reject(emailNotVerified());
 
     if (declaredLengthTooLarge(req)) return reject(MediaErrors.tooLarge());
     const release = this.gate.tryEnter(userId);
@@ -59,5 +65,10 @@ export class ProfileUploadInterceptor implements NestInterceptor {
       throw err;
     }
     return next.handle().pipe(finalize(release));
+  }
+
+  private async emailVerified(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, emailVerifiedAt: true } });
+    return Boolean(user?.email && user.emailVerifiedAt);
   }
 }

@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Patch, Post, Put, UseGuards, HttpCode } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { EditorProfileDto, LegalInfoDto, PublicDjProfileDto } from '@fersua/shared';
+import { Roles } from '../auth/decorators';
 import { ProfileScopeGuard, ScopedProfile, type ScopedProfileId } from '../common/scope/profile-scope.guard';
 import {
   BookingFormBody,
@@ -85,15 +87,27 @@ export class ProfileEditorController {
   }
 }
 
-/** Solo el dueño: enviar a revisión no tiene sentido desde el admin (él aprueba directo). */
+/**
+ * Solo el dueño: enviar a revisión y retirarla no tienen sentido desde el admin (él aprueba
+ * directo). 10 cada 10 min: cada envío le escribe al admin.
+ */
 @Controller('me/profile')
+@Roles('USER')
 @UseGuards(ProfileScopeGuard)
 export class OwnerProfileController {
   constructor(private readonly status: ProfileStatusService) {}
 
   @Post('submit')
   @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 600_000 } })
   submit(@ScopedProfile() profileId: ScopedProfileId, @Actor() actor: EditorActor): Promise<EditorProfileDto> {
     return this.status.submit(profileId, actor);
+  }
+
+  @Post('withdraw')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 600_000 } })
+  withdraw(@ScopedProfile() profileId: ScopedProfileId, @Actor() actor: EditorActor): Promise<EditorProfileDto> {
+    return this.status.withdraw(profileId, actor);
   }
 }

@@ -23,6 +23,7 @@ import {
   setKnownDeviceCookie,
   setRefreshCookies,
 } from './tokens/auth-cookies';
+import { EmailTokenService } from './tokens/email-token.service';
 import { SessionService, type IssuedSession, type SessionMeta } from './tokens/session.service';
 import { TokenService } from './tokens/token.service';
 
@@ -90,6 +91,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly lockout: LockoutService,
     private readonly mfa: MfaService,
+    private readonly emailTokens: EmailTokenService,
   ) {}
 
   // ------------------------------------------------------------------ login
@@ -366,6 +368,8 @@ export class AuthService {
           select: { id: true, role: true, tokenVersion: true },
         });
         await this.sessions.revokeAllForUser(row.id, 'PASSWORD_CHANGED', tx);
+        // Un enlace de restablecer pedido antes ya no debe poder pisar la contraseña nueva.
+        await this.emailTokens.invalidate(row.id, 'PASSWORD_RESET', tx, now);
         const created = await this.sessions.create(updated, meta, tx);
         await this.audit.record(
           { actorId: row.id, actorUsername: row.username, action: 'auth.password_changed', targetType: 'User', targetId: row.id, ipHash: meta.ipHash },
@@ -374,14 +378,11 @@ export class AuthService {
         return { session: created, tokenVersion: updated.tokenVersion };
       });
       this.lockout.clearPairs(row.id);
-      const secure = this.config.cookieSecure;
-      setRefreshCookies(res, secure, session.refreshToken, session.expiresAt, session.familyExpiresAt);
       // tokenVersion subió y con eso murieron las cookies de dispositivo conocido emitidas antes;
       // este navegador acaba de probar la contraseña nueva, así que recibe una vigente.
-      const device = this.lockout.issueDeviceToken(row.id, tokenVersion);
-      setKnownDeviceCookie(res, secure, device.value, device.expires);
+      const dto = await this.finishSession(res, session, tokenVersion);
       this.mail.send(row.email, 'password-changed', { at: now, isAdmin: row.role === 'ADMIN' });
-      return this.sessionDto(session);
+      return dto;
     } finally {
       this.lockout.release(key);
     }
@@ -453,11 +454,7 @@ export class AuthService {
       return created;
     });
     this.lockout.clearPairs(user.id);
-
-    const secure = this.config.cookieSecure;
-    setRefreshCookies(res, secure, session.refreshToken, session.expiresAt, session.familyExpiresAt);
-    const device = this.lockout.issueDeviceToken(user.id, user.tokenVersion);
-    setKnownDeviceCookie(res, secure, device.value, device.expires);
+    const dto = await this.finishSession(res, session, user.tokenVersion);
 
     if (newNetwork && method !== 'password') {
       this.mail.send(user.email ?? this.config.adminNotifyEmail, 'admin-new-login', {
@@ -466,6 +463,19 @@ export class AuthService {
         method,
       });
     }
+    return dto;
+  }
+
+  /**
+   * Entrega una sesión ya creada (login, cambio de contraseña, registro): cookie de refresh,
+   * cookie de dispositivo conocido para este navegador (acaba de probar la contraseña) y el
+   * SessionDto con el MeDto actualizado.
+   */
+  async finishSession(res: Response, session: IssuedSession, tokenVersion: number): Promise<SessionDto> {
+    const secure = this.config.cookieSecure;
+    setRefreshCookies(res, secure, session.refreshToken, session.expiresAt, session.familyExpiresAt);
+    const device = this.lockout.issueDeviceToken(session.userId, tokenVersion);
+    setKnownDeviceCookie(res, secure, device.value, device.expires);
     return this.sessionDto(session);
   }
 

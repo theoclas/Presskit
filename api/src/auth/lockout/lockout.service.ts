@@ -25,7 +25,7 @@ export function mfaLockMinutes(failures: number): number {
  * Candados en proceso, uno por flujo y usuario. Cada flujo tiene el suyo: un login anónimo con
  * el usuario del admin (que es público) no puede hacer fallar su código de 2FA ni su step-up.
  */
-export type LockFlow = 'login' | 'mfa' | 'stepup' | 'pwchange';
+export type LockFlow = 'login' | 'mfa' | 'stepup' | 'pwchange' | 'resend' | 'forgot' | 'reset';
 
 export function lockKey(flow: LockFlow, userId: string): string {
   return `${flow}:${userId}`;

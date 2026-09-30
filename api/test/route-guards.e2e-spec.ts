@@ -20,7 +20,7 @@ const PUBLIC_ALLOWED = [
   /^\/api\/health(\/|$)/,
   /^\/api\/public\//,
   /^\/api\/media\/preview\//,
-  /^\/api\/auth\/(login|mfa|refresh|logout|forgot-password|reset-password|register|verify-email)$/,
+  /^\/api\/auth\/(login|mfa|refresh|logout|forgot-password|reset-password|register|verify-email|registration)$/,
 ];
 
 const DUMMY_ID = 'cxxxxxxxxxxxxxxxxxxxxxxx1';

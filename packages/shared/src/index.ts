@@ -19,3 +19,4 @@ export * from './genres';
 export * from './profile-status';
 export * from './api-types';
 export * from './admin-types';
+export * from './owner-types';

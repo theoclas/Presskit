@@ -220,5 +220,29 @@ curl -sI $B/admin | grep -iE '^HTTP|content-security' | head -n 3  # 200 y un so
 - **Monitoreo**: UptimeRobot (gratis) sobre `https://booking.fersuastudio.com/api/health`, y la URL de
   healthchecks.io en `BACKUP_HEALTHCHECK_URL`.
 - **Antes de lanzar**: completar los marcadores `[...]` de los textos legales y cargar fechas nuevas de Mac Fly.
-- **M3**: registro abierto de DJs (`REGISTRATION_OPEN=true`), su panel en `/panel` y la recuperación
-  de contraseña por correo.
+- **M3**: registro abierto de DJs, su panel en `/panel` y la recuperación de contraseña por correo.
+  Se despliega con un `deploy.sh` normal (no trae migraciones) y el registro se abre aparte (sección I).
+
+## I. [VPS deploy] Abrir el registro de DJs (M3)
+
+Con M3 desplegado, el registro sigue **cerrado** (`REGISTRATION_OPEN=false` por defecto): `/registro`
+muestra "El registro está cerrado por ahora" y `POST /api/auth/register` responde 403. Para abrirlo:
+
+```bash
+cd ~/apps/fersuastudio-booking
+nano .env                      # REGISTRATION_OPEN=true
+                               # (revisa también PUBLIC_URL=https://booking.fersuastudio.com: los
+                               #  enlaces de los correos se arman solo con él)
+bash scripts/check-env.sh && docker compose up -d api
+curl -s https://booking.fersuastudio.com/api/auth/registration   # {"open":true} (caché de 60 s)
+```
+
+- [ ] Registrar una cuenta de prueba con un correo propio: llega "Confirma tu correo", el enlace abre
+      `/verificar-correo` y pide el clic en "Confirmar mi correo".
+- [ ] `/panel`: crear el perfil, completar la lista y "Enviar a revisión". Al admin le llega "Perfil
+      enviado a revisión" (a `ADMIN_NOTIFY_EMAIL` o, si está vacío, a su correo).
+- [ ] Rechazarlo desde `/admin/djs` con un motivo (al DJ le llega el aviso). Después borrar el perfil
+      de prueba (DJs → borrar) y su cuenta (Usuarios → eliminar).
+
+Para cerrarlo otra vez: `REGISTRATION_OPEN=false` y el mismo `docker compose up -d api`. Las cuentas y
+perfiles ya creados siguen funcionando; solo se frenan los registros nuevos.
