@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-09-30. **M3 en producción** (`f055c5d`) con el registro **cerrado** (`REGISTRATION_OPEN=false`) hasta que Fernando decida abrirlo. Respaldo nocturno programado. **M4 hecho, revisado y con commit en `main`**: falta el push, desplegarlo y lo que necesita Fernando (sección "M4 — qué quedó").
+> Última actualización: 2026-09-30. **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Decisiones del 2026-09-30 (Fernando)
 - **La plataforma de DJs vive definitivamente en `booking.fersuastudio.com`.** No se mueve `fersuastudio.com`: el dominio principal y **Allset se quedan en Hostinger sin tocar**. Nada de reglas ni 410 para Allset o /pedido.
@@ -21,20 +21,25 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
   - `deploy` tiene sudo con contraseña: lo usa Fernando.
   - Docker de Ubuntu **sin buildx**: el Dockerfile evita las funciones de BuildKit.
 
-## Hitos (avance total aprox. 95 %)
+## Hitos (avance total aprox. 97 %)
 | Hito | Estado |
 |---|---|
 | **M0** Fundaciones | ✅ Hecho y subido (`7a3c321`) |
 | **M1** Sitio público + semilla de Mac Fly + legal + infraestructura | ✅ Hecho, subido (`1235f4c`, `b19e6f1`) y **EN PRODUCCIÓN** |
 | **M2** Auth con 2FA + panel admin | ✅ Hecho, revisado, subido (`31fa48a`) y **EN PRODUCCIÓN**; admin real creado |
 | **M3** Registro y autoservicio de DJs | ✅ Hecho, revisado, subido (`fb2027e`, `f055c5d`) y **EN PRODUCCIÓN** (registro cerrado) |
-| **M4** Endurecimiento + dominio definitivo en `booking.` (sin cambio de DNS) | ✅ Hecho, revisado y con commit; falta push y despliegue |
+| **M4** Endurecimiento + dominio definitivo en `booking.` (sin cambio de DNS) | ✅ Hecho, revisado, subido (`412d1b2`) y **EN PRODUCCIÓN**; copia a Google Drive y vigilante activos |
 
 ## Producción (M1 + M2)
 - **https://booking.fersuastudio.com**, con HTTPS por certbot (vence el 2026-12-28 y se renueva solo), `noindex` mientras sea beta.
 - **VPS:** `~/apps/fersuastudio-booking`, proyecto compose `fersua-booking` (db, migrate, api, edge). El edge escucha en `127.0.0.1:8090`; el vhost del host es `/etc/nginx/sites-available/fersua-booking.conf`.
-- **Versión desplegada:** `f055c5d` (M3, sin migraciones nuevas desde `m2_review_fixes`). M4 trae `m4_hardening`, que `deploy.sh` aplica sola. Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
-- **Respaldo nocturno:** crontab de `deploy`, 08:15 UTC (03:15 Bogotá), `scripts/backup.sh nightly` → `~/backups/fersua-booking`. Probado el 2026-09-30. La copia fuera del VPS (Google Drive) y el vigilante están listos en M4 y se activan después de desplegarlo. Semilla: 27 géneros y Mac Fly & Mike Bran (APROBADO, sin dueño). Respaldos: el manual y el automático previo a cada despliegue.
+- **Versión desplegada:** `412d1b2` (M4), con la migración `m4_hardening` aplicada. Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
+- **Respaldos (crontab de `deploy`, UTC):**
+  - 08:15, nocturno local (`scripts/backup.sh nightly`);
+  - 08:45, copia externa cifrada a Google Drive (`scripts/offsite-backup.sh nightly`, repositorio `rclone:gdrive:fersua-booking-respaldos`);
+  - cada 10 min, `scripts/watchdog.sh`, que avisa por correo por disco, respaldo viejo, contenedores, certificado o copia externa.
+
+  Primera copia externa: `2b98e772` (2026-09-30), `restic check` OK. La clave `OFFSITE_RESTIC_PASSWORD` está en el `.env` del VPS y **Fernando guardó una copia fuera del VPS**. La configuración de rclone está en `~/.config/rclone/rclone.conf` (600). Ojo: usa el `client_id` compartido de rclone, que Google retira en 2026; si falla, el vigilante avisa y hay que crear un `client_id` propio (`docs/04-backups.md`). Semilla: 27 géneros y Mac Fly & Mike Bran (APROBADO, sin dueño).
 - **Admin:** un solo usuario `fersua` (ADMIN, 2FA TOTP y correo registrado), creado por Fernando con `admin:create` el 2026-09-29. Se entra por https://booking.fersuastudio.com/login. Rescate solo desde el VPS (`admin:reset-password`, `admin:reset-mfa`, `admin:unlock`).
 - **`.env` del VPS** (chmod 600, nunca en git): secretos aleatorios y la clave SMTP real de `no-reply@fersuastudio.com`, verificada contra Hostinger.
 - **Actualizar:** `cd ~/apps/fersuastudio-booking && bash scripts/deploy.sh` (git pull, build clásico, migraciones y salud; si falla, vuelve atrás solo).
@@ -66,10 +71,7 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
 
 ### Pendiente, en este orden
 1. ~~Push de M2~~ ✅ · ~~Desplegar en el VPS~~ ✅ · ~~Crear el admin real~~ ✅ · ~~Push y despliegue de M3~~ ✅
-2. **M4:** ~~commit~~ ✅, push, `bash scripts/deploy.sh` en el VPS (aplica `m4_hardening`) y los pasos de
-   `docs/02-primer-despliegue.md`, sección J (crontab, copia externa, monitoreo). Al desplegar, el detalle
-   de «Registros legales» empieza a pedir la contraseña y el código, y la entrega de datos del DJ la casilla
-   de verificación.
+2. ~~M4: push, despliegue, crontab, copia externa a Google Drive y vigilante~~ ✅ (2026-09-30). Opcional: cuentas de UptimeRobot y healthchecks.io (`docs/08-monitoreo.md`).
 3. **Abrir el registro en producción** cuando Fernando decida (`docs/02-primer-despliegue.md`, sección I):
    - antes, la revisión única de correos guardados (una consulta que debe dar `0`, está en la sección I);
    - en el `.env` del VPS poner `REGISTRATION_OPEN=true` y correr `bash scripts/check-env.sh && docker compose up -d api`;
