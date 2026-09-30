@@ -77,8 +77,7 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
    - en el `.env` del VPS poner `REGISTRATION_OPEN=true` y correr `bash scripts/check-env.sh && docker compose up -d api`;
    - confirmar que `PUBLIC_URL=https://booking.fersuastudio.com` (los enlaces de los correos salen de ahí);
    - si la auditoría muestra "Se agotó un cupo diario de correos" (cupo `verify`), cerrar el registro otra vez.
-4. **Log del nginx del host sin query string** (sudo, una vez; detalle en `docs/02-primer-despliegue.md`, sección E):
-   `sudo cp deploy/host-nginx/conf.d/fersua-booking-log.conf /etc/nginx/conf.d/`, agregar ` fersua_booking` a los `access_log` de `/etc/nginx/sites-available/fersua-booking.conf`, `sudo nginx -t` y reload.
+4. ~~Log del nginx del host sin query string~~ ✅
 5. Desde `/admin`: cargar el registro legal (art. 53) de Mac Fly (el resumen lo marca en rojo) y sus fechas nuevas.
 
 ## M3 — qué quedó (en producción)
@@ -329,6 +328,11 @@ El cambio de DNS y Allset ya no están pendientes: se decidió no mover nada.
   `npm run cli -w api -- admin:reset-mfa --totp-secret-out <archivo en el temp>` (escribe el secreto TOTP; bórralo al terminar).
   No usar `admin:create` otra vez: se niega porque ya hay un admin.
 
+### Verificaciones en producción (2026-09-30)
+- **Ensayo de restauración desde Google Drive** (`restore-drill.sh --from-offsite`): OK. Conteos idénticos y última migración `m4_hardening`.
+- **Alerta de prueba del vigilante** (`ops:alert --kind test`) por el SMTP real de Hostinger: enviada.
+- **Automatización nocturna** del 2026-09-30: respaldo local 08:15 UTC y copia externa 08:46 UTC (instantánea `9fc58c30`), sin intervención.
+
 ## Decisiones clave (resumen)
 - **Stack:** NestJS 11 + Prisma 6.19 + MySQL 8.4 en el api; React 19 + Vite 7 en la web; npm workspaces con `packages/shared` (`@fersua/shared`).
 - **Cuentas:**
@@ -364,7 +368,7 @@ npm run dev:web                 # http://localhost:5180 (proxy de /api y /media 
 - **Abrir el registro de DJs** después de desplegar M3 (`docs/02-primer-despliegue.md`, sección I: primero la revisión de correos guardados, después `REGISTRATION_OPEN=true`).
 - **Revisar con lo legal** los textos nuevos: aviso de privacidad de `/registro`, política §8 y Términos para Artistas §10 (borrados automáticos). También falta decidir la 4.ª casilla del registro (derechos sobre el contenido).
   - **M4:** la política §5 suma a Google (Google Drive) como encargado de la copia cifrada de los respaldos, posiblemente fuera de Colombia, y la §8 aclara que el plazo de 8 semanas incluye esa copia. Se agregó sin subir la versión (sigue en borrador, con marcadores, como los cambios de M3). Si se prefiere guardar la copia externa más tiempo, primero hay que cambiar la §8.
-- **Formato del log del nginx del host** sin query string (paso 4 de arriba; `docs/02-primer-despliegue.md`, sección E).
+- ~~Formato del log del nginx del host sin query string~~ ✅ (Fernando lo aplicó; verificado el 2026-09-30).
 - **`DjLegalInfo` de Mac Fly** (registro privado del art. 53): se carga desde el admin (pestaña "Datos legales"). Mac Fly está publicado sin él: el resumen y el editor lo marcan en rojo, y si se suspende no se puede reactivar sin cargarlo.
 - **`ADMIN_NOTIFY_EMAIL`** en el `.env` del VPS (opcional): a dónde llegan los avisos de PQRS nuevas; si está vacío, van al correo del admin.
 - **Marcadores legales:** nombre o razón social, NIT o cédula, dirección, correo y teléfono del responsable. Van en `web/src/public/legal/operator.ts` y `docs/legal/`.
