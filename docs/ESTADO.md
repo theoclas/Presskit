@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-09-29 (noche). **M2 en producción** (`31fa48a`). **M3 terminado, revisado y corregido** (commit `fb2027e` + el commit de correcciones de la revisión), **todavía sin push ni despliegue**. Siguiente: push, desplegar M3 y abrir el registro.
+> Última actualización: 2026-09-30. **M3 en producción** (`f055c5d`) con el registro **cerrado** (`REGISTRATION_OPEN=false`) hasta que Fernando decida abrirlo. Respaldo nocturno programado. Siguiente: M4.
 
 ## Qué es
 Plataforma de booking de DJs de **Fersua Studio**: cada DJ (o dúo) arma su página con la plantilla de
@@ -17,19 +17,20 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
   - `deploy` tiene sudo con contraseña: lo usa Fernando.
   - Docker de Ubuntu **sin buildx**: el Dockerfile evita las funciones de BuildKit.
 
-## Hitos (avance total aprox. 90 %)
+## Hitos (avance total aprox. 85 %)
 | Hito | Estado |
 |---|---|
 | **M0** Fundaciones | ✅ Hecho y subido (`7a3c321`) |
 | **M1** Sitio público + semilla de Mac Fly + legal + infraestructura | ✅ Hecho, subido (`1235f4c`, `b19e6f1`) y **EN PRODUCCIÓN** |
 | **M2** Auth con 2FA + panel admin | ✅ Hecho, revisado, subido (`31fa48a`) y **EN PRODUCCIÓN**; admin real creado |
-| **M3** Registro y autoservicio de DJs | ✅ Hecho, integrado, revisado y corregido; en commits locales (`fb2027e` + correcciones). ⏳ Falta push y despliegue |
+| **M3** Registro y autoservicio de DJs | ✅ Hecho, revisado, subido (`fb2027e`, `f055c5d`) y **EN PRODUCCIÓN** (registro cerrado) |
 | **M4** Endurecimiento + cambio de DNS del dominio principal | ⏳ Pendiente |
 
 ## Producción (M1 + M2)
 - **https://booking.fersuastudio.com**, con HTTPS por certbot (vence el 2026-12-28 y se renueva solo), `noindex` mientras sea beta.
 - **VPS:** `~/apps/fersuastudio-booking`, proyecto compose `fersua-booking` (db, migrate, api, edge). El edge escucha en `127.0.0.1:8090`; el vhost del host es `/etc/nginx/sites-available/fersua-booking.conf`.
-- **Versión desplegada:** `31fa48a` (M2), con la migración `m2_review_fixes` aplicada. Semilla: 27 géneros y Mac Fly & Mike Bran (APROBADO, sin dueño). Respaldos: el manual y el automático previo a cada despliegue.
+- **Versión desplegada:** `f055c5d` (M3, sin migraciones nuevas desde `m2_review_fixes`). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
+- **Respaldo nocturno:** crontab de `deploy`, 08:15 UTC (03:15 Bogotá), `scripts/backup.sh nightly` → `~/backups/fersua-booking`. Probado el 2026-09-30. Falta la copia fuera del VPS (M4). Semilla: 27 géneros y Mac Fly & Mike Bran (APROBADO, sin dueño). Respaldos: el manual y el automático previo a cada despliegue.
 - **Admin:** un solo usuario `fersua` (ADMIN, 2FA TOTP y correo registrado), creado por Fernando con `admin:create` el 2026-09-29. Se entra por https://booking.fersuastudio.com/login. Rescate solo desde el VPS (`admin:reset-password`, `admin:reset-mfa`, `admin:unlock`).
 - **`.env` del VPS** (chmod 600, nunca en git): secretos aleatorios y la clave SMTP real de `no-reply@fersuastudio.com`, verificada contra Hostinger.
 - **Actualizar:** `cd ~/apps/fersuastudio-booking && bash scripts/deploy.sh` (git pull, build clásico, migraciones y salud; si falla, vuelve atrás solo).
@@ -230,7 +231,7 @@ npm run dev:web                 # http://localhost:5180 (proxy de /api y /media 
 - **Marcadores legales:** nombre o razón social, NIT o cédula, dirección, correo y teléfono del responsable. Van en `web/src/public/legal/operator.ts` y `docs/legal/`.
 - **Fechas actuales de Mac Fly & Mike Bran:** se cargan desde el admin (DJs → Mike Bran & Macfly → Fechas).
 - **Confirmar para Mac Fly:** el SoundCloud del dúo, el pie de foto "2024 / 2025" y el texto al compartir.
-- **Respaldo nocturno automático:** decidir si se programa el cron del VPS (`deploy/cron/crontab.example`).
+- ~~Respaldo nocturno automático~~ ✅ programado el 2026-09-30.
 - **Seguridad:**
   - La clave del buzón `no-reply@` se escribió en el chat: conviene cambiarla en hPanel y actualizar `SMTP_PASS` en el `.env` del VPS.
   - Opcional: pasar el repo a privado; en ese caso hace falta una deploy key de solo lectura en el VPS.
