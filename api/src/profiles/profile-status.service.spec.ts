@@ -160,7 +160,7 @@ function completeProfile(overrides: Record<string, unknown> = {}): ProfileRow {
     status: 'DRAFT',
     displayName: 'DJ Prueba',
     slug: 'dj-prueba',
-    texts: {},
+    texts: { heroTitle: 'Techno en vivo' },
     heroImageId: 'hero1',
     whatsappNumber: null,
     bookingForm: defaultFormConfig(),
@@ -188,11 +188,12 @@ describe('ProfileStatusService (dueño, M3)', () => {
     expect(legalErr.getStatus()).toBe(409);
     expect(legalErr.code).toBe('LEGAL_INFO_REQUIRED');
 
-    const incomplete = setup(completeProfile({ heroImageId: null, _count: { members: 0, genres: 0 } }));
+    const incomplete = setup(completeProfile({ texts: {}, heroImageId: null, _count: { members: 0, genres: 0 } }));
     const err = (await incomplete.service.submit(PID, owner).catch((e: unknown) => e)) as AppError;
     expect(err.getStatus()).toBe(409);
     expect(err.code).toBe('PROFILE_INCOMPLETE');
-    expect(err.details).toEqual({ heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED' });
+    // El título de la portada de la plantilla no cuenta: el DJ tiene que escribir el suyo.
+    expect(err.details).toEqual({ 'texts.heroTitle': 'REQUIRED', heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED' });
     expect(incomplete.media.moveProfileMedia).not.toHaveBeenCalled();
   });
 

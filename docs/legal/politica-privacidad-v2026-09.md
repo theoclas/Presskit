@@ -73,6 +73,8 @@ Escríbenos desde la página /pqrs o al correo [CORREO DE CONTACTO]. Cuéntanos 
 
 - Solicitudes de booking: 12 meses desde que se envían; después se borran.
 - Cuenta y página del artista: mientras la cuenta esté activa. Al cerrarla se borran; el registro de oferente se guarda hasta 12 meses más para atender posibles quejas.
+- Cuentas y perfiles sin uso: si no confirmas tu correo en 14 días, borramos la cuenta y lo que hayas empezado a armar. Un borrador sin cambios en 30 días (te avisamos por correo a los 21) y un perfil rechazado sin cambios en 30 días se borran con sus fotos y su registro de oferente, que nunca se publicó; tu cuenta no se borra.
+- Solicitudes marcadas como spam: 30 días.
 - PQRS y reportes: el tiempo necesario para atenderlos y poder demostrar que se atendieron.
 - Respaldos: las copias diarias duran 14 días y las semanales 8 semanas. Por eso un dato borrado puede tardar hasta 8 semanas en desaparecer de todos los respaldos.
 - Registros técnicos del servidor: 14 días.

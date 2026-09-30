@@ -47,6 +47,8 @@ describe('auditoría en español', () => {
     expect(auditActionLabel('profile.withdraw')).toBe('Retiró el perfil de la revisión (el DJ)');
     expect(auditActionLabel('profile.booking.status')).toBe('Cambió el estado de una solicitud (el DJ)');
     expect(auditActionLabel('system.user.unverified_purged')).toBe('Borró una cuenta que no confirmó su correo');
+    expect(auditActionLabel('system.booking.retention_purged')).toBe('Borró solicitudes vencidas (12 meses) y spam viejo');
+    expect(auditActionLabel('system.mail.cap_reached')).toMatch(/cupo diario de correos/);
     expect(auditActionLabel('auth.register')).toBe('Se registró');
     expect(auditTargetLabel('DjProfile')).toBe('Perfil');
     expect(auditTargetLabel('User')).toBe('Cuenta');

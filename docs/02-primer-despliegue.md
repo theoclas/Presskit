@@ -226,7 +226,18 @@ curl -sI $B/admin | grep -iE '^HTTP|content-security' | head -n 3  # 200 y un so
 ## I. [VPS deploy] Abrir el registro de DJs (M3)
 
 Con M3 desplegado, el registro sigue **cerrado** (`REGISTRATION_OPEN=false` por defecto): `/registro`
-muestra "El registro está cerrado por ahora" y `POST /api/auth/register` responde 403. Para abrirlo:
+muestra "El registro está cerrado por ahora" y `POST /api/auth/register` responde 403.
+
+Antes de abrirlo, una revisión única: ningún correo guardado debe tener sintaxis de lista o de
+"nombre <buzón>" (desde M3 el api ya no las acepta; esto confirma que no quedó ninguna de antes). Debe
+responder `0`:
+
+```bash
+cd ~/apps/fersuastudio-booking
+docker compose exec db sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -N -e "SELECT COUNT(*) FROM User WHERE email REGEXP \"[<>,;:() ]\" OR LOCATE(CHAR(34), email) > 0"'
+```
+
+Para abrirlo:
 
 ```bash
 cd ~/apps/fersuastudio-booking
@@ -246,3 +257,8 @@ curl -s https://booking.fersuastudio.com/api/auth/registration   # {"open":true}
 
 Para cerrarlo otra vez: `REGISTRATION_OPEN=false` y el mismo `docker compose up -d api`. Las cuentas y
 perfiles ya creados siguen funcionando; solo se frenan los registros nuevos.
+
+**Señal de alarma:** si en `/admin` → Auditoría aparece "Se agotó un cupo diario de correos"
+(`system.mail.cap_reached`) con el cupo `verify`, hubo más de 80 correos de confirmación en el día: casi
+seguro una ola de registros falsos. Ese día el registro ya responde "intenta mañana"; conviene cerrarlo
+como arriba y revisar las cuentas nuevas en Usuarios.

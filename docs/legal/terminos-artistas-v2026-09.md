@@ -69,6 +69,8 @@ Fersua Studio no recibe, retiene ni procesa pagos entre tú y tus clientes. Anti
 
 - Puedes cerrar tu cuenta cuando quieras, escribiéndonos por /pqrs o a [CORREO DE CONTACTO].
 - Al cerrarla se borran tu página, tus fotos y tus solicitudes. El registro de oferente se conserva hasta 12 meses para atender posibles quejas.
+- Si no confirmas tu correo en 14 días, borramos la cuenta y lo que hayas empezado a armar.
+- Un borrador sin cambios en 30 días (te avisamos por correo a los 21) y un perfil rechazado sin cambios en 30 días se borran, con sus fotos y su registro de oferente. Tu cuenta no se borra.
 - Podemos cerrar una cuenta por incumplimiento grave o repetido de estos términos.
 
 ## 11. Cambios en estos términos

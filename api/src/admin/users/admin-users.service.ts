@@ -13,6 +13,7 @@ import {
 import { AuditService } from '../../audit/audit.service';
 import { LockoutService } from '../../auth/lockout/lockout.service';
 import { PasswordHasher } from '../../auth/password/password-hasher.service';
+import { EmailTokenService } from '../../auth/tokens/email-token.service';
 import { SessionService } from '../../auth/tokens/session.service';
 import { Errors } from '../../common/errors';
 import { MailService } from '../../mail/mail.service';
@@ -88,6 +89,8 @@ export class AdminUsersService {
     private readonly hasher: PasswordHasher,
     private readonly sessions: SessionService,
     private readonly lockout: LockoutService,
+    // Los enlaces de "olvidé mi contraseña" pendientes mueren al rescatar o suspender la cuenta.
+    private readonly emailTokens: EmailTokenService,
     // De ProfilesModule: borrar la cuenta dueña de un perfil aprobado lo suspende (mismo camino
     // que la suspensión del admin: archivos a private/ y auditoría).
     private readonly profileStatus: ProfileStatusService,
@@ -183,6 +186,9 @@ export class AdminUsersService {
         },
       });
       const revoked = await this.sessions.revokeAllForUser(target.id, 'ADMIN_ACTION', tx);
+      // Rescate de una cuenta tomada: un enlace pedido antes (quizá por quien controla el buzón)
+      // no puede reemplazar la contraseña temporal.
+      await this.emailTokens.invalidate(target.id, 'PASSWORD_RESET', tx, now);
       await this.audit.record(
         {
           ...actorFields(actor),
@@ -212,6 +218,8 @@ export class AdminUsersService {
         select: userSelect,
       });
       const revoked = await this.sessions.revokeAllForUser(target.id, 'ADMIN_ACTION', tx);
+      // Si la reactiva pronto, un enlace de restablecer anterior a la suspensión ya no sirve.
+      await this.emailTokens.invalidate(target.id, 'PASSWORD_RESET', tx);
       await this.audit.record(
         {
           ...actorFields(actor),

@@ -37,8 +37,14 @@ export class ProfileLegalService {
     return toLegalInfoDto(row);
   }
 
+  /**
+   * Guarda el registro. El dueño declara cada vez que los datos son veraces (`truthful: true`,
+   * docs/diseno/11 §2.4) y la declaración queda en la auditoría (`declared: true`) con los
+   * nombres de los campos cambiados. El admin no declara nada (carga lo que le entregan).
+   */
   async put(profileId: ScopedProfileId, actor: EditorActor, body: LegalInfoBody): Promise<LegalInfoDto> {
     const check = new FieldCheck();
+    if (!actor.asAdmin && (body.truthful as boolean | undefined) !== true) check.fail('truthful', 'REQUIRED');
     const legalName = check.text('legalName', body.legalName, L.legalNameMax, 2);
     const docNumber = normalizeDocNumber(body.docType, body.docNumber);
     if (!docNumber) check.fail('docNumber', 'INVALID');
@@ -75,7 +81,12 @@ export class ProfileLegalService {
         create: { profileId, legalName, docType: body.docType, docNumber: docNumber!, address, phones, updatedById: actor.id },
         update: { legalName, docType: body.docType, docNumber: docNumber!, address, phones, updatedById: actor.id },
       });
-      await this.store.record(tx, profileId, actor, 'legal_info', { targetType: 'DjLegalInfo', targetId: saved.id, fields: changed });
+      await this.store.record(tx, profileId, actor, 'legal_info', {
+        targetType: 'DjLegalInfo',
+        targetId: saved.id,
+        fields: changed,
+        ...(actor.asAdmin ? {} : { meta: { declared: true } }),
+      });
       return saved;
     });
     return toLegalInfoDto(row);

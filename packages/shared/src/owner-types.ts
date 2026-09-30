@@ -39,6 +39,11 @@ export interface ResetPasswordInput {
 export interface AcceptTermsInput {
   acceptTerms: true;
   acceptPrivacy: true;
+  /**
+   * Mayoría de edad. Obligatoria (true) si la cuenta nunca la declaró (MeDto.ageConfirmed
+   * false: cuentas que creó el admin); si ya la declaró, se ignora.
+   */
+  confirmAge?: true;
 }
 
 export interface OnboardingInput {

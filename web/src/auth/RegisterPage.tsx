@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { usePalette } from '../lib/palette';
+import { RegisterPrivacyNotice } from '../public/legal/PrivacyNotice';
 import { SITE_NAME, usePageTitle } from '../lib/usePageTitle';
 import { AuthCard, AuthStatusCard } from './AuthCard';
 import { useAuth } from './AuthProvider';
@@ -337,6 +338,7 @@ function RegisterForm({ onClosed }: { onClosed: () => void }) {
           />
         </div>
 
+        <RegisterPrivacyNotice />
         <div className="auth-consents">
           {consent(
             'acceptTerms',

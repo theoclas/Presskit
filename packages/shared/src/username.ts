@@ -39,7 +39,19 @@ export function validateUsername(input: unknown, opts: { allowReserved?: boolean
   return null;
 }
 
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,189}\.[^\s@]{2,}$/;
+/**
+ * addr-spec estricto (RFC 5321/5322 sin comillas ni comentarios), solo ASCII:
+ * - parte local: dot-atom (letras, números y !#$%&'*+/=?^_`{|}~-, puntos no al inicio, al
+ *   final ni dobles), máximo 64;
+ * - dominio: etiquetas [A-Za-z0-9-] (sin guion al inicio o al final) separadas por puntos, con
+ *   un TLD que empieza por letra.
+ * Nunca pasan <>,;:"()[]\ ni espacios: con ellos, "x<otro@buzon.com>" o "a,otro@buzon.com"
+ * los entrega el cliente SMTP a OTRO destinatario (evadía "1 correo = 1 cuenta" y los topes).
+ */
+const EMAIL_LOCAL = "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*";
+const EMAIL_LABEL = '[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?';
+const EMAIL_TLD = '[A-Za-z](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])';
+const EMAIL_RE = new RegExp(`^(?=[^@]{1,64}@)${EMAIL_LOCAL}@(?:${EMAIL_LABEL}\\.)+${EMAIL_TLD}$`);
 
 export function normalizeEmail(input: string): string {
   return input.trim().toLowerCase();
@@ -47,4 +59,17 @@ export function normalizeEmail(input: string): string {
 
 export function isValidEmail(input: unknown): input is string {
   return typeof input === 'string' && input.length <= LIMITS.user.emailMax && EMAIL_RE.test(input.trim());
+}
+
+/**
+ * Buzón canónico para topes por destinatario: sin la etiqueta "+algo" de la parte local
+ * (dj+1@x.com y dj+2@x.com llegan al mismo buzón) y en minúscula. Solo para contar, nunca
+ * para enviar ni para guardar.
+ */
+export function mailboxKey(email: string): string {
+  const e = normalizeEmail(email);
+  const at = e.lastIndexOf('@');
+  if (at <= 0) return e;
+  const local = e.slice(0, at).split('+')[0] || e.slice(0, at);
+  return `${local}@${e.slice(at + 1)}`;
 }

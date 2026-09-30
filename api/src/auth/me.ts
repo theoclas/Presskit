@@ -13,6 +13,7 @@ export const ME_SELECT = {
   mfaEnabledAt: true,
   termsVersion: true,
   privacyVersion: true,
+  ageConfirmedAt: true,
   profile: { select: { id: true, slug: true, status: true } },
 } satisfies Prisma.UserSelect;
 
@@ -33,5 +34,7 @@ export function toMeDto(u: MeRow): MeDto {
     privacyVersion: u.privacyVersion,
     // M3: la web muestra la re-aceptación (y el TermsGuard frena /api/me/**) mientras sea true.
     termsOutdated: isTermsOutdated(u),
+    // Cuentas que creó el admin: la pantalla de términos pide también la mayoría de edad.
+    ageConfirmed: u.role !== 'USER' || u.ageConfirmedAt !== null,
   };
 }

@@ -20,6 +20,7 @@ import { PasswordHasher } from '../src/auth/password/password-hasher.service';
 import { SessionService } from '../src/auth/tokens/session.service';
 import { BookingTokenService } from '../src/booking/booking-token.service';
 import { AppConfig } from '../src/config/app-config.service';
+import { OwnerEditBudget, OWNER_EDITS_PER_WINDOW } from '../src/common/guards/owner-edit-budget.guard';
 import { MailService } from '../src/mail/mail.service';
 import { MediaService } from '../src/media/media.service';
 import { StorageService } from '../src/media/storage.service';
@@ -47,6 +48,10 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
   let origin = '';
   let sendSpy: jest.SpyInstance;
   let mailpit = false;
+  let budget: OwnerEditBudget;
+
+  // Cada prueba empieza con el presupuesto de cambios del dueño lleno (H3 se prueba aparte, al final).
+  beforeEach(() => budget?.resetForTesting());
   let jpeg: Buffer;
 
   const userIds: string[] = [];
@@ -196,6 +201,7 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
     } catch {
       mailpit = false;
     }
+    budget = app.get(OwnerEditBudget);
     const mail = app.get(MailService);
     // Sin el API de Mailpit no hay dónde leer: nada sale por SMTP y se verifica con el espía.
     if (!mailpit) mail.setTransportForTesting({ sendMail: async () => ({}) });
@@ -355,22 +361,27 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
     const noLegal = await send('post', '/api/me/profile/submit', tokenB).expect(409);
     expect(noLegal.body.code).toBe('LEGAL_INFO_REQUIRED');
 
-    await send('put', '/api/me/profile/legal-info', tokenB, {
+    const legalB = {
       legalName: 'Persona de Prueba B',
       docType: 'CC',
       docNumber: '1.023.456.780',
       address: 'Calle 1 # 2-3, Medellín',
       phones: ['+57 300 111 2233'],
-    }).expect(200);
+    };
+    // Sin la declaración de veracidad (art. 53) no se guarda.
+    expect((await send('put', '/api/me/profile/legal-info', tokenB, legalB).expect(400)).body.details).toEqual({ truthful: 'REQUIRED' });
+    await send('put', '/api/me/profile/legal-info', tokenB, { ...legalB, truthful: true }).expect(200);
     const incomplete = await send('post', '/api/me/profile/submit', tokenB).expect(409);
     expect(incomplete.body.code).toBe('PROFILE_INCOMPLETE');
-    expect(incomplete.body.details).toEqual({ heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED' });
+    // El título de la portada de la plantilla no cuenta: el DJ escribe el suyo.
+    expect(incomplete.body.details).toEqual({ 'texts.heroTitle': 'REQUIRED', heroImage: 'REQUIRED', genres: 'REQUIRED', members: 'REQUIRED' });
+    expect((await get('/api/me/profile', tokenB).expect(200)).body.publishMissing).toContain('texts.heroTitle');
     expect((await get('/api/me/profile', tokenB).expect(200)).body.status).toBe('DRAFT');
   });
 
   it('enviar completo → PENDING_REVIEW y aviso al admin; retirar → DRAFT (una sola vez)', async () => {
     const hero = await upload('/api/me/profile/media', tokenB).expect(201);
-    await send('patch', '/api/me/profile', tokenB, { heroImageId: hero.body.id }).expect(200);
+    await send('patch', '/api/me/profile', tokenB, { heroImageId: hero.body.id, texts: { heroTitle: 'Techno toda la noche' } }).expect(200);
     const genre = await prisma.genre.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
     await send('put', '/api/me/profile/genres', tokenB, { genreIds: [genre.id] }).expect(200);
     await send('post', '/api/me/profile/members', tokenB, { name: 'Integrante B' }).expect(201);
@@ -420,11 +431,11 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
     expect(await prisma.bookingRequest.findUnique({ where: { id: bookingB }, select: { status: true } })).toEqual({ status: 'NEW' });
     const calls = () => mailCalls('booking-new-owner').filter((c) => c[0] === emails.B);
     for (let i = 0; i < 40 && !calls().length; i++) await new Promise((r) => setTimeout(r, 50));
-    expect(calls()).toEqual([[emails.B, 'booking-new-owner', { requesterName: 'Ana María Pérez' }]]);
+    expect(calls()).toEqual([[emails.B, 'booking-new-owner', {}]]);
     if (mailpit) {
       const msg = await waitForMail(`to:"${emails.B}"`, (m) => m.Subject === 'Tienes una nueva solicitud de booking');
-      // Sin datos de contacto del solicitante en el correo: solo el nombre saneado.
-      expect(msg.Snippet).toContain('Ana María Pérez');
+      // Ningún dato del solicitante en el correo (plan M3: sin texto libre del público).
+      expect(msg.Snippet).not.toContain('Ana');
       expect(msg.Snippet).not.toContain('ana.e2e@example.com');
     }
 
@@ -519,10 +530,30 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
       docNumber: '1.023.456.781',
       address: 'Calle 1 # 2-3, Medellín',
       phones: ['+57 300 111 2234'],
+      truthful: true,
     }).expect(200);
     await send('post', `/api/admin/profiles/${profileA}/approve`, tokenAdmin).expect(200);
     await new Promise((r) => setTimeout(r, 300));
     expect(sendSpy.mock.calls.filter((c) => c[0] === emails.A)).toHaveLength(0);
+  });
+
+  // ------------------------------------------------------------------ tope de cambios (H3)
+
+  it(`tope de cambios del dueño: ${OWNER_EDITS_PER_WINDOW} cada 10 min por usuario; después 429, las lecturas siguen y el admin no tiene tope`, async () => {
+    const userD = await createUser({ email: `owner-d.${run}@example.com` });
+    const tokenD = await session(userD, 'USER');
+    const created = await send('post', '/api/me/profile', tokenD, { displayName: 'E2E Dueño D', slug: `e2e-od-${run}` }).expect(201);
+    // El onboarding ya gastó uno: quedan OWNER_EDITS_PER_WINDOW - 1, cada uno desde una IP distinta.
+    for (let i = 1; i < OWNER_EDITS_PER_WINDOW; i++) {
+      await send('patch', '/api/me/profile', tokenD, { tagline: `Tagline ${i}` }).expect(200);
+    }
+    const over = await send('patch', '/api/me/profile', tokenD, { tagline: 'Una más' }).expect(429);
+    expect(over.body.code).toBe('RATE_LIMITED');
+    await send('put', '/api/me/profile/genres', tokenD, { genreIds: [] }).expect(429);
+    await get('/api/me/profile', tokenD).expect(200);
+    // Otro dueño no se ve afectado, y el admin edita ese mismo perfil sin tope.
+    await send('patch', '/api/me/profile', tokenA, { tagline: 'Sigo editando' }).expect(200);
+    await send('patch', `/api/admin/profiles/${created.body.id}`, tokenAdmin, { tagline: 'Editado por el admin' }).expect(200);
   });
 
   // ------------------------------------------------------------------ purgas
@@ -560,10 +591,27 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
     const draftL = await mk('l', { userId: lateUser, status: 'DRAFT', idle: 40 });
     const rejUser = await createUser({ email: `purge-h.${run}@example.com`, verified: true });
     const rejectedH = await mk('h', { userId: rejUser, status: 'REJECTED', idle: 31 });
+    // Que el admin lo haya rechazado no lo vuelve "del admin": se purga igual.
+    await prisma.auditLog.create({ data: { action: 'admin.profile.reject', targetType: 'DjProfile', targetId: rejectedH, profileId: rejectedH, createdAt: ago(31) } });
     const rejYoung = await mk('r', { userId: await createUser({ email: `purge-r.${run}@example.com`, verified: true }), status: 'REJECTED', idle: 29 });
     const approvedK = await mk('k', { userId: await createUser({ email: `purge-k.${run}@example.com`, verified: true }), status: 'APPROVED', idle: 400 });
     const orphanDraft = await mk('o', { userId: null, status: 'DRAFT', idle: 60 });
     purgedProfileIds.push(draftE, draftG, rejectedH);
+
+    // Lo que armó o administró el admin nunca se purga, aunque lleve más de 30 días sin cambios:
+    // - cuenta creada por el admin (sin correo ni mayoría de edad declarada) con un borrador viejo;
+    const adminMade = await createUser({ createdAt: ago(60), terms: false });
+    await prisma.auditLog.create({ data: { action: 'admin.user.create', targetType: 'User', targetId: adminMade } });
+    const draftAdminMade = await mk('am', { userId: adminMade, status: 'DRAFT', idle: 31 });
+    // - DJ que se registró solo, sin verificar hace 15 días, al que el admin le asignó un borrador;
+    const assigned = await createUser({ email: `purge-as.${run}@example.com`, createdAt: ago(15) });
+    const draftAssigned = await mk('as', { userId: assigned, status: 'DRAFT', idle: 15 });
+    await prisma.auditLog.create({ data: { action: 'admin.profile.owner', targetType: 'DjProfile', targetId: draftAssigned, profileId: draftAssigned } });
+    // - borrador de un DJ que el admin editó (aunque ya se hubiera avisado).
+    const editedUser = await createUser({ email: `purge-ed.${run}@example.com`, verified: true });
+    const draftEdited = await mk('ed', { userId: editedUser, status: 'DRAFT', idle: 31 });
+    await prisma.auditLog.create({ data: { action: 'admin.profile.update', targetType: 'DjProfile', targetId: draftEdited, profileId: draftEdited, createdAt: ago(31) } });
+    await prisma.auditLog.create({ data: { action: PURGE_ACTIONS.draftWarned, targetType: 'DjProfile', targetId: draftEdited, profileId: draftEdited, createdAt: ago(10) } });
 
     const job = app.get(OwnerPurgeJob);
     const summary = await job.run();
@@ -598,9 +646,18 @@ describe('Dueño de perfil: onboarding, revisión, bandeja, avisos y purgas (e2e
     expect(await prisma.user.count({ where: { id: rejUser } })).toBe(1);
     expect(await prisma.djProfile.count({ where: { id: { in: [rejYoung, approvedK, orphanDraft] } } })).toBe(3);
 
+    // Lo del admin: intacto y sin avisos.
+    expect(await prisma.user.count({ where: { id: { in: [adminMade, assigned, editedUser] } } })).toBe(3);
+    expect(await prisma.djProfile.count({ where: { id: { in: [draftAdminMade, draftAssigned, draftEdited] } } })).toBe(3);
+    expect(mailCalls('draft-expiring').filter((c) => c[0] === `purge-ed.${run}@example.com`)).toHaveLength(0);
+
     // Idempotente: una segunda corrida no repite avisos ni borra más.
     await job.run();
     expect(await prisma.auditLog.count({ where: { action: PURGE_ACTIONS.draftWarned, profileId: { in: [draftW, draftL] } } })).toBe(2);
-    expect(await prisma.djProfile.count({ where: { id: { in: [draftW, draftL, rejYoung, approvedK, orphanDraft, pendingI] } } })).toBe(6);
+    expect(
+      await prisma.djProfile.count({
+        where: { id: { in: [draftW, draftL, rejYoung, approvedK, orphanDraft, pendingI, draftAdminMade, draftAssigned, draftEdited] } },
+      }),
+    ).toBe(9);
   });
 });

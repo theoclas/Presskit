@@ -128,7 +128,7 @@ export class BookingService {
 
     // Aviso al DJ (M3) solo por solicitudes reales. En segundo plano: no demora ni puede tumbar
     // la respuesta (el servicio nunca lanza).
-    if (!spam) void this.notify.newBooking(id, profile.id, contact.contactName);
+    if (!spam) void this.notify.newBooking(id, profile.id);
 
     // La solicitud ya está guardada y el nonce gastado: un fallo armando el enlace nunca puede
     // convertirse en un 500 (el visitante reintentaría y duplicaría la solicitud).

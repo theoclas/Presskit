@@ -67,4 +67,9 @@ export class AcceptTermsBody implements AcceptTermsInput {
 
   @IsBoolean()
   acceptPrivacy!: true;
+
+  /** Solo la exige (en true) una cuenta que nunca declaró ser mayor de edad. */
+  @IsOptional()
+  @IsBoolean()
+  confirmAge?: true;
 }

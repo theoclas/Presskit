@@ -31,9 +31,11 @@ import {
   isLabelAllowed,
   isSafeNextPath,
   isValidDateOnly,
+  isValidEmail,
   isValidPhone,
   isWellFormedText,
   LIMITS,
+  mailboxKey,
   normalizeSocialUrl,
   sliceText,
   toWellFormedText,
@@ -86,6 +88,37 @@ describe('usuarios y contraseñas', () => {
     expect(validatePassword('aaaaaaaaaaaa')).toBe('TOO_SIMPLE');
     expect(validatePassword('Luna-sobre-Medellin7')).toBeNull();
     expect(validatePassword('Luna-Medellin7', { minLength: 16 })).toBe('TOO_SHORT');
+  });
+  it('correo: addr-spec estricto, sin sintaxis de lista ni de nombre visible', () => {
+    for (const ok of ['dj@example.com', 'mike.bran+booking@gmail.com', "o'neil@mail.co", 'a_b-c@sub.dominio.com.co', 'X@Y.io']) {
+      expect(isValidEmail(ok)).toBe(true);
+    }
+    for (const bad of [
+      'x<victim@example.com>',
+      'a,victim@example.com',
+      'a;victim@example.com',
+      '"a b"@example.com',
+      'a@b',
+      'a@-b.com',
+      'a@b.c',
+      '.a@b.com',
+      'a..b@b.com',
+      'a@b..com',
+      'a b@b.com',
+      'a@b.com,c@d.com',
+      '(x)a@b.com',
+      'a@[127.0.0.1]',
+      'josé@mail.com',
+      `${'a'.repeat(65)}@b.com`,
+    ]) {
+      expect(isValidEmail(bad)).toBe(false);
+    }
+    expect(isValidEmail('  dj@example.com ')).toBe(true);
+  });
+  it('mailboxKey: el mismo buzón sin la etiqueta +algo', () => {
+    expect(mailboxKey('DJ+uno@Example.com')).toBe('dj@example.com');
+    expect(mailboxKey('dj@example.com')).toBe('dj@example.com');
+    expect(mailboxKey('+solo@example.com')).toBe('+solo@example.com');
   });
 });
 

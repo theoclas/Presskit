@@ -1,10 +1,14 @@
-import type { MeDto } from '@fersua/shared';
+import { LIMITS, type MeDto } from '@fersua/shared';
 import { Alert, Button, Space } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useIsMobile } from '../admin/useIsMobile';
 import { useAuth } from '../auth/AuthProvider';
 import { useFeedback } from '../editor-kit/feedback';
 import { apiError, http, setSessionUser } from '../lib/http';
 import { panelErrorMessage } from './errors';
+
+/** Política de datos §8: las cuentas del registro que no confirman el correo se borran. */
+export const DELETE_NOTICE = `Si creaste tu cuenta en el registro y no confirmas el correo en ${LIMITS.retention.unverifiedUserDays} días, la borramos junto con lo que hayas empezado a armar.`;
 
 /** Después de reenviar, el botón espera esto antes de dejar pedir otro (el api permite 3 por hora). */
 const RESEND_COOLDOWN_MS = 60_000;
@@ -34,6 +38,8 @@ export function EmailBanner() {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [, setTick] = useState(0);
   const lastFocusCheck = useRef(0);
+  const [expanded, setExpanded] = useState(false);
+  const isMobile = useIsMobile();
   const unverified = !!user && !user.emailVerified;
 
   // Volvió de abrir el enlace en otra pestaña: se revisa sin que tenga que hacer nada.
@@ -104,26 +110,57 @@ export function EmailBanner() {
   }
 
   const waiting = cooldownUntil > Date.now();
+  const resendButton = (
+    <Button size="small" type="primary" onClick={() => void resend()} loading={sending} disabled={waiting}>
+      {waiting ? 'Correo enviado' : isMobile ? 'Reenviar' : 'Reenviar correo'}
+    </Button>
+  );
+  const checkButton = (
+    <Button size="small" onClick={() => void check()} loading={checking}>
+      Ya lo confirmé
+    </Button>
+  );
+  const full = (
+    <>
+      Te enviamos un enlace a <strong>{user.email}</strong>. Mientras no lo confirmes no puedes subir fotos ni enviar tu perfil a
+      revisión. {DELETE_NOTICE}
+    </>
+  );
+
+  // En el teléfono, una línea y los botones: el aviso completo, a pedido (no se come la pantalla).
+  if (isMobile) {
+    return (
+      <Alert
+        className="panel-email-banner panel-email-banner-compact"
+        type="warning"
+        title="Confirma tu correo para subir fotos y enviar tu perfil"
+        description={
+          <Space orientation="vertical" size={6} style={{ width: '100%' }}>
+            {expanded ? <span>{full}</span> : null}
+            <Space wrap size={6}>
+              {resendButton}
+              {expanded ? checkButton : null}
+              <Button size="small" type="link" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
+                {expanded ? 'Ver menos' : 'Ver más'}
+              </Button>
+            </Space>
+          </Space>
+        }
+      />
+    );
+  }
+
   return (
     <Alert
       className="panel-email-banner"
       type="warning"
       showIcon
       title="Confirma tu correo"
-      description={
-        <>
-          Te enviamos un enlace a <strong>{user.email}</strong>. Mientras no lo confirmes no puedes subir fotos ni enviar tu
-          perfil a revisión.
-        </>
-      }
+      description={full}
       action={
         <Space orientation="vertical" size={6}>
-          <Button size="small" type="primary" onClick={() => void resend()} loading={sending} disabled={waiting}>
-            {waiting ? 'Correo enviado' : 'Reenviar correo'}
-          </Button>
-          <Button size="small" onClick={() => void check()} loading={checking}>
-            Ya lo confirmé
-          </Button>
+          {resendButton}
+          {checkButton}
         </Space>
       }
     />

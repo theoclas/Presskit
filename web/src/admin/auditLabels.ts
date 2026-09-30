@@ -48,6 +48,8 @@ const ACTIONS: Record<string, string> = {
   'system.profile.draft_purged': 'Borró un borrador inactivo',
   'system.profile.rejected_purged': 'Borró un perfil rechazado inactivo',
   'system.user.unverified_purged': 'Borró una cuenta que no confirmó su correo',
+  'system.booking.retention_purged': 'Borró solicitudes vencidas (12 meses) y spam viejo',
+  'system.mail.cap_reached': 'Se agotó un cupo diario de correos (revisa si hay registros falsos)',
 };
 
 /** Cambios de un perfil: 'profile.<x>' (el dueño) o 'admin.profile.<x>' (el admin). */

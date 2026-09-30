@@ -1,10 +1,11 @@
 // Términos para Artistas (DJs con cuenta). Se aceptan con la casilla del registro y se
 // piden de nuevo cuando sube la versión en LEGAL_DOCS.artistTerms.
-import { LEGAL_DOCS } from '@fersua/shared';
+import { LEGAL_DOCS, LIMITS } from '@fersua/shared';
 import { OPERATOR } from '../operator';
 import type { LegalDoc } from '../types';
 
 const PQRS_PATH = LEGAL_DOCS.pqrs.path;
+const R = LIMITS.retention;
 
 export const artistTermsDoc: LegalDoc = {
   key: 'artistTerms',
@@ -107,6 +108,8 @@ export const artistTermsDoc: LegalDoc = {
       bullets: [
         `Puedes cerrar tu cuenta cuando quieras, escribiéndonos por ${PQRS_PATH} o a ${OPERATOR.email}.`,
         'Al cerrarla se borran tu página, tus fotos y tus solicitudes. El registro de oferente se conserva hasta 12 meses para atender posibles quejas.',
+        `Si no confirmas tu correo en ${R.unverifiedUserDays} días, borramos la cuenta y lo que hayas empezado a armar.`,
+        `Un borrador sin cambios en ${R.draftIdleDays} días (te avisamos por correo a los ${R.draftWarnDays}) y un perfil rechazado sin cambios en ${R.rejectedIdleDays} días se borran, con sus fotos y su registro de oferente. Tu cuenta no se borra.`,
         'Podemos cerrar una cuenta por incumplimiento grave o repetido de estos términos.',
       ],
     },

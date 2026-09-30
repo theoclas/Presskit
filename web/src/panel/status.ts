@@ -38,7 +38,7 @@ export function statusBanner(p: Pick<EditorProfileDto, 'status' | 'statusReason'
         type: 'info',
         label,
         title: 'Borrador: tu página todavía no es pública',
-        description: 'Complétala con la lista de abajo y envíala a revisión. Mientras tanto, usa «Vista previa» para ver cómo va.',
+        description: `Complétala con la lista de abajo y envíala a revisión. Mientras tanto, usa «Vista previa» para ver cómo va. Si no la editas en ${LIMITS.retention.draftIdleDays} días, se borra (te avisamos antes por correo).`,
         reason: null,
       };
     case 'PENDING_REVIEW':
@@ -62,7 +62,7 @@ export function statusBanner(p: Pick<EditorProfileDto, 'status' | 'statusReason'
         type: 'error',
         label,
         title: 'Rechazado: tu perfil necesita cambios',
-        description: 'Revisa el motivo, haz los cambios y vuelve a enviarlo a revisión.',
+        description: `Revisa el motivo, haz los cambios y vuelve a enviarlo a revisión. Si no lo cambias en ${LIMITS.retention.rejectedIdleDays} días, se borra (tu cuenta no).`,
         reason,
       };
     case 'SUSPENDED':

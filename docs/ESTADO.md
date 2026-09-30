@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-09-29 (noche). **M2 en producción** (`31fa48a`). **M3 terminado e integrado en local** (verificado de punta a punta), **todavía sin commit ni despliegue**. Siguiente: subir M3, desplegarlo y abrir el registro.
+> Última actualización: 2026-09-29 (noche). **M2 en producción** (`31fa48a`). **M3 terminado, revisado y corregido** (commit `fb2027e` + el commit de correcciones de la revisión), **todavía sin push ni despliegue**. Siguiente: push, desplegar M3 y abrir el registro.
 
 ## Qué es
 Plataforma de booking de DJs de **Fersua Studio**: cada DJ (o dúo) arma su página con la plantilla de
@@ -17,13 +17,13 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
   - `deploy` tiene sudo con contraseña: lo usa Fernando.
   - Docker de Ubuntu **sin buildx**: el Dockerfile evita las funciones de BuildKit.
 
-## Hitos (avance total aprox. 85 %)
+## Hitos (avance total aprox. 90 %)
 | Hito | Estado |
 |---|---|
 | **M0** Fundaciones | ✅ Hecho y subido (`7a3c321`) |
 | **M1** Sitio público + semilla de Mac Fly + legal + infraestructura | ✅ Hecho, subido (`1235f4c`, `b19e6f1`) y **EN PRODUCCIÓN** |
 | **M2** Auth con 2FA + panel admin | ✅ Hecho, revisado, subido (`31fa48a`) y **EN PRODUCCIÓN**; admin real creado |
-| **M3** Registro y autoservicio de DJs | ✅ Hecho e integrado en local (2026-09-29); ⏳ falta commit, push y despliegue |
+| **M3** Registro y autoservicio de DJs | ✅ Hecho, integrado, revisado y corregido; en commits locales (`fb2027e` + correcciones). ⏳ Falta push y despliegue |
 | **M4** Endurecimiento + cambio de DNS del dominio principal | ⏳ Pendiente |
 
 ## Producción (M1 + M2)
@@ -61,15 +61,17 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
 
 ### Pendiente, en este orden
 1. ~~Push de M2~~ ✅ · ~~Desplegar en el VPS~~ ✅ · ~~Crear el admin real~~ ✅
-2. **Commit y push de M3** (ver "M3 — qué quedó"), luego `bash scripts/deploy.sh` en el VPS (no trae migraciones).
+2. **Push de M3** (los dos commits: `fb2027e` y el de correcciones), luego `bash scripts/deploy.sh` en el VPS (no trae migraciones).
 3. **Abrir el registro en producción** cuando Fernando decida (`docs/02-primer-despliegue.md`, sección I):
-   en el `.env` del VPS poner `REGISTRATION_OPEN=true` y correr `bash scripts/check-env.sh && docker compose up -d api`.
-   Antes, confirmar que `PUBLIC_URL=https://booking.fersuastudio.com` (los enlaces de los correos salen de ahí).
+   - antes, la revisión única de correos guardados (una consulta que debe dar `0`, está en la sección I);
+   - en el `.env` del VPS poner `REGISTRATION_OPEN=true` y correr `bash scripts/check-env.sh && docker compose up -d api`;
+   - confirmar que `PUBLIC_URL=https://booking.fersuastudio.com` (los enlaces de los correos salen de ahí);
+   - si la auditoría muestra "Se agotó un cupo diario de correos" (cupo `verify`), cerrar el registro otra vez.
 4. **Log del nginx del host sin query string** (sudo, una vez; detalle en `docs/02-primer-despliegue.md`, sección E):
    `sudo cp deploy/host-nginx/conf.d/fersua-booking-log.conf /etc/nginx/conf.d/`, agregar ` fersua_booking` a los `access_log` de `/etc/nginx/sites-available/fersua-booking.conf`, `sudo nginx -t` y reload.
 5. Desde `/admin`: cargar el registro legal (art. 53) de Mac Fly (el resumen lo marca en rojo) y sus fechas nuevas.
 
-## M3 — qué quedó (en local, sin commit)
+## M3 — qué quedó (commits locales, sin push)
 Contrato: `docs/api-m3.md`. Tipos nuevos: `packages/shared/src/owner-types.ts`.
 
 | Parte | Carpetas |
@@ -82,6 +84,42 @@ Contrato: `docs/api-m3.md`. Tipos nuevos: `packages/shared/src/owner-types.ts`.
 | Compartido y edge: rutas de auth de M3 en `API_ROUTES`; `verify-email` y `resend-verification` en la zona `auth` del edge; `LIMITS.retention.draftWarnDays` y `rejectedIdleDays`; `MeDto.privacyVersion` | `packages/shared`, `deploy/edge/default.conf`, `scripts/ci/check-compose.mjs` |
 
 **Sin migración nueva:** `EmailToken` y los campos de términos ya existían; el "ya avisado" del borrador es una fila de auditoría.
+
+**Revisión de seguridad y requisitos de M3, corregida (commit aparte):**
+- **Purgas:** solo tocan lo que el DJ hizo solo: cuentas que pasaron por `/registro` sin auditoría `admin.user.*` y perfiles sin `admin.profile.*` (rechazar o leer el registro legal no cuenta). Lo que el admin creó, editó, asignó o administró nunca se borra solo; el bloqueo `FOR UPDATE` repite las mismas condiciones.
+- **Correo:** `isValidEmail` es un addr-spec estricto (ya no pasan `x<otro@buzón>` ni listas con coma). MailService además exige una sola dirección según el parser de nodemailer y manda sobre SMTP explícito.
+- **Cupos de correo por tipo:** alertas de seguridad; "tu contraseña/correo cambió" (cupo propio); restablecer (100 al día y 5 por buzón); confirmar el correo (80 al día); PQRS del admin (nunca los agotan los avisos); avisos. Además:
+  - los topes por buzón cuentan `dj+x@` como `dj@`;
+  - "olvidé mi contraseña" y "reenviar" no emiten un enlace (ni anulan el anterior) si el correo no va a salir;
+  - el registro responde 503 `REGISTRATION_BUSY` sin cupo de confirmaciones, y hay un tope de 20 confirmaciones al día por IP;
+  - si un cupo se agota, queda `system.mail.cap_reached` en la auditoría.
+- **Cambios del dueño:** 60 cada 10 min por usuario en `/api/me/profile/**` (429; el admin no tiene tope).
+- **Slug:** un perfil que nunca se publicó libera su slug viejo (no acapara nombres con redirecciones).
+- **Admin:** la clave temporal y la suspensión anulan los enlaces de restablecer pendientes.
+- **Correos sin texto del público:**
+  - el aviso de solicitud al DJ ya no lleva el nombre del solicitante;
+  - el nombre artístico en el correo al admin va sin `. @ : /`;
+  - el correo de rechazo usa `rejectedIdleDays`.
+- **Resumen de solicitudes:** a las 08:00, quien ayer pasó el tope de 5 avisos y tiene sin leer recibe "Tienes N solicitudes sin leer".
+- **Conservación de solicitudes:** job diario 04:30 que borra las de más de 12 meses y el SPAM de más de 30 días (`LIMITS.retention.spamDays`).
+- **Legal y avisos:**
+  - aviso de privacidad breve en `/registro`;
+  - la política §8 y los Términos para Artistas §10 dicen los borrados automáticos;
+  - el banner de correo, el de borrador y el de rechazado también lo dicen, igual que el correo de verificación.
+- **Mayoría de edad:** las cuentas que creó el admin la declaran al aceptar los términos (`MeDto.ageConfirmed`, `confirmAge`).
+- **Registro legal:** la declaración de veracidad del dueño se envía (`truthful`) y queda en la auditoría.
+- **Checklist:** en perfiles con dueño, "Escribe el título de la portada" exige un título propio (el de la plantilla es solo un ejemplo en el editor).
+- **Teléfono:** el banner de correo es de una línea con "Ver más", y el slug del onboarding usa el prefijo `/`.
+
+**Verificación después de las correcciones (2026-09-29):**
+- **Pruebas:** shared 43; api 452 unitarias (42 suites) y 104 e2e (8 suites); web 204 (25 archivos). `ci:bundle`, `ci:compose` e imágenes `api` y `edge` con el builder clásico, en verde.
+- **En vivo** (api compilado + vite, a 375 px y en escritorio):
+  - `/registro` con el aviso de privacidad antes de las casillas;
+  - el banner compacto (124 px; antes unos 270) y el prefijo `/` del slug;
+  - el título de la portada pendiente hasta escribirlo; el de la plantilla escrito a mano se guarda;
+  - datos legales guardados con `declared: true`;
+  - un correo `x<…>` rechazado con 400.
+- La BD de desarrollo y mailpit quedaron como antes.
 
 **Verificación de la integración (2026-09-29):**
 - **Pruebas:** shared 41; api 432 unitarias (40 suites) y 101 e2e (8 suites, con `auth-m3` y `owner`); web 201 (25 archivos).
@@ -113,7 +151,20 @@ Contrato: `docs/api-m3.md`. Tipos nuevos: `packages/shared/src/owner-types.ts`.
 - Se quitaron `ComingSoonPage` y `PanelSoonPage`, que ya no se usaban.
 
 ### Siguiente hito: M4 (endurecimiento + cambio de DNS)
-Ver `docs/00-plan.md` y la lista de "Conocido y aceptado".
+Lo del plan (`docs/00-plan.md`, M4):
+- microcaché del edge;
+- respaldo externo con ensayo de restauración;
+- monitoreo;
+- texto legal final;
+- purgar los datos de la beta;
+- cambio de DNS y redirecciones heredadas.
+
+Más lo que quedó de M2 y M3 (detalle en "Conocido y aceptado"):
+- borrado suave de solicitudes desde el panel del DJ (migración);
+- pantalla de registros del art. 53 de perfiles borrados y el flujo `disclose`;
+- token HMAC del formulario de PQRS;
+- modal de autorización de fotos y la etiqueta "Reclamo en trámite";
+- topes de correo en la BD si llega a haber más de un proceso.
 
 ### Conocido y aceptado (no frena)
 - **M3, fuera del panel del DJ por ahora:**
@@ -122,8 +173,11 @@ Ver `docs/00-plan.md` y la lista de "Conocido y aceptado".
   - cambiar el usuario o el correo (no hay endpoint; lo hace el admin);
   - "Solicitar eliminación de mi cuenta" (el panel lleva a `/pqrs`).
 - **Registro:** usa las 3 casillas del contrato (términos, datos y mayoría de edad). La 4.ª, de derechos sobre el contenido (docs/diseno/11), queda para revisar con lo legal. El botón "Crear cuenta" no se desactiva: si falta una casilla, marca el error y pone el foco en ella.
-- **Cupo de correo del admin:** los avisos "perfil enviado a revisión" (máx. 1 por perfil cada 24 h) comparten el tope diario del admin con los de PQRS. Con muchos envíos el mismo día, un aviso de PQRS podría retrasarse; en M4 se les pueden dar cupos separados.
-- **Aviso de solicitudes al DJ:** el 5.º correo del día avisa que no llegan más hasta mañana, y las solicitudes siguientes de ese día no se avisan. Ese texto es todo el "resumen".
+- **Topes de correo en memoria:** se reinician a las 00:00 UTC y con cada reinicio del api. Con un solo proceso basta; si algún día hay más, van a la BD.
+- **Borrar una solicitud desde el panel del DJ** la borra también de la bandeja del admin. Un borrado suave (`ownerDeletedAt`, que la conserve para el admin hasta la purga de 12 meses) necesita migración: va en M4.
+- **Cuenta sin verificar con un borrador activo:** a los 14 días se borra igual (contrato M3; lo avisan el banner, el correo de verificación y la política). Si el admin tocó el perfil o la cuenta, no.
+- **Textos legales:** la política §8 y los Términos §10 agregan los borrados automáticos sin subir la versión (siguen en borrador hasta M4 y nadie los ha aceptado en producción). Si se publican como definitivos antes, hay que subir la versión en `LEGAL_DOCS`.
+- **Resumen de solicitudes:** sale al día siguiente (08:00), no el mismo día; cuenta las solicitudes del día UTC anterior.
 - **TermsGuard** hace una consulta extra en cada petición a `/api/me/**`; se podría unir a la de JwtAuthGuard.
 - **Un solo admin en la BD:** no se agregó el CHECK `role = ADMIN ⇔ adminSlot` porque las pruebas e2e crean admins desechables (con `adminSlot` NULL) sobre la BD de desarrollo, que ya tiene al admin real. Lo protegen el índice único, `admin:create` y que ningún endpoint cambia roles. Si algún día las e2e usan una BD propia, se agrega.
 - **Registros del art. 53 de perfiles borrados:** se conservan 12 meses, pero todavía no hay pantalla para consultarlos ni el flujo `disclose` del diseño (docs/diseno/11): hoy se leen en la BD. Va en M4.
@@ -131,7 +185,7 @@ Ver `docs/00-plan.md` y la lista de "Conocido y aceptado".
 - El chunk del admin pesa ~1,1 MB (350 kB gzip) y Vite lo advierte; separar antd con `manualChunks` es opcional.
 
 ### Cómo retomar
-- **Sesión nueva:** decir *"Lee docs/ESTADO.md del proyecto fersuastudio-booking y continúa"* (M3 está listo en local: falta commit, push, despliegue y abrir el registro).
+- **Sesión nueva:** decir *"Lee docs/ESTADO.md del proyecto fersuastudio-booking y continúa"* (M3 está en commits locales: falta push, despliegue y abrir el registro).
 - **Admin de desarrollo:** en la BD local existe el admin `fersua` con 2FA. Sus credenciales de prueba están en un archivo del temp del sistema (fuera del repo). Si se pierden, se regeneran sin tocar nada más:
   `echo "<clave nueva de 12+>" | npm run cli -w api -- admin:reset-password --password-stdin` y
   `npm run cli -w api -- admin:reset-mfa --totp-secret-out <archivo en el temp>` (escribe el secreto TOTP; bórralo al terminar).
@@ -168,7 +222,8 @@ npm run dev:web                 # http://localhost:5180 (proxy de /api y /media 
 - La prueba e2e de `admin:create` se salta sola si la BD ya tiene un admin (la de desarrollo lo tiene).
 
 ## Pendientes de Fernando (no frenan el desarrollo)
-- **Abrir el registro de DJs** después de desplegar M3 (`docs/02-primer-despliegue.md`, sección I).
+- **Abrir el registro de DJs** después de desplegar M3 (`docs/02-primer-despliegue.md`, sección I: primero la revisión de correos guardados, después `REGISTRATION_OPEN=true`).
+- **Revisar con lo legal** los textos nuevos: aviso de privacidad de `/registro`, política §8 y Términos para Artistas §10 (borrados automáticos). También falta decidir la 4.ª casilla del registro (derechos sobre el contenido).
 - **Formato del log del nginx del host** sin query string (paso 4 de arriba; `docs/02-primer-despliegue.md`, sección E).
 - **`DjLegalInfo` de Mac Fly** (registro privado del art. 53): se carga desde el admin (pestaña "Datos legales"). Mac Fly está publicado sin él: el resumen y el editor lo marcan en rojo, y si se suspende no se puede reactivar sin cargarlo.
 - **`ADMIN_NOTIFY_EMAIL`** en el `.env` del VPS (opcional): a dónde llegan los avisos de PQRS nuevas; si está vacío, van al correo del admin.

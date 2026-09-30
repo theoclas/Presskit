@@ -80,6 +80,8 @@ export class ProfileStatusService {
       displayName: p.displayName,
       slug: p.slug,
       texts: p.texts,
+      // Solo el dueño envía a revisión: el título de la portada tiene que ser suyo.
+      ownHeroTitleRequired: true,
       heroImageId: p.heroImageId,
       activeGenres: p._count.genres,
       members: p._count.members,

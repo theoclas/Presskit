@@ -59,12 +59,23 @@ const SHOW_LABELS: Record<keyof ShowFlags, string> = {
   form: 'Formulario de solicitud',
 };
 
-/** Valores del formulario: lo guardado, y el texto por defecto donde no hay nada guardado. */
-export function profileFormValues(p: EditorProfileDto): ProfileFormValues {
+/**
+ * Textos que el DJ escribe él mismo (no valen los de la plantilla): el api los exige para
+ * enviar el perfil a revisión (publishChecklist, 'texts.heroTitle').
+ */
+export const OWNER_OWN_TEXTS: readonly string[] = ['heroTitle'];
+
+/**
+ * Valores del formulario: lo guardado, y el texto por defecto donde no hay nada guardado. Con
+ * `ownTexts` (panel del DJ), esas ranuras arrancan vacías si no las ha escrito: el texto de
+ * la plantilla se ve solo como ejemplo.
+ */
+export function profileFormValues(p: EditorProfileDto, opts: { ownTexts?: readonly string[] } = {}): ProfileFormValues {
   const texts: Record<string, string> = {};
   for (const slot of SLOTS) {
     const stored = (p.texts as Record<string, string | undefined>)[slot.key];
-    texts[slot.key] = typeof stored === 'string' && stored !== '' ? stored : slot.default;
+    const own = typeof stored === 'string' && stored !== '';
+    texts[slot.key] = own ? stored : opts.ownTexts?.includes(slot.key) ? '' : slot.default;
   }
   return {
     displayName: p.displayName,
@@ -82,14 +93,22 @@ export function profileFormValues(p: EditorProfileDto): ProfileFormValues {
   };
 }
 
-/** Solo los textos que cambiaron. Volver al texto por defecto se envía como '' (automático). */
-export function buildTextsPatch(initial: Record<string, string>, current: Record<string, string>): Record<string, string> {
+/**
+ * Solo los textos que cambiaron. Volver al texto por defecto se envía como '' (automático),
+ * salvo en las ranuras `ownTexts`: ahí lo escrito se guarda tal cual (aunque coincida con el
+ * de la plantilla) y vaciarlas las deja sin texto propio.
+ */
+export function buildTextsPatch(
+  initial: Record<string, string>,
+  current: Record<string, string>,
+  opts: { ownTexts?: readonly string[] } = {},
+): Record<string, string> {
   const patch: Record<string, string> = {};
   for (const slot of SLOTS) {
     const before = (initial[slot.key] ?? '').trim();
     const now = (current[slot.key] ?? '').trim();
     if (before === now) continue;
-    patch[slot.key] = now === slot.default ? '' : now;
+    patch[slot.key] = !opts.ownTexts?.includes(slot.key) && now === slot.default ? '' : now;
   }
   return patch;
 }
@@ -99,7 +118,11 @@ export function onlyDigits(v: string): string {
 }
 
 /** Parche con solo los campos que cambiaron (nunca estado, dueño ni destacado). */
-export function buildProfilePatch(initial: ProfileFormValues, values: ProfileFormValues): UpdateProfileInput {
+export function buildProfilePatch(
+  initial: ProfileFormValues,
+  values: ProfileFormValues,
+  opts: { ownTexts?: readonly string[] } = {},
+): UpdateProfileInput {
   const patch: UpdateProfileInput = {};
   if (values.displayName.trim() !== initial.displayName.trim()) patch.displayName = values.displayName.trim();
   const optional = ['tagline', 'city', 'seoDescription', 'publicEmail', 'publicPhone'] as const;
@@ -117,7 +140,7 @@ export function buildProfilePatch(initial: ProfileFormValues, values: ProfileFor
   if (Object.keys(show).length) patch.show = show;
   if (!!values.formOpenWhatsapp !== !!initial.formOpenWhatsapp) patch.formOpenWhatsapp = !!values.formOpenWhatsapp;
   if (!!values.notifyByEmail !== !!initial.notifyByEmail) patch.notifyByEmail = !!values.notifyByEmail;
-  const texts = buildTextsPatch(initial.texts, values.texts ?? {});
+  const texts = buildTextsPatch(initial.texts, values.texts ?? {}, opts);
   if (Object.keys(texts).length) patch.texts = texts;
   return patch;
 }
@@ -150,7 +173,9 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
   const { base, actor } = useEditorScope();
   const { message } = useFeedback();
   const afterSave = useAfterSave();
-  const initial = useMemo(() => profileFormValues(profile), [profile]);
+  // En el panel del DJ, el título de la portada lo escribe él (el de la plantilla es un ejemplo).
+  const ownTexts = actor === 'owner' ? OWNER_OWN_TEXTS : undefined;
+  const initial = useMemo(() => profileFormValues(profile, { ownTexts }), [profile, ownTexts]);
   const { form, dirty, onValuesChange, markSaved, discard } = useSyncedForm<ProfileFormValues>(initial);
   const displayName = (Form.useWatch('displayName', form) as string | undefined) ?? profile.displayName;
   const [openGroups, setOpenGroups] = useState<string[]>([]);
@@ -181,7 +206,7 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
       message.error('Revisa los campos marcados.');
       return;
     }
-    const patch = buildProfilePatch(initial, values);
+    const patch = buildProfilePatch(initial, values, { ownTexts });
     if (patch.texts) {
       // Misma validación que el api antes de enviar.
       const check = validateTexts(patch.texts);
@@ -223,6 +248,7 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
         slot={slot}
         form={form}
         onRestored={onValuesChange}
+        ownText={!!ownTexts?.includes(slot.key)}
         derivedDefault={
           slot.key === 'heroPhotoAlt'
             ? `Show de ${displayName}`

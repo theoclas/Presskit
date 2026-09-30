@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Card, Form, Input, Space, Typography } from 'antd';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
+import { useIsMobile } from '../../admin/useIsMobile';
 import { useAuth } from '../../auth/AuthProvider';
 import { useFeedback } from '../../editor-kit/feedback';
 import { SLUG_ERROR_MESSAGES } from '../../editor-kit/labels';
@@ -75,6 +76,9 @@ export function OnboardingPage() {
   }
 
   const host = typeof window !== 'undefined' ? window.location.host : '';
+  // En el teléfono el dominio completo deja muy poco espacio para escribir: basta con '/', la
+  // línea de estado de abajo ya muestra la dirección completa.
+  const isMobile = useIsMobile();
   const canCreate = !nameError && !!slug && check.state !== 'bad' && check.state !== 'checking' && !creating;
   const taken = check.state === 'bad' && check.message === SLUG_TAKEN_MESSAGE;
 
@@ -177,7 +181,7 @@ export function OnboardingPage() {
                 id="onb-slug"
                 value={touched ? typed : slug}
                 onChange={(e) => onSlugChange(e.target.value)}
-                prefix={<span className="panel-slug-prefix">{host ? `${host}/` : '/'}</span>}
+                prefix={<span className="panel-slug-prefix">{host && !isMobile ? `${host}/` : '/'}</span>}
                 maxLength={LIMITS.profile.slugMax + 10}
                 autoComplete="off"
                 autoCapitalize="none"

@@ -44,6 +44,11 @@ export interface MeDto {
   privacyVersion?: string | null;
   /** true si los términos o la política aceptados no son los vigentes (M3: la web pide re-aceptar). */
   termsOutdated?: boolean;
+  /**
+   * false si la cuenta (USER) nunca declaró ser mayor de edad (las que creó el admin): la
+   * pantalla de términos pide también esa casilla. Siempre true para el admin.
+   */
+  ageConfirmed?: boolean;
 }
 
 export interface LoginInput {
@@ -256,7 +261,13 @@ export interface LegalInfoDto {
   updatedAt: string | null;
 }
 
-export type LegalInfoInput = Omit<LegalInfoDto, 'updatedAt'>;
+export type LegalInfoInput = Omit<LegalInfoDto, 'updatedAt'> & {
+  /**
+   * Declaración del dueño: "estos datos son veraces y me obligo a mantenerlos actualizados"
+   * (docs/diseno/11 §2.4). Obligatoria (true) en /me/profile; el admin no la envía.
+   */
+  truthful?: true;
+};
 
 // ---------------------------------------------------------------- admin
 

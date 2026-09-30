@@ -1,4 +1,4 @@
-import { LEGAL_DOCS, type AcceptTermsInput } from '@fersua/shared';
+import { LEGAL_DOCS, REGISTER_CONSENTS, type AcceptTermsInput } from '@fersua/shared';
 import { Alert, Button, Card, Checkbox, Space, Typography } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -9,7 +9,8 @@ import { panelErrorMessage } from './errors';
 /**
  * Pantalla bloqueante cuando cambió la versión de los Términos para Artistas o de la Política
  * de datos (MeDto.termsOutdated o un 403 TERMS_ACCEPTANCE_REQUIRED). Casillas separadas y sin
- * marcar; no hay forma de saltarla (docs/diseno/11 §2.4).
+ * marcar; no hay forma de saltarla (docs/diseno/11 §2.4). Las cuentas que no pasaron por el
+ * registro (las crea el admin) declaran aquí también la mayoría de edad (MeDto.ageConfirmed).
  */
 export function TermsScreen({ onAccepted }: { onAccepted?: () => void }) {
   usePageTitle(`Documentos actualizados · ${SITE_NAME}`);
@@ -17,15 +18,18 @@ export function TermsScreen({ onAccepted }: { onAccepted?: () => void }) {
   const navigate = useNavigate();
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
+  const [age, setAge] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const needsAge = user?.ageConfirmed === false;
+  const ready = terms && privacy && (!needsAge || age);
 
   const accept = async () => {
-    if (!terms || !privacy || sending) return;
+    if (!ready || sending) return;
     setSending(true);
     setError(null);
     try {
-      const body: AcceptTermsInput = { acceptTerms: true, acceptPrivacy: true };
+      const body: AcceptTermsInput = { acceptTerms: true, acceptPrivacy: true, ...(needsAge ? { confirmAge: true } : {}) };
       // POST /auth/accept-terms: responde el MeDto fresco y AuthProvider lo aplica (termsOutdated: false).
       await acceptTerms(body);
       onAccepted?.();
@@ -73,9 +77,14 @@ export function TermsScreen({ onAccepted }: { onAccepted?: () => void }) {
             </a>{' '}
             (versión {priv.version}).
           </Checkbox>
+          {needsAge ? (
+            <Checkbox checked={age} onChange={(e) => setAge(e.target.checked)}>
+              {REGISTER_CONSENTS.age}
+            </Checkbox>
+          ) : null}
           {error ? <Alert type="error" showIcon title={error} /> : null}
           <Space wrap>
-            <Button type="primary" onClick={() => void accept()} disabled={!terms || !privacy} loading={sending}>
+            <Button type="primary" onClick={() => void accept()} disabled={!ready} loading={sending}>
               Aceptar y continuar
             </Button>
             <Button onClick={() => void onLogout()}>Cerrar sesión</Button>

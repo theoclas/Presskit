@@ -164,6 +164,7 @@ export function toEditorProfileDto(
         displayName: p.displayName,
         slug: p.slug,
         texts: p.texts,
+        ownHeroTitleRequired: p.userId !== null,
         heroImageId: p.heroImageId,
         activeGenres: p.genres.filter((g) => g.genre.isActive).length,
         members: p.members.length,

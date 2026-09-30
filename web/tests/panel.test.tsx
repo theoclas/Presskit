@@ -261,6 +261,30 @@ describe('panel del DJ', { timeout: 40_000 }, () => {
     expect(await screen.findByRole('heading', { name: 'Resumen' }, WAIT)).toBeTruthy();
   });
 
+  it('cuenta creada por el admin: la primera aceptación también pide la mayoría de edad', async () => {
+    applySession({ accessToken: 'tok', expiresIn: 900, user: me({ termsOutdated: true, termsVersion: null, ageConfirmed: false }) });
+    install((c, config) => {
+      if (c.method === 'POST' && c.url === '/auth/accept-terms') return respond(config, 200, me({ termsOutdated: false, ageConfirmed: true }));
+      if (c.method === 'GET' && c.url === '/me/profile') return respond(config, 200, profile());
+      if (c.method === 'GET' && c.url === '/me/profile/bookings/unread-count') return respond(config, 200, { count: 0 });
+      return null;
+    });
+    renderPanel('/panel');
+    expect(await screen.findByText('Antes de empezar, acepta nuestros documentos', undefined, WAIT)).toBeTruthy();
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(3);
+    expect(screen.getByText('Declaro que soy mayor de 18 años.')).toBeTruthy();
+    const accept = screen.getByRole('button', { name: /Aceptar y continuar/ });
+    fireEvent.click(boxes[0]!);
+    fireEvent.click(boxes[1]!);
+    expect(accept.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(boxes[2]!);
+    await waitFor(() => expect(accept.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(accept);
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url === '/auth/accept-terms')).toBe(true), WAIT);
+    expect(calls.find((c) => c.url === '/auth/accept-terms')?.body).toEqual({ acceptTerms: true, acceptPrivacy: true, confirmAge: true });
+  });
+
   it('onboarding: sugiere la dirección, revisa disponibilidad en vivo y crea el perfil', async () => {
     let created: EditorProfileDto | null = null;
     applySession({ accessToken: 'tok', expiresIn: 900, user: me() });
@@ -408,7 +432,10 @@ describe('panel del DJ', { timeout: 40_000 }, () => {
       return null;
     });
     renderPanel('/panel');
-    fireEvent.click(await screen.findByRole('button', { name: 'Reenviar correo' }, WAIT));
+    const resend = await screen.findByRole('button', { name: 'Reenviar correo' }, WAIT);
+    // El aviso dice que la cuenta del registro sin confirmar se borra (política de datos §8).
+    expect(screen.getByText(/no confirmas el correo en 14 días, la borramos/)).toBeTruthy();
+    fireEvent.click(resend);
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Reenviar correo' })).toBeNull(), WAIT);
     expect(calls.some((c) => c.method === 'POST' && c.url === '/auth/resend-verification')).toBe(true);
     expect(screen.getByRole('button', { name: /Ver mi página/ })).toBeTruthy();

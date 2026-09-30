@@ -1,11 +1,13 @@
 import { Logger } from '@nestjs/common';
 import type { AppConfig } from '../config/app-config.service';
-import { MAIL_TEMPLATES, REQUESTER_NAME_MAX, escapeHtml, renderMail, sanitizeRequesterName } from './mail-templates';
+import { MAIL_TEMPLATES, REQUESTER_NAME_MAX, escapeHtml, mailLane, renderMail, sanitizeMailName, sanitizeRequesterName } from './mail-templates';
 import {
   MAIL_DAILY_NORMAL_BUDGET,
+  MAIL_LANE_DAILY_CAPS,
   MAIL_PER_RECIPIENT_PER_DAY,
   MAIL_TEMPLATE_DAILY_CAPS,
   MailService,
+  singleRecipient,
   type MailTransport,
 } from './mail.service';
 
@@ -41,6 +43,7 @@ describe('plantillas de correo', () => {
       'admin-mfa-failed',
       'admin-new-login',
       'admin-new-ticket',
+      'booking-digest-owner',
       'booking-new-owner',
       'draft-expiring',
       'email-changed',
@@ -84,7 +87,10 @@ describe('plantillas de correo', () => {
     expect(m.html).toContain('href="https://booking.fersuastudio.com/verificar-correo#t=abc_DEF-123.xyz"');
     expect(m.text).toContain('48 horas');
     expect(m.text).toContain('Confirmar mi correo');
+    // Avisa del borrado de la cuenta sin confirmar (política de datos §8).
+    expect(m.text).toContain('Si no confirmas tu correo en 14 días, borramos la cuenta');
     expect(MAIL_TEMPLATES['verify-email'].priority).toBe('normal');
+    expect(mailLane('verify-email')).toBe('verify');
   });
 
   it('restablecer: enlace con #t=, 30 minutos y "si no fuiste tú, ignóralo"; prioridad de seguridad', () => {
@@ -93,25 +99,30 @@ describe('plantillas de correo', () => {
     expect(m.text).toContain('30 minutos');
     expect(m.text).toContain('Si no fuiste tú, ignora este correo');
     expect(MAIL_TEMPLATES['reset-password'].priority).toBe('security');
+    expect(mailLane('reset-password')).toBe('reset');
     // Un token raro no puede salirse del fragmento ni del atributo href.
     const odd = renderMail('reset-password', { token: '"><script>x</script>' }, ctx);
     expect(odd.html).not.toContain('<script>');
     expect(odd.text).toContain('#t=%22%3E%3Cscript%3E');
   });
 
-  it('solicitud nueva al dueño: sin datos del solicitante salvo el nombre saneado (máx. 40) y enlace al panel', () => {
+  it('solicitud nueva al dueño: ningún dato del solicitante, solo el enlace al panel', () => {
     const plain = renderMail('booking-new-owner', {}, ctx);
     expect(plain.subject).toBe('Tienes una nueva solicitud de booking');
     expect(plain.text).toContain('Tienes una nueva solicitud de booking.');
     expect(plain.text).toContain('https://booking.fersuastudio.com/panel/solicitudes');
-    expect(plain.text).not.toContain('hasta mañana');
+    expect(plain.text).not.toContain('mañana');
+    const last = renderMail('booking-new-owner', { lastOfDay: true }, ctx);
+    expect(last.text).toContain('te las contamos mañana en un solo correo');
+  });
 
-    const named = renderMail('booking-new-owner', { requesterName: 'José Ñandú <b>visita</b> www.evil.com' }, ctx);
-    expect(named.text).toContain('de José Ñandú b visita b www evil com.');
-    expect(named.text).not.toContain('evil.com');
-    expect(named.html).not.toContain('<b>');
-    const last = renderMail('booking-new-owner', { requesterName: null, lastOfDay: true }, ctx);
-    expect(last.text).toContain('no te avisaremos de más solicitudes hasta mañana');
+  it('resumen de solicitudes: solo el número (singular y plural) y el enlace al panel', () => {
+    expect(renderMail('booking-digest-owner', { count: 1 }, ctx).text).toContain('Tienes 1 solicitud de booking sin leer.');
+    const m = renderMail('booking-digest-owner', { count: 12 }, ctx);
+    expect(m.subject).toBe('Tienes solicitudes de booking sin leer');
+    expect(m.text).toContain('Tienes 12 solicitudes de booking sin leer.');
+    expect(m.text).toContain('https://booking.fersuastudio.com/panel/solicitudes');
+    expect(renderMail('booking-digest-owner', { count: Number.NaN }, ctx).text).toContain('Tienes 1 solicitud');
   });
 
   it('sanitizeRequesterName: solo letras, espacios, apóstrofos y guiones; nada de enlaces, correos ni teléfonos', () => {
@@ -129,13 +140,18 @@ describe('plantillas de correo', () => {
     expect(sanitizeRequesterName('a'.repeat(100))).toHaveLength(REQUESTER_NAME_MAX);
   });
 
-  it('perfil enviado a revisión (al admin): nombre y slug, enlace a /admin/djs', () => {
-    const m = renderMail('profile-submitted-admin', { displayName: 'Mac Fly & <Mike>', slug: 'mac-fly' }, ctx);
-    expect(m.text).toContain('El perfil «Mac Fly & <Mike>» (/mac-fly) se envió a revisión.');
-    expect(m.html).toContain('Mac Fly &amp; &lt;Mike&gt;');
+  it('perfil enviado a revisión (al admin): nombre saneado y slug, enlace a /admin/djs', () => {
+    const m = renderMail('profile-submitted-admin', { displayName: 'Mac Fly & <Mike> 2', slug: 'mac-fly' }, ctx);
+    expect(m.text).toContain('El perfil «Mac Fly & Mike 2» (/mac-fly) se envió a revisión.');
+    expect(m.html).toContain('Mac Fly &amp; Mike 2');
     expect(m.text).toContain('https://booking.fersuastudio.com/admin/djs');
     const bad = renderMail('profile-submitted-admin', { displayName: 'X', slug: 'https://evil.com' }, ctx);
     expect(bad.text).not.toContain('evil');
+    // Un nombre artístico no puede volverse un enlace en el correo del admin.
+    const phishing = renderMail('profile-submitted-admin', { displayName: 'Soporte fersua-login.com/admin', slug: 'dj-uno' }, ctx);
+    expect(phishing.text).toContain('«Soporte fersua-login com admin»');
+    expect(phishing.text).not.toMatch(/fersua-login\.com/);
+    expect(sanitizeMailName('ana@evil.com: http://x', 60, { digits: true })).toBe('ana evil com http x');
   });
 
   it('aprobado: enlace a la página y al panel; un slug inválido no arma enlace', () => {
@@ -150,6 +166,7 @@ describe('plantillas de correo', () => {
   it('rechazado y suspendido: el motivo del admin va escapado, en una línea y con enlace al panel', () => {
     const r = renderMail('profile-rejected', { reason: 'Falta la foto <img src=x onerror=alert(1)>\nprincipal' }, ctx);
     expect(r.subject).toBe('Tu perfil necesita cambios');
+    expect(r.text).toContain('Si no hay cambios en 30 días, el perfil se borra');
     expect(r.text).toContain('Motivo: Falta la foto <img src=x onerror=alert(1)> principal');
     expect(r.html).not.toContain('<img');
     expect(r.html).toContain('&lt;img src=x onerror=alert(1)&gt;');
@@ -173,7 +190,8 @@ describe('plantillas de correo', () => {
     const samples = [
       renderMail('verify-email', { token: 't' }, ctx),
       renderMail('reset-password', { token: 't' }, ctx),
-      renderMail('booking-new-owner', { requesterName: 'https://evil.com' }, ctx),
+      renderMail('booking-new-owner', {}, ctx),
+      renderMail('booking-digest-owner', { count: 3 }, ctx),
       renderMail('profile-submitted-admin', { displayName: 'https://evil.com', slug: 'dj-uno' }, ctx),
       renderMail('profile-approved', { slug: 'dj-uno' }, ctx),
       renderMail('profile-rejected', { reason: 'mira https://evil.com' }, ctx),
@@ -205,13 +223,88 @@ describe('MailService', () => {
     return { svc, sendMail };
   }
 
-  it('envía a la dirección normalizada con el remitente configurado', async () => {
+  it('envía a la dirección normalizada con el remitente configurado y un sobre SMTP explícito', async () => {
     const { svc, sendMail } = withTransport(async () => ({}));
     expect(svc.send(' DJ@Example.com ', 'account-locked', { until: new Date() })).toBe(true);
     await svc.drainForTesting();
     expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: 'dj@example.com', from: 'Fersua Studio <no-reply@fersuastudio.com>' }),
+      expect.objectContaining({
+        to: 'dj@example.com',
+        from: 'Fersua Studio <no-reply@fersuastudio.com>',
+        envelope: { from: 'no-reply@fersuastudio.com', to: 'dj@example.com' },
+      }),
     );
+    svc.onModuleDestroy();
+  });
+
+  it('nunca a una lista ni a un "nombre <otro buzón>": solo una dirección simple', () => {
+    const { svc, sendMail } = withTransport(async () => ({}));
+    for (const to of ['x<victim@example.com>', 'a,victim@example.com', 'a;victim@example.com', '"a b"@example.com', 'a@b.com b@c.com']) {
+      expect(singleRecipient(to)).toBeNull();
+      expect(svc.send(to, 'account-locked', { until: new Date() })).toBe(false);
+    }
+    expect(singleRecipient(' DJ+tag@Example.com ')).toBe('dj+tag@example.com');
+    expect(sendMail).not.toHaveBeenCalled();
+    svc.onModuleDestroy();
+  });
+
+  it('canSend no gasta cupo', async () => {
+    const { svc } = withTransport(async () => ({}));
+    for (let i = 0; i < 50; i++) expect(svc.canSend('dj@example.com', 'reset-password')).toBe(true);
+    const cap = MAIL_TEMPLATE_DAILY_CAPS['reset-password']!;
+    for (let i = 0; i < cap; i++) expect(svc.send('dj@example.com', 'reset-password', { token: 't' })).toBe(true);
+    expect(svc.canSend('dj@example.com', 'reset-password')).toBe(false);
+    expect(svc.canSend(null, 'reset-password')).toBe(false);
+    await svc.drainForTesting();
+    svc.onModuleDestroy();
+  });
+
+  it('enlaces de restablecer: máximo 5 al día por buzón y nunca gastan el cupo de las alertas', async () => {
+    const { svc } = withTransport(async () => ({}));
+    expect(MAIL_TEMPLATE_DAILY_CAPS['reset-password']).toBe(5);
+    for (let i = 0; i < 5; i++) expect(svc.send('dj@example.com', 'reset-password', { token: 't' })).toBe(true);
+    expect(svc.send('dj@example.com', 'reset-password', { token: 't' })).toBe(false);
+    // El mismo buzón con otra etiqueta +algo cuenta igual.
+    expect(svc.send('dj+otro@example.com', 'reset-password', { token: 't' })).toBe(false);
+    // Las alertas (bloqueos) tienen su cupo; "tu contraseña cambió" tiene otro aparte.
+    for (let i = 0; i < MAIL_PER_RECIPIENT_PER_DAY; i++) expect(svc.send('dj@example.com', 'account-locked', { until: new Date() })).toBe(true);
+    expect(svc.send('dj@example.com', 'account-locked', { until: new Date() })).toBe(false);
+    expect(svc.send('dj@example.com', 'password-changed', { at: new Date(), isAdmin: false })).toBe(true);
+    expect(svc.send('dj@example.com', 'email-changed', { at: new Date() })).toBe(true);
+    await svc.drainForTesting();
+    svc.onModuleDestroy();
+  });
+
+  it(`correos de confirmación: tope global de ${MAIL_LANE_DAILY_CAPS.verify} al día que no toca los demás cupos`, async () => {
+    const record = jest.fn(async () => undefined);
+    const svc = new MailService(config, { record } as never);
+    svc.setTransportForTesting({ sendMail: jest.fn(async () => ({})) });
+    const cap = MAIL_LANE_DAILY_CAPS.verify!;
+    for (let i = 0; i < cap; i++) expect(svc.send(`v${i}@example.com`, 'verify-email', { token: 't' })).toBe(true);
+    expect(svc.send('otro@example.com', 'verify-email', { token: 't' })).toBe(false);
+    expect(svc.canSend('otro2@example.com', 'verify-email')).toBe(false);
+    // Una sola fila de auditoría al día para que el admin se entere.
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ action: 'system.mail.cap_reached', metadata: { lane: 'verify', cap } }));
+    // Avisos, PQRS y alertas siguen saliendo.
+    expect(svc.send('dj@example.com', 'booking-new-owner', {})).toBe(true);
+    expect(svc.send('admin@example.com', 'admin-new-ticket', { typeLabel: 'Consulta', ticketId: 'c1', dueDate: '2026-10-13', businessDays: 10 })).toBe(true);
+    expect(svc.send('dj@example.com', 'account-locked', { until: new Date() })).toBe(true);
+    await svc.drainForTesting();
+    svc.onModuleDestroy();
+  });
+
+  it('los avisos de PQRS al admin no se quedan sin cupo aunque los avisos normales lo agoten', async () => {
+    const { svc } = withTransport(async () => ({}));
+    let sent = 0;
+    for (let i = 0; sent < MAIL_DAILY_NORMAL_BUDGET && i < 1000; i++) {
+      if (svc.send(`dj${i}@example.com`, 'profile-approved', { slug: 'dj-uno' })) sent++;
+    }
+    expect(sent).toBe(MAIL_DAILY_NORMAL_BUDGET);
+    expect(svc.send('nuevo@example.com', 'booking-new-owner', {})).toBe(false);
+    expect(svc.send('admin@example.com', 'admin-new-ticket', { typeLabel: 'Consulta', ticketId: 'c1', dueDate: '2026-10-13', businessDays: 10 })).toBe(true);
+    expect(svc.send('dj@example.com', 'password-changed', { at: new Date(), isAdmin: false })).toBe(true);
+    await svc.drainForTesting();
     svc.onModuleDestroy();
   });
 
@@ -269,16 +362,16 @@ describe('MailService', () => {
     const { svc, sendMail } = withTransport(async () => ({}));
     const cap = MAIL_TEMPLATE_DAILY_CAPS['booking-new-owner']!;
     expect(cap).toBe(5);
-    for (let i = 0; i < cap; i++) expect(svc.send('dj@example.com', 'booking-new-owner', { requesterName: 'Ana' })).toBe(true);
-    expect(svc.send('DJ@example.com', 'booking-new-owner', { requesterName: 'Ana' })).toBe(false);
+    for (let i = 0; i < cap; i++) expect(svc.send('dj@example.com', 'booking-new-owner', {})).toBe(true);
+    expect(svc.send('DJ@example.com', 'booking-new-owner', {})).toBe(false);
     // Otro dueño tiene su propio tope, y el mismo dueño sigue recibiendo otros avisos.
     expect(svc.send('otro@example.com', 'booking-new-owner', {})).toBe(true);
     expect(svc.send('dj@example.com', 'profile-approved', { slug: 'dj-uno' })).toBe(true);
     await svc.drainForTesting();
     const toDj = sendMail.mock.calls.map(([m]) => m).filter((m) => m.to === 'dj@example.com' && m.subject.includes('solicitud'));
     expect(toDj).toHaveLength(cap);
-    expect(toDj.slice(0, cap - 1).every((m) => !m.text.includes('hasta mañana'))).toBe(true);
-    expect(toDj[cap - 1]!.text).toContain('no te avisaremos de más solicitudes hasta mañana');
+    expect(toDj.slice(0, cap - 1).every((m) => !m.text.includes('mañana'))).toBe(true);
+    expect(toDj[cap - 1]!.text).toContain('te las contamos mañana en un solo correo');
     svc.onModuleDestroy();
   });
 

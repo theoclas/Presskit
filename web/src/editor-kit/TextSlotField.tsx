@@ -25,21 +25,29 @@ interface Props {
   disabled?: boolean;
   /** Se llama al restaurar (setFieldValue no dispara onValuesChange del Form). */
   onRestored?: () => void;
+  /**
+   * El DJ lo escribe él (p. ej. el título de la portada en su panel): el texto de la plantilla
+   * es solo un ejemplo, no hay «Restaurar» y vacío no significa "automático".
+   */
+  ownText?: boolean;
 }
 
 /**
  * Un texto editable de la página con contador y «Restaurar valor por defecto».
  * Guardar el valor por defecto deja el texto en automático (se envía '' al api).
  */
-export function TextSlotField({ slot, form, derivedDefault, disabled, onRestored }: Props) {
+export function TextSlotField({ slot, form, derivedDefault, disabled, onRestored, ownText }: Props) {
   const name = ['texts', slot.key];
   const value = (Form.useWatch(name, form) as string | undefined) ?? '';
-  const canRestore = !!slot.default && value.trim() !== slot.default;
-  const hints = [
-    slot.placeholders?.length ? `Puedes usar ${slot.placeholders.join(' y ')}.` : null,
-    !slot.default && derivedDefault ? `Si lo dejas vacío se usa «${derivedDefault}».` : null,
-    slot.default && !value.trim() ? 'Vacío = se usa el texto por defecto.' : null,
-  ].filter(Boolean);
+  const canRestore = !ownText && !!slot.default && value.trim() !== slot.default;
+  const hints = ownText
+    ? ['Escríbelo tú: es lo primero que se ve en tu página y hace falta para enviarla a revisión.']
+    : [
+        slot.placeholders?.length ? `Puedes usar ${slot.placeholders.join(' y ')}.` : null,
+        !slot.default && derivedDefault ? `Si lo dejas vacío se usa «${derivedDefault}».` : null,
+        slot.default && !value.trim() ? 'Vacío = se usa el texto por defecto.' : null,
+      ].filter(Boolean);
+  const placeholder = ownText && slot.default ? `Ej.: ${slot.default}` : slot.default || derivedDefault || '';
 
   const extra =
     hints.length || canRestore ? (
@@ -81,12 +89,12 @@ export function TextSlotField({ slot, form, derivedDefault, disabled, onRestored
       {slot.multiline ? (
         <Input.TextArea
           autoSize={{ minRows: 3, maxRows: 10 }}
-          placeholder={slot.default || derivedDefault || ''}
+          placeholder={placeholder}
           disabled={disabled}
           count={countConfig(slot.max)}
         />
       ) : (
-        <Input placeholder={slot.default || derivedDefault || ''} disabled={disabled} count={countConfig(slot.max)} />
+        <Input placeholder={placeholder} disabled={disabled} count={countConfig(slot.max)} />
       )}
     </Form.Item>
   );

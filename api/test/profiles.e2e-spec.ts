@@ -16,6 +16,7 @@ import { AppModule } from '../src/app.module';
 import { PasswordHasher } from '../src/auth/password/password-hasher.service';
 import { SessionService } from '../src/auth/tokens/session.service';
 import { TokenService } from '../src/auth/tokens/token.service';
+import { OwnerEditBudget } from '../src/common/guards/owner-edit-budget.guard';
 import { MediaService } from '../src/media/media.service';
 import { StorageService } from '../src/media/storage.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -57,7 +58,11 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let storage: StorageService;
+  let budget: OwnerEditBudget;
   let server: ReturnType<INestApplication['getHttpServer']>;
+
+  // Muchas pruebas cambian el mismo perfil: el tope de 60 cambios cada 10 min (H3) se prueba en owner.e2e.
+  beforeEach(() => budget?.resetForTesting());
 
   const userIds: string[] = [];
   const userEmails: string[] = [];
@@ -128,6 +133,7 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     server = app.getHttpServer();
     prisma = app.get(PrismaService);
     storage = app.get(StorageService);
+    budget = app.get(OwnerEditBudget);
 
     jpeg = await sharp({ create: { width: 640, height: 480, channels: 3, background: '#cc3366' } }).jpeg().toBuffer();
 
@@ -406,14 +412,17 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     expect(preview.body.gallery[0].variants[0].url).toMatch(/^\/api\/media\/preview\//);
   });
 
-  it('slug: el viejo queda como redirección y el nuevo no puede ser de otro', async () => {
+  it('slug de un borrador: el viejo se libera (nunca se publicó) y el nuevo no puede ser de otro', async () => {
     const newSlug = `e2e-pa2-${run}`;
     const res = await send('put', '/api/me/profile/slug', tokenA, { slug: newSlug }).expect(200);
     expect(res.body.slug).toBe(newSlug);
-    expect(await prisma.slugRedirect.findUnique({ where: { fromSlug: SLUG_A } })).toMatchObject({ profileId: profileA });
+    // Un borrador no acapara nombres con redirecciones (L7).
+    expect(await prisma.slugRedirect.findUnique({ where: { fromSlug: SLUG_A } })).toBeNull();
+    expect(await prisma.slugRedirect.count({ where: { profileId: profileA } })).toBe(0);
+    expect((await get(`/api/me/profile/slug-availability?slug=${SLUG_A}`, tokenB).expect(200)).body).toEqual({ available: true });
     const taken = await send('put', '/api/me/profile/slug', tokenA, { slug: SLUG_B }).expect(409);
     expect(taken.body.code).toBe('SLUG_TAKEN');
-    await send('put', '/api/me/profile/slug', tokenB, { slug: SLUG_A }).expect(409);
+    await send('put', '/api/me/profile/slug', tokenB, { slug: newSlug }).expect(409);
   });
 
   // ------------------------------------------------------------------ ciclo de vida
@@ -422,13 +431,19 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     const noLegal = await send('post', `/api/admin/profiles/${profileA}/approve`, tokenAdmin).expect(409);
     expect(noLegal.body.code).toBe('LEGAL_INFO_REQUIRED');
 
-    const legal = await send('put', '/api/me/profile/legal-info', tokenA, {
+    const legalBody = {
       legalName: 'Persona de Prueba',
       docType: 'CC',
       docNumber: '1.023.456.789',
       address: 'Calle 1 # 2-3, Medellín',
       phones: ['+57 300 111 2233'],
-    }).expect(200);
+    };
+    // El dueño declara que los datos son veraces; sin la declaración no se guarda nada.
+    const undeclared = await send('put', '/api/me/profile/legal-info', tokenA, legalBody).expect(400);
+    expect(undeclared.body.details).toEqual({ truthful: 'REQUIRED' });
+    const legal = await send('put', '/api/me/profile/legal-info', tokenA, { ...legalBody, truthful: true }).expect(200);
+    const declared = await prisma.auditLog.findFirst({ where: { profileId: profileA, action: 'profile.legal_info' }, orderBy: { id: 'desc' } });
+    expect(declared?.metadata).toMatchObject({ declared: true });
     expect(legal.body).toMatchObject({ docNumber: '1023456789', phones: ['+57 300 111 2233'] });
     expect((await get('/api/me/profile/legal-info', tokenB).expect(200)).body.updatedAt).toBeNull();
     // El dueño leyendo lo suyo no se audita; cada lectura del admin sí (sin los valores).
@@ -461,6 +476,14 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     expect(back.body).toMatchObject({ status: 'APPROVED', statusReason: null });
   });
 
+  it('slug de un perfil ya publicado: el viejo queda como redirección 301 y nadie más lo toma', async () => {
+    const oldSlug = `e2e-pa2-${run}`;
+    const res = await send('put', `/api/admin/profiles/${profileA}/slug`, tokenAdmin, { slug: `e2e-pa3-${run}` }).expect(200);
+    expect(res.body.slug).toBe(`e2e-pa3-${run}`);
+    expect(await prisma.slugRedirect.findUnique({ where: { fromSlug: oldSlug } })).toMatchObject({ profileId: profileA });
+    expect((await send('put', '/api/me/profile/slug', tokenB, { slug: oldSlug }).expect(409)).body.code).toBe('SLUG_TAKEN');
+  });
+
   it('el dueño envía a revisión solo con correo verificado, registro legal y el perfil completo', async () => {
     // M3: primero el correo, después el registro legal y por último el resto del checklist.
     const ownerB = await prisma.djProfile.findUniqueOrThrow({ where: { id: profileB }, select: { userId: true } });
@@ -478,6 +501,7 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
       docNumber: '1023456780',
       address: 'Calle 4 # 5-6, Medellín',
       phones: ['+57 300 111 2244'],
+      truthful: true,
     }).expect(200);
     const r = await send('post', '/api/me/profile/submit', tokenB).expect(409);
     expect(r.body.code).toBe('PROFILE_INCOMPLETE');
@@ -499,7 +523,8 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     const created = await send('post', '/api/admin/profiles', tokenAdmin, { slug: `e2e-pc-${run}`, displayName: 'E2E C' }).expect(201);
     expect(created.body).toMatchObject({ status: 'DRAFT', owner: null, texts: {} });
     profileIds.push(created.body.id);
-    await send('post', '/api/admin/profiles', tokenAdmin, { slug: SLUG_A, displayName: 'Dup' }).expect(409);
+    // El slug viejo de un perfil publicado sigue ocupado (es su redirección).
+    await send('post', '/api/admin/profiles', tokenAdmin, { slug: `e2e-pa2-${run}`, displayName: 'Dup' }).expect(409);
     await send('post', '/api/admin/profiles', tokenAdmin, { slug: 'admin', displayName: 'Reservado' }).expect(400);
 
     const feat = await send('patch', `/api/admin/profiles/${created.body.id}/feature`, tokenAdmin, { featured: true, featuredRank: 5 }).expect(200);
@@ -572,7 +597,7 @@ describe('Editor de perfiles y admin de perfiles (e2e)', () => {
     await prisma.djLegalInfo.delete({ where: { id: kept!.id } });
     expect(await prisma.djProfile.findUnique({ where: { id: profileA } })).toBeNull();
     expect(await prisma.mediaAsset.findUnique({ where: { id: galleryAsset } })).toBeNull();
-    expect(await prisma.slugRedirect.findUnique({ where: { fromSlug: SLUG_A } })).toBeNull();
+    expect(await prisma.slugRedirect.findUnique({ where: { fromSlug: `e2e-pa2-${run}` } })).toBeNull();
     expect(existsSync(storage.assetDir(asset.storageKey, true))).toBe(false);
     expect(existsSync(storage.assetDir(asset.storageKey, false))).toBe(false);
     expect(await prisma.auditLog.findFirst({ where: { profileId: profileA, action: 'admin.profile.delete' } })).not.toBeNull();

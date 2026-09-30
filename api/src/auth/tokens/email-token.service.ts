@@ -91,6 +91,11 @@ export class EmailTokenService {
     return this.prisma.emailToken.count({ where: { userId, type, createdAt: { gt: since } } });
   }
 
+  /** Cuántos se pidieron desde una IP (su HMAC) desde `since`: topes por IP. */
+  countFromIpSince(ipHash: string, type: EmailTokenType, since: Date): Promise<number> {
+    return this.prisma.emailToken.count({ where: { requestIpHash: ipHash, type, createdAt: { gt: since } } });
+  }
+
   /**
    * El token si existe, es de este tipo, no se usó, no venció y sigue atado al correo actual
    * del usuario. No lo consume: así una contraseña débil no quema el enlace.

@@ -7,6 +7,7 @@ import {
   normalizeLinks,
   publishChecklist,
   quotaError,
+  keepsRedirects,
   redirectsToEvict,
   slugCooldownUntil,
   usageDto,
@@ -186,6 +187,25 @@ describe('publishChecklist', () => {
     const noContact = [{ key: 'fullName', required: true }];
     expect(publishChecklist({ ...complete, bookingForm: noContact })).toEqual({ bookingForm: 'INVALID', contact: 'REQUIRED' });
     expect(publishChecklist({ ...complete, bookingForm: noContact, whatsappNumber: '573001112233' })).toEqual({ bookingForm: 'INVALID' });
+  });
+
+  it('perfil con dueño: el título de la portada tiene que ser suyo, no el de la plantilla', () => {
+    expect(publishChecklist({ ...complete, ownHeroTitleRequired: true })).toEqual({ 'texts.heroTitle': 'REQUIRED' });
+    expect(publishChecklist({ ...complete, ownHeroTitleRequired: true, texts: { heroTitle: '   ' } })).toEqual({ 'texts.heroTitle': 'REQUIRED' });
+    expect(publishChecklist({ ...complete, ownHeroTitleRequired: true, texts: { heroTitle: 'Techno en vivo' } })).toEqual({});
+  });
+});
+
+describe('keepsRedirects', () => {
+  it('solo un perfil que ya se publicó conserva sus slugs viejos', () => {
+    const at = new Date('2026-09-01T00:00:00Z');
+    expect(keepsRedirects({ status: 'APPROVED', approvedAt: at })).toBe(true);
+    expect(keepsRedirects({ status: 'SUSPENDED', approvedAt: at })).toBe(true);
+    // El seed o datos viejos sin fecha: el estado basta.
+    expect(keepsRedirects({ status: 'APPROVED', approvedAt: null })).toBe(true);
+    for (const status of ['DRAFT', 'PENDING_REVIEW', 'REJECTED'] as const) {
+      expect(keepsRedirects({ status, approvedAt: null })).toBe(false);
+    }
   });
 });
 

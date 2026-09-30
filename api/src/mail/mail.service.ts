@@ -1,12 +1,16 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
-import { isValidEmail, normalizeEmail } from '@fersua/shared';
+import addressparser from 'nodemailer/lib/addressparser';
+import { isValidEmail, mailboxKey, normalizeEmail } from '@fersua/shared';
+import { AuditService } from '../audit/audit.service';
 import { AppConfig } from '../config/app-config.service';
 import { sha256Hex } from '../common/crypto';
 import {
+  mailLane,
   mailPriority,
   renderMail,
   type MailContent,
+  type MailLane,
   type MailPriority,
   type MailRenderParams,
   type MailTemplateName,
@@ -17,23 +21,37 @@ import {
 export const MAIL_RETRY_DELAYS_MS = [1_000, 10_000, 60_000] as const;
 /**
  * Topes diarios en memoria (M6): el SMTP de Hostinger tiene un cupo compartido, y si se agota
- * dejan de salir los correos de seguridad. Por destinatario, para que nadie use el formulario
- * de otro para inundarle el buzón. Cupos separados por prioridad: una ola de avisos normales
- * (p. ej. PQRS al admin) no puede gastar el cupo de las alertas de seguridad del mismo buzón,
- * y los normales paran antes del tope global para dejar margen a los de seguridad.
+ * dejan de salir los correos de seguridad. En tres niveles:
+ * - Global: MAIL_DAILY_BUDGET para todo. Los cupos que dispara cualquiera con autoservicio
+ *   ('verify' y 'notice') paran antes, en MAIL_DAILY_NORMAL_BUDGET: siempre queda margen para
+ *   las alertas de seguridad, los enlaces de restablecer y los avisos de PQRS.
+ * - Por cupo (MAIL_LANE_DAILY_CAPS): una ola de registros o de "olvidé mi contraseña" gasta su
+ *   propio cupo y nada más.
+ * - Por buzón y cupo (MAIL_PER_RECIPIENT_PER_DAY), contando dj+1@x y dj+2@x como el mismo buzón:
+ *   nadie usa un formulario para inundarle el buzón a otro.
  */
 export const MAIL_DAILY_BUDGET = 300;
 export const MAIL_DAILY_NORMAL_BUDGET = 250;
-/** Por destinatario, al día y por prioridad. */
+const NORMAL_BUDGET_LANES: ReadonlySet<MailLane> = new Set<MailLane>(['verify', 'notice']);
+/** Tope global al día de algunos cupos (además del global de arriba). */
+export const MAIL_LANE_DAILY_CAPS: Readonly<Partial<Record<MailLane, number>>> = {
+  verify: 80,
+  reset: 100,
+};
+/** Por buzón, al día y por cupo. */
 export const MAIL_PER_RECIPIENT_PER_DAY = 10;
 /**
- * Topes propios de algunas plantillas, por destinatario y al día (además de los de arriba).
- * Avisos de booking al DJ: máximo 5; el 5.º dice que no habrá más avisos hasta mañana (la
- * plantilla recibe `lastOfDay`) y del 6.º en adelante se omiten en silencio: las solicitudes
- * siguen en el panel. Así un bot que llena el formulario de un DJ no le inunda el buzón.
+ * Topes propios de algunas plantillas, por buzón y al día (además de los de arriba).
+ * - Avisos de booking al DJ: máximo 5; el 5.º dice que lo que siga irá en el resumen de mañana
+ *   (la plantilla recibe `lastOfDay`) y del 6.º en adelante se omiten en silencio: las
+ *   solicitudes siguen en el panel. Así un bot que llena el formulario de un DJ no le inunda
+ *   el buzón.
+ * - Enlaces de restablecer: 5, la mitad del cupo del buzón, para que quien los pida en bucle
+ *   nunca llegue al tope.
  */
 export const MAIL_TEMPLATE_DAILY_CAPS: Readonly<Partial<Record<MailTemplateName, number>>> = {
   'booking-new-owner': 5,
+  'reset-password': 5,
 };
 
 interface Job {
@@ -47,7 +65,38 @@ interface Job {
 
 /** Mínimo que necesitamos del transporte (en las pruebas se reemplaza). */
 export interface MailTransport {
-  sendMail(msg: { from: string; to: string; subject: string; text: string; html: string }): Promise<unknown>;
+  sendMail(msg: {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    envelope?: { from: string; to: string };
+  }): Promise<unknown>;
+}
+
+type Refusal = 'closed' | 'invalid' | 'template-cap' | 'lane-cap' | 'recipient-cap' | 'budget';
+
+type Verdict =
+  | { ok: false; reason: Refusal; recipient?: string }
+  | { ok: true; recipient: string; lane: MailLane; recipientKey: string; capKey: string; cap: number | undefined; capUsed: number };
+
+/**
+ * El destinatario normalizado solo si es UNA dirección simple: pasa isValidEmail (addr-spec
+ * estricto) y el mismo parser que usa nodemailer lee exactamente esa dirección, sin nombre.
+ * Segunda barrera: "x<otro@buzon.com>" o "a,otro@buzon.com" nunca llegan al SMTP.
+ */
+export function singleRecipient(to: string | null | undefined): string | null {
+  if (!to || !isValidEmail(to)) return null;
+  const recipient = normalizeEmail(to);
+  let parsed: { name: string; address: string }[];
+  try {
+    parsed = addressparser(recipient, { flatten: true });
+  } catch {
+    return null;
+  }
+  if (parsed.length !== 1 || parsed[0]!.name || parsed[0]!.address.toLowerCase() !== recipient) return null;
+  return recipient;
 }
 
 /**
@@ -68,30 +117,38 @@ export class MailService implements OnModuleDestroy {
   private sentToday = 0;
   private readonly perRecipient = new Map<string, number>();
   private readonly perTemplate = new Map<string, number>();
+  private readonly perLane = new Map<MailLane, number>();
+  /** Cupos que ya avisaron hoy que se agotaron (una sola vez por día). */
+  private readonly lanesAnnounced = new Set<MailLane>();
+  private envelopeFrom: string | null | undefined;
 
-  constructor(private readonly config: AppConfig) {}
+  constructor(
+    private readonly config: AppConfig,
+    @Optional() private readonly audit?: AuditService,
+  ) {}
+
+  /**
+   * ¿Saldría hoy este correo? Sin gastar cupo. Para decidir ANTES de emitir un enlace (y anular
+   * los anteriores) si el correo que lo lleva va a salir.
+   */
+  canSend(to: string | null | undefined, template: MailTemplateName): boolean {
+    return this.check(to, template).ok;
+  }
 
   /** Encola un correo. Devuelve false si se descartó (sin destinatario válido o sin cupo). */
   send<K extends MailTemplateName>(to: string | null | undefined, template: K, params: MailTemplateParams<K>): boolean {
-    if (this.closed || !to || !isValidEmail(to)) return false;
-    const recipient = normalizeEmail(to);
-    this.rollDay();
-    const cap = MAIL_TEMPLATE_DAILY_CAPS[template];
-    const capKey = `${template}|${recipient}`;
-    const capUsed = cap === undefined ? 0 : (this.perTemplate.get(capKey) ?? 0);
-    if (cap !== undefined && capUsed >= cap) {
-      this.log.debug(`aviso omitido por el tope diario de la plantilla: ${template} a ${tag(recipient)}`);
-      return false;
-    }
-    if (!this.takeBudget(recipient, mailPriority(template))) {
-      this.log.warn(`correo descartado por cupo diario: ${template} a ${tag(recipient)}`);
+    const verdict = this.check(to, template);
+    if (!verdict.ok) {
+      if (verdict.reason === 'template-cap') {
+        this.log.debug(`aviso omitido por el tope diario de la plantilla: ${template} a ${tag(verdict.recipient ?? '')}`);
+      } else if (verdict.reason !== 'closed' && verdict.reason !== 'invalid') {
+        this.log.warn(`correo descartado por cupo diario (${verdict.reason}): ${template} a ${tag(verdict.recipient ?? '')}`);
+      }
       return false;
     }
     let renderParams = params as unknown as MailRenderParams<K>;
-    if (cap !== undefined) {
-      this.perTemplate.set(capKey, capUsed + 1);
-      if (capUsed + 1 === cap) renderParams = { ...renderParams, lastOfDay: true };
-    }
+    const last = verdict.cap !== undefined && verdict.capUsed + 1 === verdict.cap;
+    if (last) renderParams = { ...renderParams, lastOfDay: true };
     let content: MailContent;
     try {
       content = renderMail(template, renderParams, { publicUrl: this.config.publicUrl });
@@ -99,7 +156,12 @@ export class MailService implements OnModuleDestroy {
       this.log.error(`plantilla ${template} falló: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
-    const job: Job = { id: ++this.seq, to: recipient, content, priority: mailPriority(template), template, attempts: 0 };
+    // Se gasta el cupo solo cuando el correo de verdad se encola.
+    this.sentToday++;
+    this.perRecipient.set(verdict.recipientKey, (this.perRecipient.get(verdict.recipientKey) ?? 0) + 1);
+    this.perLane.set(verdict.lane, (this.perLane.get(verdict.lane) ?? 0) + 1);
+    if (verdict.cap !== undefined) this.perTemplate.set(verdict.capKey, verdict.capUsed + 1);
+    const job: Job = { id: ++this.seq, to: verdict.recipient, content, priority: mailPriority(template), template, attempts: 0 };
     this.enqueue(job);
     return true;
   }
@@ -121,6 +183,43 @@ export class MailService implements OnModuleDestroy {
     this.queue.length = 0;
   }
 
+  private check(to: string | null | undefined, template: MailTemplateName): Verdict {
+    if (this.closed) return { ok: false, reason: 'closed' };
+    const recipient = singleRecipient(to);
+    if (!recipient) return { ok: false, reason: 'invalid' };
+    this.rollDay();
+    const lane = mailLane(template);
+    const box = mailboxKey(recipient);
+    const cap = MAIL_TEMPLATE_DAILY_CAPS[template];
+    const capKey = `${template}|${box}`;
+    const capUsed = cap === undefined ? 0 : (this.perTemplate.get(capKey) ?? 0);
+    if (cap !== undefined && capUsed >= cap) return { ok: false, reason: 'template-cap', recipient };
+    const laneCap = MAIL_LANE_DAILY_CAPS[lane];
+    if (laneCap !== undefined && (this.perLane.get(lane) ?? 0) >= laneCap) {
+      this.announceLaneCap(lane, laneCap);
+      return { ok: false, reason: 'lane-cap', recipient };
+    }
+    const recipientKey = `${lane}|${box}`;
+    if ((this.perRecipient.get(recipientKey) ?? 0) >= MAIL_PER_RECIPIENT_PER_DAY) return { ok: false, reason: 'recipient-cap', recipient };
+    const globalCap = NORMAL_BUDGET_LANES.has(lane) ? MAIL_DAILY_NORMAL_BUDGET : MAIL_DAILY_BUDGET;
+    if (this.sentToday >= globalCap) return { ok: false, reason: 'budget', recipient };
+    return { ok: true, recipient, lane, recipientKey, capKey, cap, capUsed };
+  }
+
+  /**
+   * Un cupo con tope global se agotó: una vez al día, al log y a la auditoría (la ve el admin).
+   * Si es el de verificación, casi seguro es una ola de registros falsos: el aviso lo dice.
+   */
+  private announceLaneCap(lane: MailLane, cap: number): void {
+    if (this.lanesAnnounced.has(lane)) return;
+    this.lanesAnnounced.add(lane);
+    const hint = lane === 'verify' ? ' Si es una ola de registros falsos, cierra el registro con REGISTRATION_OPEN=false.' : '';
+    this.log.warn(`cupo diario de correos '${lane}' agotado (${cap}).${hint}`);
+    void this.audit
+      ?.record({ actorId: null, actorUsername: null, action: 'system.mail.cap_reached', metadata: { lane, cap } })
+      .catch(() => undefined);
+  }
+
   private enqueue(job: Job): void {
     // Seguridad primero: se inserta antes del primer correo "normal" de la cola.
     if (job.priority === 'security') {
@@ -140,12 +239,17 @@ export class MailService implements OnModuleDestroy {
       while (this.queue.length && !this.closed) {
         const job = this.queue.shift()!;
         try {
+          const from = this.config.smtp.from;
+          const envelopeFrom = this.getEnvelopeFrom(from);
           await this.getTransport().sendMail({
-            from: this.config.smtp.from,
+            from,
             to: job.to,
             subject: job.content.subject,
             text: job.content.text,
             html: job.content.html,
+            // Sobre SMTP explícito: RCPT TO es exactamente la dirección validada, nunca lo que
+            // el parser de cabeceras pudiera deducir.
+            ...(envelopeFrom ? { envelope: { from: envelopeFrom, to: job.to } } : {}),
           });
         } catch (err) {
           this.retry(job, err);
@@ -174,6 +278,19 @@ export class MailService implements OnModuleDestroy {
     this.timers.add(timer);
   }
 
+  /** Dirección del remitente ("Fersua Studio <no-reply@…>" → "no-reply@…") para MAIL FROM. */
+  private getEnvelopeFrom(from: string): string | null {
+    if (this.envelopeFrom === undefined) {
+      try {
+        const parsed = addressparser(from, { flatten: true });
+        this.envelopeFrom = parsed.length === 1 && isValidEmail(parsed[0]!.address) ? parsed[0]!.address : null;
+      } catch {
+        this.envelopeFrom = null;
+      }
+    }
+    return this.envelopeFrom;
+  }
+
   private getTransport(): MailTransport {
     if (!this.transport) {
       const smtp = this.config.smtp;
@@ -199,18 +316,9 @@ export class MailService implements OnModuleDestroy {
       this.sentToday = 0;
       this.perRecipient.clear();
       this.perTemplate.clear();
+      this.perLane.clear();
+      this.lanesAnnounced.clear();
     }
-  }
-
-  private takeBudget(recipient: string, priority: MailPriority): boolean {
-    this.rollDay();
-    const key = `${priority}|${recipient}`;
-    const mine = this.perRecipient.get(key) ?? 0;
-    const globalCap = priority === 'security' ? MAIL_DAILY_BUDGET : MAIL_DAILY_NORMAL_BUDGET;
-    if (this.sentToday >= globalCap || mine >= MAIL_PER_RECIPIENT_PER_DAY) return false;
-    this.sentToday++;
-    this.perRecipient.set(key, mine + 1);
-    return true;
   }
 }
 

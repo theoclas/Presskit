@@ -7,7 +7,13 @@ import type { AppConfig } from '../config/app-config.service';
 import type { MailService } from '../mail/mail.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RegisterBody } from './account.dto';
-import { AccountService, RESET_EMAILS_PER_USER_PER_DAY, RESET_EMAILS_PER_USER_PER_HOUR, forgotLookup } from './account.service';
+import {
+  AccountService,
+  RESET_EMAILS_PER_USER_PER_DAY,
+  RESET_EMAILS_PER_USER_PER_HOUR,
+  VERIFY_EMAILS_PER_IP_PER_DAY,
+  forgotLookup,
+} from './account.service';
 import type { AuthService } from './auth.service';
 import { LockoutService } from './lockout/lockout.service';
 import type { PasswordHasher } from './password/password-hasher.service';
@@ -27,7 +33,9 @@ function resStub() {
   return { res, cookies };
 }
 
-function setup(opts: { users?: UserRow[]; registrationOpen?: boolean; issuedLastHour?: number; issuedLastDay?: number } = {}) {
+function setup(
+  opts: { users?: UserRow[]; registrationOpen?: boolean; issuedLastHour?: number; issuedLastDay?: number; mailBudget?: boolean; fromIp?: number } = {},
+) {
   const users = opts.users ?? [];
   const prisma = {
     user: {
@@ -48,7 +56,7 @@ function setup(opts: { users?: UserRow[]; registrationOpen?: boolean; issuedLast
   } as unknown as AppConfig;
   const ctx = { ipHash: () => 'h'.repeat(64), userAgent: () => 'jest' } as unknown as RequestContext;
   const audit = { record: jest.fn(async () => undefined) } as unknown as AuditService;
-  const mail = { send: jest.fn(() => true) } as unknown as MailService;
+  const mail = { send: jest.fn(() => true), canSend: jest.fn(() => opts.mailBudget ?? true) } as unknown as MailService;
   const hasher = { hash: jest.fn(async () => '$argon2id$x'), dummyVerify: jest.fn(async () => false) } as unknown as PasswordHasher;
   const sessions = { create: jest.fn(), revokeAllForUser: jest.fn() } as unknown as SessionService;
   const lockout = new LockoutService({} as PrismaService, config);
@@ -58,6 +66,7 @@ function setup(opts: { users?: UserRow[]; registrationOpen?: boolean; issuedLast
   const emailTokens = {
     issue: jest.fn(async () => 'token-en-claro'),
     countSince,
+    countFromIpSince: jest.fn(async () => opts.fromIp ?? 0),
   } as unknown as EmailTokenService;
   const auth = { finishSession: jest.fn(), me: jest.fn() } as unknown as AuthService;
   const svc = new AccountService(
@@ -143,6 +152,19 @@ describe('AccountService.forgotPassword', () => {
     }
   });
 
+  it('sin cupo de correo hoy no emite token: el enlace anterior sigue sirviendo', async () => {
+    const { svc, mail, emailTokens } = setup({ users: [dj], mailBudget: false });
+    svc.forgotPassword({ identifier: 'dj.uno' }, req);
+    await svc.settledForTesting();
+    expect(mail.canSend).toHaveBeenCalledWith('dj@example.com', 'reset-password');
+    expect(emailTokens.issue).not.toHaveBeenCalled();
+    expect(mail.send).not.toHaveBeenCalled();
+  });
+
+  it('el tope diario de enlaces queda por debajo del cupo del buzón', () => {
+    expect(RESET_EMAILS_PER_USER_PER_DAY).toBeLessThan(10);
+  });
+
   it('un error de la BD no se escapa (ni rechazo sin manejar ni respuesta distinta)', async () => {
     const { svc, prisma } = setup({ users: [dj] });
     prisma.user.findUnique.mockRejectedValueOnce(new Error('BD caída'));
@@ -202,6 +224,19 @@ describe('AccountService.register', () => {
     expect(err.details).toEqual({ password: 'TOO_SHORT' });
     const err2 = await expectError(svc.register(body({ password: 'xx-nuevo.dj-2026' }), req, resStub().res), 400, 'PASSWORD_WEAK');
     expect(err2.details).toEqual({ password: 'CONTAINS_USERNAME' });
+  });
+
+  it('sin cupo de correos de confirmación hoy: 503 REGISTRATION_BUSY y no se crea nada', async () => {
+    const { svc, prisma, mail } = setup({ mailBudget: false });
+    await expectError(svc.register(body(), req, resStub().res), 503, 'REGISTRATION_BUSY');
+    expect(mail.canSend).toHaveBeenCalledWith('nuevo@example.com', 'verify-email');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it(`más de ${VERIFY_EMAILS_PER_IP_PER_DAY} correos de confirmación desde la misma IP en 24 h: 429 y no se crea nada`, async () => {
+    const { svc, prisma } = setup({ fromIp: VERIFY_EMAILS_PER_IP_PER_DAY });
+    await expectError(svc.register(body(), req, resStub().res), 429, 'RATE_LIMITED');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('honeypot lleno: misma forma de respuesta y cookies, pero nada se guarda ni se envía', async () => {

@@ -84,6 +84,8 @@ function LegalInfoForm({ dto, actor }: { dto: LegalInfoDto; actor: 'admin' | 'ow
       docNumber: v.docNumber.trim(),
       address: v.address.trim(),
       phones: (v.phones ?? []).map((p) => (p ?? '').trim()).filter(Boolean),
+      // El dueño declara la veracidad cada vez que guarda; el api la exige y la deja en la auditoría.
+      ...(actor === 'owner' && (form.getFieldsValue(true) as { truthful?: unknown }).truthful === true ? { truthful: true as const } : {}),
     };
     setSaving(true);
     try {
@@ -238,7 +240,7 @@ function LegalInfoForm({ dto, actor }: { dto: LegalInfoDto; actor: 'admin' | 'ow
           )}
         </Form.List>
         {actor === 'owner' ? (
-          // Declaración del dueño al guardar (docs/diseno/11 §2.4). No se envía: solo habilita guardar.
+          // Declaración del dueño al guardar (docs/diseno/11 §2.4): se envía (truthful) y queda auditada.
           <Form.Item
             name="truthful"
             valuePropName="checked"

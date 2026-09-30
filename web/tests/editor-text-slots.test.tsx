@@ -113,6 +113,19 @@ describe('parche de textos', () => {
     expect(buildTextsPatch(initial.texts, texts)).toEqual({ heroTitle: '', navTag: 'Reservas' });
   });
 
+  it('panel del DJ: el título de la portada arranca vacío y se guarda tal cual, aunque sea el de la plantilla', () => {
+    const own = { ownTexts: ['heroTitle'] as const };
+    const initial = profileFormValues(profile({ texts: {} }), own);
+    expect(initial.texts.heroTitle).toBe('');
+    expect(initial.texts.navTag).toBe('Booking');
+    const texts = { ...initial.texts, heroTitle: 'Electronic club show' };
+    expect(buildTextsPatch(initial.texts, texts, own)).toEqual({ heroTitle: 'Electronic club show' });
+    // Lo que ya escribió se muestra como suyo; vaciarlo lo deja sin título propio.
+    const written = profileFormValues(profile({ texts: { heroTitle: 'Techno en vivo' } }), own);
+    expect(written.texts.heroTitle).toBe('Techno en vivo');
+    expect(buildTextsPatch(written.texts, { ...written.texts, heroTitle: '' }, own)).toEqual({ heroTitle: '' });
+  });
+
   it('el parche del perfil nunca lleva campos sin cambios y normaliza el WhatsApp', () => {
     const initial = profileFormValues(profile());
     const values: ProfileFormValues = {

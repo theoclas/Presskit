@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { MustChangePasswordGuard } from './common/guards/must-change-password.guard';
+import { OwnerEditBudgetGuard } from './common/guards/owner-edit-budget.guard';
 import { OriginGuard } from './common/guards/origin.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { StepUpGuard } from './common/guards/step-up.guard';
@@ -87,10 +88,12 @@ export function pathOnly(url: string | undefined): string {
     { provide: APP_GUARD, useClass: OriginGuard },
     // Sesión y autorización, en este orden (docs/api-m2.md). StepUpGuard solo actúa en
     // rutas con @RequireStepUp. TermsGuard (M3) solo en /api/me/** para rol USER.
+    // OwnerEditBudgetGuard (M3, H3): 60 cambios cada 10 min por dueño en /api/me/profile/**.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: MustChangePasswordGuard },
     { provide: APP_GUARD, useClass: TermsGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: OwnerEditBudgetGuard },
     { provide: APP_GUARD, useClass: StepUpGuard },
     { provide: APP_INTERCEPTOR, useClass: CacheControlInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

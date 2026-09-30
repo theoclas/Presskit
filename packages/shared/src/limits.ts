@@ -72,6 +72,8 @@ export const LIMITS = {
   legalInfo: { legalNameMax: 120, docNumberMax: 20, addressMax: 200, phoneMax: 20, phonesMax: 3 },
   retention: {
     bookingMonths: 12,
+    /** Solicitudes marcadas como SPAM: se borran antes que el resto. */
+    spamDays: 30,
     auditMonths: 24,
     resetTokenMinutes: 30,
     verifyTokenHours: 48,

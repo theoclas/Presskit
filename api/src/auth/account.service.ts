@@ -37,14 +37,27 @@ const DAY_MS = 24 * HOUR_MS;
 
 /** Reenvíos del enlace de verificación por usuario y hora (cuenta también el del registro). */
 export const VERIFY_EMAILS_PER_USER_PER_HOUR = 3;
-/** Enlaces de restablecer por usuario resuelto (M6): 3 por hora y 10 al día. Pasado el tope, nada. */
+/**
+ * Enlaces de verificación (registros + reenvíos) por IP (IPv6 por /64) en 24 h. Además de los
+ * límites por hora: una sola conexión no puede gastar el cupo diario de verificación de todos.
+ */
+export const VERIFY_EMAILS_PER_IP_PER_DAY = 20;
+/**
+ * Enlaces de restablecer por usuario resuelto (M6): 3 por hora y 5 al día. Pasado el tope, nada.
+ * 5 es la mitad del cupo diario de correos del buzón: pedirlos en bucle nunca lo llena.
+ */
 export const RESET_EMAILS_PER_USER_PER_HOUR = 3;
-export const RESET_EMAILS_PER_USER_PER_DAY = 10;
+export const RESET_EMAILS_PER_USER_PER_DAY = 5;
 
 /** Siempre el mismo código para un token inválido, usado, vencido o de otro correo. */
 const tokenInvalid = () => Errors.badRequest('TOKEN_INVALID', 'El enlace no es válido o ya venció. Pide uno nuevo.');
 const usernameTaken = () => Errors.conflict('USERNAME_TAKEN', 'Ese nombre de usuario ya está en uso.');
 const emailTaken = () => Errors.conflict('EMAIL_TAKEN', 'Ya hay una cuenta con ese correo. Si es tuya, recupera tu contraseña.');
+const verifyIpLimit = () =>
+  Errors.tooMany('Desde tu conexión ya se pidieron muchos correos de confirmación hoy. Intenta de nuevo mañana.');
+/** El cupo diario de correos de confirmación se agotó: mejor no crear una cuenta que no se puede confirmar. */
+const registrationBusy = () =>
+  Errors.unavailable('REGISTRATION_BUSY', 'Hoy no podemos enviar más correos de confirmación. Intenta registrarte de nuevo mañana.');
 
 type Consents = Pick<RegisterBody, 'acceptTerms' | 'acceptPrivacy' | 'confirmAge'>;
 
@@ -117,8 +130,12 @@ export class AccountService {
     });
     if (taken) throw taken.username === username ? usernameTaken() : emailTaken();
 
-    const passwordHash = await this.hasher.hash(body.password);
     const meta = { ipHash: this.ctx.ipHash(req), userAgent: this.ctx.userAgent(req) };
+    // Antes de crear nada: el correo de confirmación tiene que poder salir hoy.
+    await this.assertVerifyIpBudget(meta.ipHash);
+    if (!this.mail.canSend(email, 'verify-email')) throw registrationBusy();
+
+    const passwordHash = await this.hasher.hash(body.password);
     const now = new Date();
     let created: { session: IssuedSession; token: string; tokenVersion: number };
     try {
@@ -193,6 +210,7 @@ export class AccountService {
         termsVersion: LEGAL_DOCS.artistTerms.version,
         privacyVersion: LEGAL_DOCS.privacy.version,
         termsOutdated: false,
+        ageConfirmed: true,
       },
     };
   }
@@ -240,7 +258,13 @@ export class AccountService {
       if (recent >= VERIFY_EMAILS_PER_USER_PER_HOUR) {
         throw Errors.tooMany('Ya te enviamos varios enlaces. Revisa tu correo (también la carpeta de spam) o intenta de nuevo en una hora.');
       }
-      const token = await this.emailTokens.issue({ id: row.id, email: row.email }, 'EMAIL_VERIFY', { ipHash: this.ctx.ipHash(req) });
+      const ipHash = this.ctx.ipHash(req);
+      await this.assertVerifyIpBudget(ipHash);
+      // Sin cupo de correo hoy no se emite nada: emitir anula el enlace anterior, que sí puede servir.
+      if (!this.mail.canSend(row.email, 'verify-email')) {
+        throw Errors.tooMany('Hoy no podemos enviarte otro correo. Usa el último enlace que te llegó o intenta de nuevo mañana.');
+      }
+      const token = await this.emailTokens.issue({ id: row.id, email: row.email }, 'EMAIL_VERIFY', { ipHash });
       this.mail.send(row.email, 'verify-email', { token });
     } finally {
       this.lockout.release(key);
@@ -281,6 +305,12 @@ export class AccountService {
       ]);
       if (lastHour >= RESET_EMAILS_PER_USER_PER_HOUR || lastDay >= RESET_EMAILS_PER_USER_PER_DAY) {
         this.log.warn('restablecer: tope por usuario alcanzado, no se envía otro enlace');
+        return;
+      }
+      // Si el correo no va a salir (cupo del día), no se emite: emitir anula el enlace anterior,
+      // que puede ser justo el que la persona está por usar.
+      if (!this.mail.canSend(user.email, 'reset-password')) {
+        this.log.warn('restablecer: sin cupo de correo, no se emite otro enlace');
         return;
       }
       const token = await this.emailTokens.issue({ id: user.id, email: user.email }, 'PASSWORD_RESET', { ipHash });
@@ -362,16 +392,30 @@ export class AccountService {
 
   // ------------------------------------------------------------------ términos
 
+  /**
+   * Acepta los documentos vigentes. Si la cuenta nunca declaró ser mayor de edad (las que creó
+   * el admin: no pasaron por el registro), también exige `confirmAge` y la guarda.
+   */
   async acceptTerms(authUser: AuthUser, body: AcceptTermsBody, req: Request): Promise<MeDto> {
     const details: Record<string, string> = {};
     if ((body.acceptTerms as boolean) !== true) details.acceptTerms = 'REQUIRED';
     if ((body.acceptPrivacy as boolean) !== true) details.acceptPrivacy = 'REQUIRED';
+    if (authUser.role !== 'USER') {
+      if (Object.keys(details).length) throw Errors.validation(details);
+      throw Errors.forbidden();
+    }
+    const row = await this.prisma.user.findUnique({ where: { id: authUser.id }, select: { ageConfirmedAt: true } });
+    if (!row) throw Errors.unauthorized();
+    const needsAge = row.ageConfirmedAt === null;
+    if (needsAge && (body.confirmAge as boolean | undefined) !== true) details.confirmAge = 'REQUIRED';
     if (Object.keys(details).length) throw Errors.validation(details);
-    if (authUser.role !== 'USER') throw Errors.forbidden();
 
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.user.updateMany({ where: { id: authUser.id, role: 'USER' }, data: acceptedTermsData(now) });
+      const updated = await tx.user.updateMany({
+        where: { id: authUser.id, role: 'USER' },
+        data: { ...acceptedTermsData(now), ...(needsAge ? { ageConfirmedAt: now } : {}) },
+      });
       if (updated.count !== 1) throw Errors.unauthorized();
       await this.audit.record(
         {
@@ -380,13 +424,23 @@ export class AccountService {
           action: 'auth.terms_accepted',
           targetType: 'User',
           targetId: authUser.id,
-          metadata: { termsVersion: LEGAL_DOCS.artistTerms.version, privacyVersion: LEGAL_DOCS.privacy.version },
+          metadata: {
+            termsVersion: LEGAL_DOCS.artistTerms.version,
+            privacyVersion: LEGAL_DOCS.privacy.version,
+            ...(needsAge ? { ageConfirmed: true } : {}),
+          },
           ipHash: this.ctx.ipHash(req),
         },
         tx,
       );
     });
     return this.auth.me(authUser);
+  }
+
+  /** Tope diario de enlaces de verificación por IP (registros + reenvíos). */
+  private async assertVerifyIpBudget(ipHash: string): Promise<void> {
+    const fromIp = await this.emailTokens.countFromIpSince(ipHash, 'EMAIL_VERIFY', new Date(Date.now() - DAY_MS));
+    if (fromIp >= VERIFY_EMAILS_PER_IP_PER_DAY) throw verifyIpLimit();
   }
 
   /** Solo pruebas: espera a que termine el trabajo de "Olvidé mi contraseña" ya encolado. */

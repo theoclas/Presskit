@@ -80,6 +80,12 @@ describe('estado del perfil', () => {
     expect(suspended.reason).toBe('Contenido reportado.');
   });
 
+  it('borrador y rechazado avisan que se borran por inactividad', () => {
+    expect(statusBanner({ status: 'DRAFT', statusReason: null }).description).toContain('Si no la editas en 30 días, se borra');
+    expect(statusBanner({ status: 'REJECTED', statusReason: null }).description).toContain('Si no lo cambias en 30 días, se borra');
+    expect(statusBanner({ status: 'APPROVED', statusReason: null }).description).not.toContain('se borra');
+  });
+
   it('solo se envía desde borrador o rechazado', () => {
     expect(canSubmit('DRAFT')).toBe(true);
     expect(canSubmit('REJECTED')).toBe(true);

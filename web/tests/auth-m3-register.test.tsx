@@ -1,6 +1,6 @@
 import { LEGAL_DOCS, REGISTER_CONSENTS, type MeDto, type SessionDto } from '@fersua/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import type { ReactNode } from 'react';
 import { Outlet, RouterProvider, createMemoryRouter, useLocation } from 'react-router';
@@ -179,6 +179,8 @@ describe('validateRegister', () => {
     expect(registerFailure(err(403, 'REGISTRATION_CLOSED'))).toEqual({ kind: 'closed' });
     expect(registerFailure(err(429, 'RATE_LIMITED'))).toMatchObject({ kind: 'alert', message: expect.stringMatching(/demasiados intentos/) });
     expect(registerFailure(err(400, 'PASSWORD_WEAK'))).toMatchObject({ kind: 'field', field: 'password', message: 'm' });
+    // Sin cupo de correos de confirmación hoy: el mensaje del api, no "el servidor no respondió".
+    expect(registerFailure(err(503, 'REGISTRATION_BUSY'))).toEqual({ kind: 'alert', message: 'm' });
   });
 });
 
@@ -219,6 +221,15 @@ describe('/registro', () => {
     const hp = document.querySelector('input[name="hp_x7"]') as HTMLInputElement;
     expect(hp.tabIndex).toBe(-1);
     expect(hp.closest('[aria-hidden="true"]')).not.toBeNull();
+
+    // Aviso de privacidad breve junto al formulario, antes de las casillas (plan, parte legal).
+    const notice = document.querySelector('.privacy-notice') as HTMLElement;
+    expect(notice).not.toBeNull();
+    expect(notice.textContent).toContain('Aviso de privacidad');
+    expect(notice.textContent).toContain('art. 53 Ley 1480');
+    expect(notice.textContent).toContain('Si no confirmas tu correo en 14 días, borramos la cuenta');
+    expect(notice.compareDocumentPosition(c.terms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(notice).getByRole('link', { name: 'PQRS y habeas data' }).getAttribute('href')).toBe('/pqrs');
   });
 
   it('no envía nada sin las tres casillas y enfoca la primera que falta', async () => {

@@ -87,8 +87,8 @@ describe('BookingService.submit', () => {
       consentVersion: expect.any(String),
       ipHash: 'a'.repeat(64),
     });
-    // Aviso al DJ (M3): id, perfil y el nombre tal como quedó guardado (la plantilla lo sanea).
-    expect(notify.newBooking).toHaveBeenCalledWith('req1', 'prof1', 'Ana Pérez');
+    // Aviso al DJ (M3): solo ids; ningún dato del solicitante llega al correo.
+    expect(notify.newBooking).toHaveBeenCalledWith('req1', 'prof1');
   });
 
   it('pasado el tope por IP y perfil, guarda como SPAM y responde igual (sin 429)', async () => {

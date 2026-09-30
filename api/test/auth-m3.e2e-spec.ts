@@ -8,6 +8,7 @@
 import { createTransport } from 'nodemailer';
 import { randomBytes } from 'node:crypto';
 import { LEGAL_DOCS } from '@fersua/shared';
+import { AdminUsersService } from '../src/admin/users/admin-users.service';
 import { AccountService } from '../src/auth/account.service';
 import { XHR_HEADER_VALUE } from '../src/auth/auth.constants';
 import { TestUsers, cookieFrom, createTestApp, nextIp, setCookieHeader, strongPassword, uniqueEmail, type TestApp } from './auth.e2e-helpers';
@@ -190,6 +191,7 @@ describe('Auth M3 (e2e)', () => {
         profile: null,
         termsVersion: LEGAL_DOCS.artistTerms.version,
         termsOutdated: false,
+        ageConfirmed: true,
       },
     });
     expect(cookieFrom(res, t.cookieName)).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -249,6 +251,11 @@ describe('Auth M3 (e2e)', () => {
     expect(weak.body).toMatchObject({ code: 'PASSWORD_WEAK', details: { password: 'TOO_SHORT' } });
     await register({ role: 'ADMIN' }).expect(400);
     await register({ emailVerifiedAt: new Date().toISOString() }).expect(400);
+    // Sintaxis de lista o de "nombre <buzón>": el SMTP lo entregaría a OTRO buzón. Nunca pasa.
+    for (const email of [`x<victima.${run}@example.com>`, `a,victima.${run}@example.com`, `"a b"@example.com`]) {
+      const inj = await register({ email }).expect(400);
+      expect(inj.body).toMatchObject({ code: 'VALIDATION_FAILED', details: { email: 'INVALID' } });
+    }
   });
 
   it('honeypot lleno: el mismo 201 de apariencia, pero no se crea nada ni se envía correo', async () => {
@@ -388,6 +395,26 @@ describe('Auth M3 (e2e)', () => {
     expect(await t.prisma.auditLog.count({ where: { action: 'auth.password_reset', targetId: dj.id } })).toBe(1);
   });
 
+  it('el admin rescata la cuenta (clave temporal) o la suspende: los enlaces de restablecer pendientes mueren', async () => {
+    const admin = await users.create({ role: 'ADMIN' });
+    const actor = { id: admin.id, username: admin.username, ipHash: null };
+    const adminUsers = t.app.get(AdminUsersService);
+    for (const action of ['reset', 'suspend'] as const) {
+      const email = newEmail(`adm${action}`);
+      const dj = await users.create({ email });
+      await post('/api/auth/forgot-password', { identifier: dj.username }).expect(202);
+      const token = await tokenFromMail(email, 'reset-password');
+      if (action === 'reset') {
+        await adminUsers.resetPassword(actor, dj.id);
+      } else {
+        await adminUsers.suspend(actor, dj.id);
+        await adminUsers.reactivate(actor, dj.id);
+      }
+      const res = await post('/api/auth/reset-password', { token, newPassword: strongPassword() }).expect(400);
+      expect(res.body.code).toBe('TOKEN_INVALID');
+    }
+  });
+
   it('restablecer con un enlace de un correo que el admin cambió después: 400 TOKEN_INVALID', async () => {
     const email = newEmail('chg');
     const dj = await users.create({ email });
@@ -410,11 +437,15 @@ describe('Auth M3 (e2e)', () => {
     const blocked = await t.http.get('/api/me/profile').set('Authorization', `Bearer ${access}`).expect(403);
     expect(blocked.body.code).toBe('TERMS_ACCEPTANCE_REQUIRED');
 
-    await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: true }, { access, xhr: false }).expect(403);
-    const half = await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: false }, { access }).expect(400);
+    await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: true, confirmAge: true }, { access, xhr: false }).expect(403);
+    const half = await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: false, confirmAge: true }, { access }).expect(400);
     expect(half.body).toMatchObject({ code: 'VALIDATION_FAILED', details: { acceptPrivacy: 'REQUIRED' } });
-    const ok = await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: true }, { access }).expect(200);
-    expect(ok.body).toMatchObject({ id: dj.id, termsOutdated: false, termsVersion: LEGAL_DOCS.artistTerms.version });
+    // Esta cuenta no pasó por /registro (como las que crea el admin): también declara la mayoría de edad.
+    expect((await me(access).expect(200)).body.ageConfirmed).toBe(false);
+    const noAge = await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: true }, { access }).expect(400);
+    expect(noAge.body).toMatchObject({ code: 'VALIDATION_FAILED', details: { confirmAge: 'REQUIRED' } });
+    const ok = await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: true, confirmAge: true }, { access }).expect(200);
+    expect(ok.body).toMatchObject({ id: dj.id, termsOutdated: false, ageConfirmed: true, termsVersion: LEGAL_DOCS.artistTerms.version });
 
     // Ya no es 403: sin perfil todavía, el editor responde 404 NO_PROFILE.
     const after = await t.http.get('/api/me/profile').set('Authorization', `Bearer ${access}`);
@@ -423,7 +454,14 @@ describe('Auth M3 (e2e)', () => {
     expect(row.termsVersion).toBe(LEGAL_DOCS.artistTerms.version);
     expect(row.privacyVersion).toBe(LEGAL_DOCS.privacy.version);
     expect(row.termsAcceptedAt).toBeInstanceOf(Date);
+    expect(row.ageConfirmedAt).toBeInstanceOf(Date);
+    const accepted = await t.prisma.auditLog.findFirst({ where: { action: 'auth.terms_accepted', targetId: dj.id } });
+    expect(accepted?.metadata).toMatchObject({ ageConfirmed: true });
     expect(await t.prisma.auditLog.count({ where: { action: 'auth.terms_accepted', targetId: dj.id } })).toBe(1);
+
+    // Una vez declarada, la próxima re-aceptación ya no la pide.
+    await t.prisma.user.update({ where: { id: dj.id }, data: { termsVersion: '2020-01' } });
+    await post('/api/auth/accept-terms', { acceptTerms: true, acceptPrivacy: true }, { access }).expect(200);
   });
 
   it('el admin no acepta términos de artista: accept-terms 403 y termsOutdated siempre false', async () => {

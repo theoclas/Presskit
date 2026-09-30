@@ -252,4 +252,9 @@ export class LegalInfoBody implements LegalInfoInput {
   @IsString({ each: true })
   @MaxLength(40, { each: true })
   phones!: string[];
+
+  /** Declaración de veracidad del dueño (obligatoria en /me/profile; el servicio exige true). */
+  @IsOptional()
+  @IsBoolean()
+  truthful?: true;
 }

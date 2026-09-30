@@ -115,6 +115,15 @@ export function slugCooldownUntil(
   return until > now ? until : null;
 }
 
+/**
+ * Un perfil que ya estuvo publicado conserva sus slugs viejos como redirección 301: hay enlaces
+ * a ellos. Uno que nunca se publicó (borrador, en revisión o rechazado sin haber sido aprobado)
+ * no: su slug viejo se libera para que un borrador no acapare nombres (L7).
+ */
+export function keepsRedirects(p: { status: ProfileStatus; approvedAt: Date | null }): boolean {
+  return p.approvedAt !== null || p.status === 'APPROVED' || p.status === 'SUSPENDED';
+}
+
 /** Slugs viejos a borrar para no pasar de maxSlugRedirects (se conservan los más nuevos). */
 export function redirectsToEvict(redirects: readonly { fromSlug: string; createdAt: Date }[], max = LIMITS.profile.maxSlugRedirects): string[] {
   return [...redirects]
@@ -165,6 +174,11 @@ export interface ChecklistInput {
   displayName: string;
   slug: string;
   texts: unknown;
+  /**
+   * Perfil con dueño (DJ): el título de la portada tiene que ser suyo, no el de la plantilla
+   * ("Electronic club show"). Los perfiles del admin, sin dueño, pueden usar el de la plantilla.
+   */
+  ownHeroTitleRequired?: boolean;
   heroImageId: string | null;
   activeGenres: number;
   members: number;
@@ -181,7 +195,8 @@ export function publishChecklist(p: ChecklistInput): Record<string, string> {
   const missing: Record<string, string> = {};
   if (!p.displayName.trim()) missing.displayName = 'REQUIRED';
   if (validateSlug(p.slug)) missing.slug = 'INVALID';
-  if (!resolveTexts(p.texts, p.displayName).heroTitle.trim()) missing['texts.heroTitle'] = 'REQUIRED';
+  const heroTitle = p.ownHeroTitleRequired ? ownText(p.texts, 'heroTitle') : resolveTexts(p.texts, p.displayName).heroTitle;
+  if (!heroTitle.trim()) missing['texts.heroTitle'] = 'REQUIRED';
   if (!p.heroImageId) missing.heroImage = 'REQUIRED';
   if (p.activeGenres < LIMITS.genres.perProfileMin) missing.genres = 'REQUIRED';
   if (p.members < 1) missing.members = 'REQUIRED';
@@ -190,6 +205,13 @@ export function publishChecklist(p: ChecklistInput): Record<string, string> {
   if (!p.whatsappNumber && !formContact) missing.contact = 'REQUIRED';
   if (!p.hasLegalInfo) missing.legalInfo = 'REQUIRED';
   return missing;
+}
+
+/** Texto guardado por el DJ para una ranura ('' si usa el de la plantilla). */
+function ownText(texts: unknown, key: string): string {
+  if (!texts || typeof texts !== 'object') return '';
+  const v = (texts as Record<string, unknown>)[key];
+  return typeof v === 'string' ? v : '';
 }
 
 // ------------------------------------------------------------------ registro legal

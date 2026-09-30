@@ -43,6 +43,26 @@ export function BookingPrivacyNotice({ displayName, opensWhatsapp }: { displayNa
   );
 }
 
+/**
+ * Registro de artistas (/registro): para qué usamos los datos de la cuenta, en el momento de
+ * autorizar (L1581 art. 12; D1377 art. 5), incluidos los borrados automáticos.
+ */
+export function RegisterPrivacyNotice() {
+  const R = LIMITS.retention;
+  const text =
+    `Aviso de privacidad: ${responsible()}, usará tu usuario, tu correo y lo que publiques para crear y administrar tu cuenta, ` +
+    'publicar tu página cuando la aprobemos, enviarte correos del servicio y, si alguien que te contrató presenta una queja, ' +
+    'entregarle tu registro de oferente (art. 53 Ley 1480). Tu página no es pública hasta que la aprobemos. ' +
+    `Si no confirmas tu correo en ${R.unverifiedUserDays} días, borramos la cuenta; un borrador sin cambios en ${R.draftIdleDays} días ` +
+    `(te avisamos antes por correo) y un perfil rechazado sin cambios en ${R.rejectedIdleDays} días también se borran. `;
+  return (
+    <p className="small privacy-notice">
+      <PlaceholderText text={text} />
+      <RightsLinks />
+    </p>
+  );
+}
+
 export function TicketPrivacyNotice({ mode }: { mode: 'pqrs' | 'report' }) {
   const purpose = mode === 'report' ? 'revisar este reporte y responderte' : 'tramitar esta solicitud y responderte';
   const text =

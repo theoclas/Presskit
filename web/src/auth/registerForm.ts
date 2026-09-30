@@ -93,6 +93,10 @@ export type RegisterFailure =
 export function registerFailure(e: unknown): RegisterFailure {
   const err = apiError(e);
   if (err.code === 'REGISTRATION_CLOSED') return { kind: 'closed' };
+  // Cupo diario de correos de confirmación agotado: el mensaje del api dice qué hacer.
+  if (err.code === 'REGISTRATION_BUSY') {
+    return { kind: 'alert', message: err.message || 'Hoy no podemos enviar más correos de confirmación. Intenta de nuevo mañana.' };
+  }
   if (err.code === 'RATE_LIMITED' || err.statusCode === 429) {
     return { kind: 'alert', message: 'Hiciste demasiados intentos. Espera un rato antes de volver a intentarlo.' };
   }

@@ -29,7 +29,7 @@ import type {
 import type { EditorActor } from './editor-actor';
 import { storedTexts } from './editor.mappers';
 import { FieldCheck } from './field-check';
-import { normalizeLinks, redirectsToEvict, slugCooldownUntil } from './profile-rules';
+import { keepsRedirects, normalizeLinks, redirectsToEvict, slugCooldownUntil } from './profile-rules';
 import { ProfileStore, type AssetFiles } from './profile-store.service';
 
 const SHOW_COLUMNS = {
@@ -192,14 +192,17 @@ export class ProfileEditorService {
   }
 
   /**
-   * Cambia la dirección pública. El slug viejo queda como SlugRedirect (301), con un máximo de
-   * 5 por perfil. El dueño de un perfil aprobado puede cambiarla una vez cada 30 días.
+   * Cambia la dirección pública. Si el perfil ya se publicó alguna vez, el slug viejo queda
+   * como SlugRedirect (301), con un máximo de 5 por perfil. Si nunca se publicó, nadie tiene
+   * enlaces a él: el slug viejo se libera (y las redirecciones que tuviera también), así un
+   * borrador no acapara nombres (L7). El dueño de un perfil aprobado puede cambiarla una vez
+   * cada 30 días.
    */
   async setSlug(profileId: ScopedProfileId, actor: EditorActor, raw: string): Promise<EditorProfileDto> {
     const slug = checkSlugFormat(raw);
     const current = await this.prisma.djProfile.findUnique({
       where: { id: profileId },
-      select: { slug: true, status: true, slugChangedAt: true },
+      select: { slug: true, status: true, slugChangedAt: true, approvedAt: true },
     });
     if (!current) throw Errors.notFound('Perfil no encontrado.');
     if (current.slug === slug) return this.store.loadEditor(profileId);
@@ -225,12 +228,15 @@ export class ProfileEditorService {
         if (redirect) await tx.slugRedirect.delete({ where: { fromSlug: slug } });
 
         await tx.djProfile.update({ where: { id: profileId }, data: { slug, slugChangedAt: now } });
-        const old = await tx.slugRedirect.findUnique({ where: { fromSlug: current.slug } });
-        if (!old) await tx.slugRedirect.create({ data: { fromSlug: current.slug, profileId, createdAt: now } });
-
-        const all = await tx.slugRedirect.findMany({ where: { profileId }, select: { fromSlug: true, createdAt: true } });
-        const evict = redirectsToEvict(all);
-        if (evict.length) await tx.slugRedirect.deleteMany({ where: { profileId, fromSlug: { in: evict } } });
+        if (keepsRedirects(current)) {
+          const old = await tx.slugRedirect.findUnique({ where: { fromSlug: current.slug } });
+          if (!old) await tx.slugRedirect.create({ data: { fromSlug: current.slug, profileId, createdAt: now } });
+          const all = await tx.slugRedirect.findMany({ where: { profileId }, select: { fromSlug: true, createdAt: true } });
+          const evict = redirectsToEvict(all);
+          if (evict.length) await tx.slugRedirect.deleteMany({ where: { profileId, fromSlug: { in: evict } } });
+        } else {
+          await tx.slugRedirect.deleteMany({ where: { profileId } });
+        }
         await this.store.record(tx, profileId, actor, 'slug', { fields: ['slug'] });
       });
     } catch (err) {
