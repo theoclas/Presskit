@@ -154,7 +154,7 @@ jobs:
           docker compose -f docker-compose.prod.yml --env-file .env config --quiet
           rm -f .env
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build api
         uses: docker/build-push-action@v6
