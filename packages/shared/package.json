@@ -22,8 +22,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
-    "typescript": "~5.9.3",
-    "vitest": "^3.2.7"
+    "tsup": "^9.0.0",
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.5"
   }
 }
