@@ -10,6 +10,7 @@ import type {
   PaletteKey,
   ProfileStatus,
   SocialPlatform,
+  TemplateKey,
   TicketStatus,
   TicketType,
   UserRole,
@@ -173,6 +174,7 @@ export interface EditorProfileDto {
   publicEmail: string | null;
   publicPhone: string | null;
   palette: PaletteKey;
+  template: TemplateKey;
   /** Solo lo guardado (sin valores por defecto); la web los completa con resolveTexts. */
   texts: Partial<PageTexts>;
   bookingForm: FormFieldConfig[];
@@ -212,6 +214,7 @@ export interface UpdateProfileInput {
   publicEmail?: string | null;
   publicPhone?: string | null;
   palette?: PaletteKey;
+  template?: TemplateKey;
   /** Parche de textos: solo claves de PAGE_TEXT_SLOTS; '' vuelve al valor por defecto. */
   texts?: Partial<Record<string, string>>;
   show?: Partial<EditorProfileDto['show']>;

@@ -1,7 +1,9 @@
 {
   "slug": "macfly-mike-bran",
   "displayName": "Mike Bran & Macfly",
+  "city": "Medellín",
   "palette": "SUNSET",
+  "template": "CLASSIC",
   "texts": {
     "navTag": "Booking",
     "navArtists": "Artistas",
@@ -17,6 +19,8 @@
     "heroPhotoAlt": "Show de Mike Bran & Macfly",
     "heroCaptionLeft": "Live club show",
     "heroCaptionRight": "2024 / 2025",
+    "storyLabel": "Story",
+    "storyMoreCta": "Conocer más",
     "riderCardLabel": "Live Setup",
     "riderCardTitle": "Specs",
     "riderButton": "Rider Técnico",

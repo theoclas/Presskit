@@ -15,6 +15,9 @@ import {
   RESERVED_SLUGS,
   SOCIAL_PLATFORMS,
   SOCIAL_PLATFORM_KEYS,
+  TEMPLATES,
+  TEMPLATE_KEYS,
+  slotUsedBy,
   addBusinessDays,
   businessDaysInRange,
   colombianHolidays,
@@ -49,6 +52,7 @@ import {
   validateSlug,
   validateTexts,
   validateUsername,
+  type TextSlot,
 } from '../src';
 
 describe('slugs', () => {
@@ -143,6 +147,25 @@ describe('redes sociales', () => {
   it('el catálogo coincide con el enum', () => {
     expect(Object.keys(SOCIAL_PLATFORMS).sort()).toEqual([...SOCIAL_PLATFORM_KEYS].sort());
     expect(Object.keys(PALETTES).sort()).toEqual([...PALETTE_KEYS].sort());
+    expect(Object.keys(TEMPLATES).sort()).toEqual([...TEMPLATE_KEYS].sort());
+    for (const t of Object.values(TEMPLATES)) expect(PALETTE_KEYS).toContain(t.suggestedPalette);
+  });
+});
+
+describe('plantillas', () => {
+  it('cada texto lo muestra al menos una plantilla conocida', () => {
+    for (const slot of PAGE_TEXT_SLOTS as readonly TextSlot[]) {
+      expect(TEMPLATE_KEYS.some((t) => slotUsedBy(slot, t))).toBe(true);
+    }
+  });
+  it('los textos sin plantillas los muestran todas; los marcados, solo las suyas', () => {
+    const slots = PAGE_TEXT_SLOTS as readonly TextSlot[];
+    const byKey = (k: string) => slots.find((s) => s.key === k)!;
+    expect(slotUsedBy(byKey('heroTitle'), 'SIGNAL')).toBe(true);
+    expect(slotUsedBy(byKey('heroTitle'), 'CLASSIC')).toBe(true);
+    expect(slotUsedBy(byKey('navTag'), 'SIGNAL')).toBe(false);
+    expect(slotUsedBy(byKey('storyLabel'), 'CLASSIC')).toBe(false);
+    expect(slotUsedBy(byKey('storyLabel'), 'SIGNAL')).toBe(true);
   });
 });
 

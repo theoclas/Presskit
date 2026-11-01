@@ -35,7 +35,9 @@ const texts = resolveTexts(
 export const macflyProfile: PublicDjProfileDto = {
   slug: 'macfly-mike-bran',
   displayName: 'Mike Bran & Macfly',
+  city: 'Medellín',
   palette: 'SUNSET',
+  template: 'CLASSIC',
   texts,
   heroImage: img('hero', 1440, 960, [480, 960, 1440], 'Show de Mike Bran & Macfly'),
   genres: [

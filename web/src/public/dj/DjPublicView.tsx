@@ -11,6 +11,7 @@ import { DjNav } from './DjNav';
 import { HeroMiniCards } from './HeroMiniCards';
 import { MediaModule, type MediaTab } from './MediaModule';
 import { ShowsSection } from './ShowsSection';
+import { SignalView } from './signal/SignalView';
 import './dj-template.css';
 import './dj-additions.css';
 
@@ -25,11 +26,18 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * La página pública de un DJ: la plantilla de Mac Fly & Mike Bran en componentes.
- * Es pura (props in, markup out) para que la página y la vista previa la compartan.
- * Una sección se oculta si su interruptor está apagado o si no tiene contenido.
+ * La página pública de un DJ con la plantilla que eligió. Es pura (props in, markup out) para
+ * que la página y la vista previa la compartan.
  */
 export function DjPublicView({ dj, mode = 'live' }: Props) {
+  return dj.template === 'SIGNAL' ? <SignalView dj={dj} mode={mode} /> : <ClassicView dj={dj} mode={mode} />;
+}
+
+/**
+ * Plantilla clásica: la de Mac Fly & Mike Bran en componentes.
+ * Una sección se oculta si su interruptor está apagado o si no tiene contenido.
+ */
+function ClassicView({ dj, mode = 'live' }: Props) {
   const { texts } = dj;
   const hasGallery = dj.show.gallery && dj.gallery.length > 0;
   const hasRider = dj.show.rider && dj.riderItems.length > 0;

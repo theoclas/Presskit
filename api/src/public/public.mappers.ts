@@ -158,7 +158,9 @@ export function mapProfile(profile: ProfileDetail, images: ImageMapper): PublicD
   return {
     slug: profile.slug,
     displayName: profile.displayName,
+    city: profile.city ?? null,
     palette: profile.palette,
+    template: profile.template,
     texts,
     heroImage: images.toImageDto(profile.heroImage, texts.heroPhotoAlt),
     genres: mapGenres(profile.genres),

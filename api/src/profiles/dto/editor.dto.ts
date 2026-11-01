@@ -22,6 +22,7 @@ import {
   LIMITS,
   PALETTE_KEYS,
   SOCIAL_PLATFORM_KEYS,
+  TEMPLATE_KEYS,
   type DocType,
   type FormFieldConfig,
   type LegalInfoInput,
@@ -29,6 +30,7 @@ import {
   type RiderItemInput,
   type SocialLinkInput,
   type SocialPlatform,
+  type TemplateKey,
   type UpdateProfileInput,
 } from '@fersua/shared';
 
@@ -105,6 +107,10 @@ export class UpdateProfileBody implements UpdateProfileInput {
   @ValidateIf(present)
   @IsIn(PALETTE_KEYS)
   palette?: PaletteKey;
+
+  @ValidateIf(present)
+  @IsIn(TEMPLATE_KEYS)
+  template?: TemplateKey;
 
   /** Se valida con validateTexts (shared): solo claves de PAGE_TEXT_SLOTS. */
   @ValidateIf(present)

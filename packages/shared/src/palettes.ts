@@ -171,6 +171,25 @@ export const PALETTES: Record<PaletteKey, Palette> = {
     onAccent: '#0a0a0a',
     themeColor: '#000000',
   },
+  // La de la plantilla Signal (Afterhours): negro verdoso, lima y gris claro.
+  SIGNAL: {
+    name: 'Signal (lima/negro)',
+    bg: '#090b0b',
+    bgSoft: '#101414',
+    card: 'rgba(32,39,38,.98)',
+    muted: '#9aa39f',
+    text: '#e9e9e9',
+    accent: '#c2ff00',
+    accent2: '#8fd400',
+    border: 'rgba(233,233,233,.16)',
+    accentRgb: '194 255 0',
+    accent2Rgb: '143 212 0',
+    surfaceRgb: '32 39 38',
+    lineRgb: '125 136 133',
+    textRgb: '233 233 233',
+    onAccent: '#090b0b',
+    themeColor: '#090b0b',
+  },
 };
 
 /** Variables CSS de una paleta, para aplicarlas en un contenedor o en <html>. */

@@ -129,6 +129,7 @@ export class ProfileEditorService {
       set('publicPhone', 'publicPhone', phone, current.publicPhone);
     }
     if (body.palette !== undefined) set('palette', 'palette', body.palette, current.palette);
+    if (body.template !== undefined) set('template', 'template', body.template, current.template);
 
     if (body.texts !== undefined) {
       const { texts, errors } = validateTexts(body.texts);

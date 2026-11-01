@@ -25,9 +25,12 @@ function fixture(name: string): unknown {
 
 const NOT_FOUND = { statusCode: 404, code: 'NOT_FOUND', message: 'No encontrado.' };
 
-/** Intercepta /api y /media; cualquier otra petición a internet se corta (capturas sin red). */
-export async function mockApi(page: Page): Promise<void> {
-  const profile = fixture('macfly-profile.json');
+/**
+ * Intercepta /api y /media; cualquier otra petición a internet se corta (capturas sin red).
+ * `profilePatch` cambia campos del perfil (p. ej. la plantilla) sobre la semilla.
+ */
+export async function mockApi(page: Page, profilePatch: Record<string, unknown> = {}): Promise<void> {
+  const profile = { ...(fixture('macfly-profile.json') as Record<string, unknown>), ...profilePatch };
   const cards = fixture('djs.json');
   const genres = fixture('genres.json');
 

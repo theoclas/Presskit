@@ -51,6 +51,7 @@ function profile(overrides: Partial<EditorProfileDto> = {}): EditorProfileDto {
     publicEmail: null,
     publicPhone: null,
     palette: 'SUNSET',
+    template: 'CLASSIC',
     texts: { heroTitle: 'Club show' },
     bookingForm: [],
     show: { gallery: true, rider: true, events: true, openDateRow: true, form: true },
@@ -137,6 +138,17 @@ describe('parche de textos', () => {
     };
     expect(buildProfilePatch(initial, values)).toEqual({ city: 'Bogotá', show: { rider: false } });
     expect(buildProfilePatch(initial, { ...values, whatsappNumber: '57 300 111 2222' }).whatsappNumber).toBe('573001112222');
+  });
+
+  it('la plantilla arranca en la guardada y solo viaja si cambió', () => {
+    const initial = profileFormValues(profile({ template: 'SIGNAL' }));
+    expect(initial.template).toBe('SIGNAL');
+    expect(buildProfilePatch(initial, initial)).toEqual({});
+    expect(buildProfilePatch(initial, { ...initial, template: 'CLASSIC' })).toEqual({ template: 'CLASSIC' });
+    expect(buildProfilePatch(initial, { ...initial, template: 'CLASSIC', palette: 'SIGNAL' })).toEqual({
+      template: 'CLASSIC',
+      palette: 'SIGNAL',
+    });
   });
 });
 

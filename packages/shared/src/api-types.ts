@@ -1,7 +1,7 @@
 // Contrato de las respuestas del api que consume la web. El api las construye,
 // la web solo las pinta: todas las URLs (WhatsApp, imágenes, CTAs) vienen armadas.
 
-import type { EventCtaType, PaletteKey, ProfileStatus, SocialPlatform, TicketType } from './enums';
+import type { EventCtaType, PaletteKey, ProfileStatus, SocialPlatform, TemplateKey, TicketType } from './enums';
 import type { ResolvedFormField } from './form-config';
 import type { ImageDto } from './media';
 import type { PageTexts } from './text-slots';
@@ -63,7 +63,9 @@ export interface PublicDjCardDto {
 export interface PublicDjProfileDto {
   slug: string;
   displayName: string;
+  city: string | null;
   palette: PaletteKey;
+  template: TemplateKey;
   texts: PageTexts;
   heroImage: ImageDto | null;
   genres: GenreDto[];

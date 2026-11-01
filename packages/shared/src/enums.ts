@@ -10,8 +10,11 @@ export type UserStatus = (typeof USER_STATUSES)[number];
 export const PROFILE_STATUSES = ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'SUSPENDED'] as const;
 export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
 
-export const PALETTE_KEYS = ['SUNSET', 'MIAMI', 'NEON', 'ACID', 'INFERNO', 'OCEAN', 'GOLD', 'MONO'] as const;
+export const PALETTE_KEYS = ['SUNSET', 'MIAMI', 'NEON', 'ACID', 'INFERNO', 'OCEAN', 'GOLD', 'MONO', 'SIGNAL'] as const;
 export type PaletteKey = (typeof PALETTE_KEYS)[number];
+
+export const TEMPLATE_KEYS = ['CLASSIC', 'SIGNAL'] as const;
+export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const SOCIAL_PLATFORM_KEYS = [
   'INSTAGRAM',

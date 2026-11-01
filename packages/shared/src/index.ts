@@ -9,6 +9,7 @@ export * from './username';
 export * from './password';
 export * from './social-platforms';
 export * from './palettes';
+export * from './templates';
 export * from './text-slots';
 export * from './booking-fields';
 export * from './form-config';

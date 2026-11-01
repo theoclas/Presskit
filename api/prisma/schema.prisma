@@ -53,6 +53,13 @@ enum PaletteKey {
   OCEAN
   GOLD
   MONO
+  SIGNAL
+}
+
+/// Plantilla visual de la página pública (todas leen el mismo contenido).
+enum TemplateKey {
+  CLASSIC
+  SIGNAL
 }
 
 enum SocialPlatform {
@@ -223,6 +230,7 @@ model DjProfile {
   publicEmail      String?       @db.VarChar(254)
   publicPhone      String?       @db.VarChar(20)
   palette          PaletteKey    @default(SUNSET)
+  template         TemplateKey   @default(CLASSIC)
   /// Record<TextSlotKey, string>, validado contra PAGE_TEXT_SLOTS.
   texts            Json
   /// FormFieldConfig[] ordenado, validado contra BOOKING_FIELD_CATALOGUE.

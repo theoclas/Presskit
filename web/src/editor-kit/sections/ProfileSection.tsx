@@ -1,13 +1,18 @@
 import {
   DEFAULT_PALETTE,
+  DEFAULT_TEMPLATE,
   isValidEmail,
   isValidPhone,
   LIMITS,
   PAGE_TEXT_SLOTS,
+  PALETTES,
+  slotUsedBy,
+  TEMPLATES,
   validateSlug,
   validateTexts,
   type EditorProfileDto,
   type PaletteKey,
+  type TemplateKey,
   type TextGroup,
   type TextSlot,
   type UpdateProfileInput,
@@ -28,6 +33,7 @@ import {
 import { PalettePicker } from '../PalettePicker';
 import { SaveBar } from '../SaveBar';
 import { editorKeys, useEditorScope } from '../scope';
+import { TemplatePicker } from '../TemplatePicker';
 import { TextSlotField } from '../TextSlotField';
 import { useUnsavedChanges } from '../unsaved';
 
@@ -39,6 +45,7 @@ export interface ProfileFormValues {
   city: string;
   seoDescription: string;
   palette: PaletteKey;
+  template: TemplateKey;
   whatsappNumber: string;
   publicEmail: string;
   publicPhone: string;
@@ -83,6 +90,7 @@ export function profileFormValues(p: EditorProfileDto, opts: { ownTexts?: readon
     city: p.city ?? '',
     seoDescription: p.seoDescription ?? '',
     palette: p.palette ?? DEFAULT_PALETTE,
+    template: p.template ?? DEFAULT_TEMPLATE,
     whatsappNumber: p.whatsappNumber ?? '',
     publicEmail: p.publicEmail ?? '',
     publicPhone: p.publicPhone ?? '',
@@ -133,6 +141,7 @@ export function buildProfilePatch(
     patch.whatsappNumber = onlyDigits(values.whatsappNumber ?? '') || null;
   }
   if (values.palette !== initial.palette) patch.palette = values.palette;
+  if (values.template !== initial.template) patch.template = values.template;
   const show: Partial<ShowFlags> = {};
   for (const key of Object.keys(SHOW_LABELS) as (keyof ShowFlags)[]) {
     if (!!values.show?.[key] !== !!initial.show[key]) show[key] = !!values.show?.[key];
@@ -178,7 +187,15 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
   const initial = useMemo(() => profileFormValues(profile, { ownTexts }), [profile, ownTexts]);
   const { form, dirty, onValuesChange, markSaved, discard } = useSyncedForm<ProfileFormValues>(initial);
   const displayName = (Form.useWatch('displayName', form) as string | undefined) ?? profile.displayName;
+  const template = (Form.useWatch('template', form) as TemplateKey | undefined) ?? initial.template;
+  const palette = (Form.useWatch('palette', form) as PaletteKey | undefined) ?? initial.palette;
+  const suggestedPalette = TEMPLATES[template].suggestedPalette;
   const [openGroups, setOpenGroups] = useState<string[]>([]);
+
+  const applySuggestedPalette = () => {
+    form.setFields([{ name: 'palette', value: suggestedPalette, touched: true }]);
+    onValuesChange();
+  };
 
   /** Los textos con error pueden estar en un panel cerrado: se abren para que se vean. */
   const revealErrors = (names: (string | number)[][]) => {
@@ -238,11 +255,13 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
     }
   };
 
-  const collapseItems = GROUP_ORDER.map((group) => ({
+  // Solo los textos que muestra la plantilla elegida (los otros se conservan guardados).
+  const visibleSlots = SLOTS.filter((s) => slotUsedBy(s, template));
+  const collapseItems = GROUP_ORDER.filter((group) => visibleSlots.some((s) => s.group === group)).map((group) => ({
     key: group,
     label: TEXT_GROUP_LABELS[group],
     forceRender: true,
-    children: SLOTS.filter((s) => s.group === group).map((slot) => (
+    children: visibleSlots.filter((s) => s.group === group).map((slot) => (
       <TextSlotField
         key={slot.key}
         slot={slot}
@@ -351,6 +370,30 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
                   }
                 />
               </Form.Item>
+            </Card>
+          </Col>
+          <Col xs={24}>
+            <Card title="Plantilla" size="small">
+              <Form.Item name="template" style={{ marginBottom: 0 }}>
+                <TemplatePicker />
+              </Form.Item>
+              <Typography.Paragraph type="secondary" style={{ margin: '8px 0 0' }}>
+                Todas las plantillas usan el mismo contenido: puedes cambiar de una a otra sin perder nada. Guarda y abre
+                la vista previa para verla.
+              </Typography.Paragraph>
+              {palette !== suggestedPalette ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginTop: 8 }}
+                  title={`La plantilla ${TEMPLATES[template].name} se diseñó con la paleta ${PALETTES[suggestedPalette].name}.`}
+                  action={
+                    <Button size="small" onClick={applySuggestedPalette}>
+                      Usar esa paleta
+                    </Button>
+                  }
+                />
+              ) : null}
             </Card>
           </Col>
           <Col xs={24}>

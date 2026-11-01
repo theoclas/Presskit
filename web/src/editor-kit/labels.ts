@@ -39,7 +39,8 @@ export const DOC_TYPE_LABELS: Record<DocType, string> = {
 export const TEXT_GROUP_LABELS: Record<TextGroup, string> = {
   nav: 'Menú superior',
   hero: 'Portada',
-  media: 'Tarjetas de rider y galería',
+  story: 'Sección «Story»',
+  media: 'Rider y galería',
   artists: 'Sección de artistas',
   events: 'Sección de fechas',
   booking: 'Formulario de solicitud',

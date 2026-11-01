@@ -1,7 +1,33 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-09-30. **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
+> Última actualización: 2026-11-01. **Plantillas visuales** (Clásica + Signal, a elección del DJ): hechas y probadas, ver "Plantillas" abajo. Arreglo del hero estirado de la Clásica (`85cd3f2`) en producción.
+> 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
+
+## Plantillas visuales (2026-11-01)
+**Decisión de Fernando:** varias plantillas que conviven y el DJ elige en su editor (cambia
+`docs/00-plan.md`, "Diseño"). Todas leen **el mismo contenido**: cambiar de plantilla no borra nada.
+
+| Parte | Dónde |
+|---|---|
+| `DjProfile.template` (`CLASSIC` por defecto, `SIGNAL`) y paleta nueva `SIGNAL` (lima/negro). Migración `20261101120000_templates`; `deploy.sh` la aplica sola | `api/prisma`, `packages/shared/src/enums.ts`, `templates.ts`, `palettes.ts` |
+| API: el editor acepta y devuelve `template` (auditado como cualquier campo); la página pública suma `template` y `city` | `api/src/profiles`, `api/src/public/public.mappers.ts` |
+| Textos por plantilla: `TextSlot.templates` (sin él, todas). Solo Clásica: `navTag` y las tarjetas de rider/fotos. Solo Signal: `storyLabel` ("Story") y `storyMoreCta` ("Conocer más"). El editor muestra solo los de la plantilla elegida; los otros se conservan | `packages/shared/src/text-slots.ts`, `web/src/editor-kit/sections/ProfileSection.tsx` |
+| Editor: tarjeta "Plantilla" (boceto de cada una) sobre la paleta, con aviso "Usar esa paleta" si la paleta no es la sugerida | `web/src/editor-kit/TemplatePicker.tsx` |
+| Signal (concepto "Afterhours / Signal" del PDF de Fernando): menú fijo (hamburguesa a pantalla completa en el teléfono), portada a pantalla completa en blanco y negro con el nombre en Anton gigante (se achica según el largo), franja animada con ciudad y géneros, "Story" (título y descripción de la portada + foto de la galería), artistas, galería en mosaico (deslizable en el teléfono), fechas, rider numerado, formulario y CTA fijo en el teléfono entre la portada y el formulario. Reutiliza artistas, fechas, formulario y diálogos de la clásica (contenedor `.djp.djs`) | `web/src/public/dj/signal/`, `web/src/public/dj/DjPublicView.tsx` |
+| Fuente Anton (OFL, `@fontsource/anton`): se sirve desde el propio sitio (CSP `font-src 'self'`) y solo se descarga en páginas Signal | `web/package.json` |
+| Regresión visual: capturas base `dj-signal-movil` y `dj-signal-escritorio`; las de la clásica no cambiaron | `web/tests/visual` |
+
+**Verificación (2026-11-01):** shared 45; api 496 unitarias y 123 e2e; web 221 (28 archivos); typecheck y lint de api y web; `prisma migrate diff` sin drift; regresión visual 5/5. En el navegador (local, Playwright): Signal a 1440 y 390 sin errores de consola ni scroll horizontal, menú del teléfono (abre, foco al primer enlace, Escape cierra), CTA fijo (oculto arriba y en el formulario); en el admin, elegir Clásica + "Usar esa paleta" + guardar deja la BD en `CLASSIC`/`SUNSET`.
+
+**Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
+
+**Siguiente (fase 2, en rama aparte; se puede pasar a Cursor):**
+- reproductor del último mix (link de SoundCloud o Mixcloud con su reproductor oficial; abrir `frame-src` en `deploy/edge/snippets/security-headers.conf`);
+- clips de video (YouTube sin cookies, mismo cambio de CSP);
+- después, el press kit descargable (subir PDF/ZIP con validación) y, si se pide, ES/EN.
+
+**Conocido:** el shell del servidor no pone `data-template` en `<html>` (lo pone la vista al montar), así que antes de cargar el JS el fondo es el degradado de la clásica por un instante. En la vista previa el menú de Signal no es fijo (la franja de "Vista previa" ocupa ese lugar).
 
 ## Decisiones del 2026-09-30 (Fernando)
 - **La plataforma de DJs vive definitivamente en `booking.fersuastudio.com`.** No se mueve `fersuastudio.com`: el dominio principal y **Allset se quedan en Hostinger sin tocar**. Nada de reglas ni 410 para Allset o /pedido.
@@ -343,7 +369,7 @@ El cambio de DNS y Allset ya no están pendientes: se decidió no mover nada.
   - Acciones delicadas del admin (borrar, reiniciar contraseñas, asignar dueño, cambiar el correo de un DJ) piden contraseña + código otra vez (step-up, vale 5 min).
 - **Perfiles (M2):** el admin puede aprobar desde borrador (arma los perfiles él mismo; se le muestra lo que falta); aprobar y reactivar exigen el registro legal del art. 53; suspender solo desde aprobado. Las fotos de perfiles sin aprobar son privadas y se ven con URL firmada de 1 h. Un perfil aprobado se ve si no tiene dueño o si la cuenta del dueño está activa.
 - **Formulario:** catálogo fijo de campos. Cada solicitud se guarda y luego abre WhatsApp.
-- **Diseño:** plantilla fija + 8 paletas.
+- **Diseño:** plantillas a elección del DJ (Clásica por defecto y Signal) + 9 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
 - **Imágenes:** WebP con sharp en un volumen Docker.
 - **URL:** `booking.fersuastudio.com/<slug>`, de forma definitiva (decisión del 2026-09-30). `fersuastudio.com` y Allset se quedan en Hostinger; no hay cambio de DNS.
 - **Semilla:** solo Mac Fly & Mike Bran, sin dueño, slug `macfly-mike-bran`. Allset queda fuera.

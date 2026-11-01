@@ -1,10 +1,12 @@
 import { cleanText } from './sanitize';
+import type { TemplateKey } from './enums';
 import { LIMITS } from './limits';
 
-// Todos los textos editables de la plantilla. Se guardan en DjProfile.texts (JSON);
+// Todos los textos editables de las plantillas. Se guardan en DjProfile.texts (JSON);
 // una clave que falta usa el valor por defecto. Agregar un texto no requiere migración.
+// `templates`: las plantillas que lo muestran (sin él, todas); el editor oculta los demás.
 
-export type TextGroup = 'nav' | 'hero' | 'media' | 'artists' | 'events' | 'booking' | 'footer';
+export type TextGroup = 'nav' | 'hero' | 'story' | 'media' | 'artists' | 'events' | 'booking' | 'footer';
 
 export interface TextSlot {
   key: string;
@@ -15,10 +17,11 @@ export interface TextSlot {
   multiline?: boolean;
   /** Placeholders permitidos, reemplazados por el servidor. */
   placeholders?: readonly string[];
+  templates?: readonly TemplateKey[];
 }
 
 export const PAGE_TEXT_SLOTS = [
-  { key: 'navTag', group: 'nav', label: 'Etiqueta junto al nombre', default: 'Booking', max: 20 },
+  { key: 'navTag', group: 'nav', label: 'Etiqueta junto al nombre', default: 'Booking', max: 20, templates: ['CLASSIC'] },
   { key: 'navArtists', group: 'nav', label: 'Menú: artistas', default: 'Artistas', max: 20 },
   { key: 'navEvents', group: 'nav', label: 'Menú: fechas', default: 'Fechas', max: 20 },
   { key: 'navBooking', group: 'nav', label: 'Menú: solicitud', default: 'Solicitud', max: 20 },
@@ -40,13 +43,16 @@ export const PAGE_TEXT_SLOTS = [
   { key: 'heroCaptionLeft', group: 'hero', label: 'Texto sobre la foto (izquierda)', default: 'Live club show', max: 40 },
   { key: 'heroCaptionRight', group: 'hero', label: 'Texto sobre la foto (derecha)', default: '', max: 40 },
 
-  { key: 'riderCardLabel', group: 'media', label: 'Tarjeta rider: etiqueta', default: 'Live Setup', max: 24 },
-  { key: 'riderCardTitle', group: 'media', label: 'Tarjeta rider: título', default: 'Specs', max: 30 },
-  { key: 'riderButton', group: 'media', label: 'Tarjeta rider: botón', default: 'Rider técnico', max: 24 },
+  { key: 'storyLabel', group: 'story', label: 'Etiqueta de la sección', default: 'Story', max: 24, templates: ['SIGNAL'] },
+  { key: 'storyMoreCta', group: 'story', label: 'Enlace a los artistas', default: 'Conocer más', max: 24, templates: ['SIGNAL'] },
+
+  { key: 'riderCardLabel', group: 'media', label: 'Tarjeta rider: etiqueta', default: 'Live Setup', max: 24, templates: ['CLASSIC'] },
+  { key: 'riderCardTitle', group: 'media', label: 'Tarjeta rider: título', default: 'Specs', max: 30, templates: ['CLASSIC'] },
+  { key: 'riderButton', group: 'media', label: 'Tarjeta rider: botón', default: 'Rider técnico', max: 24, templates: ['CLASSIC'] },
   { key: 'riderTitle', group: 'media', label: 'Título del rider', default: '', max: 40 },
-  { key: 'galleryCardLabel', group: 'media', label: 'Tarjeta fotos: etiqueta', default: 'Media', max: 24 },
-  { key: 'galleryCardTitle', group: 'media', label: 'Tarjeta fotos: título', default: 'Highlights', max: 30 },
-  { key: 'galleryButton', group: 'media', label: 'Tarjeta fotos: botón', default: 'Photos', max: 24 },
+  { key: 'galleryCardLabel', group: 'media', label: 'Tarjeta fotos: etiqueta', default: 'Media', max: 24, templates: ['CLASSIC'] },
+  { key: 'galleryCardTitle', group: 'media', label: 'Tarjeta fotos: título', default: 'Highlights', max: 30, templates: ['CLASSIC'] },
+  { key: 'galleryButton', group: 'media', label: 'Tarjeta fotos: botón', default: 'Photos', max: 24, templates: ['CLASSIC'] },
   { key: 'galleryTitle', group: 'media', label: 'Título de la galería', default: 'Galería', max: 40 },
 
   { key: 'artistsTitle', group: 'artists', label: 'Título de la sección', default: 'Artistas', max: 40 },
@@ -132,6 +138,11 @@ const SLOT_BY_KEY: ReadonlyMap<string, TextSlot> = new Map(PAGE_TEXT_SLOTS.map((
 
 export function getTextSlot(key: string): TextSlot | undefined {
   return SLOT_BY_KEY.get(key);
+}
+
+/** Si la plantilla muestra ese texto (el editor no pide textos que no se ven). */
+export function slotUsedBy(slot: TextSlot, template: TemplateKey): boolean {
+  return !slot.templates || slot.templates.includes(template);
 }
 
 /** Combina lo guardado con los valores por defecto. Los vacíos derivados usan el nombre del DJ. */

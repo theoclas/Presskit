@@ -135,6 +135,7 @@ export function toEditorProfileDto(
     publicEmail: p.publicEmail ?? null,
     publicPhone: p.publicPhone ?? null,
     palette: p.palette,
+    template: p.template,
     texts: storedTexts(p.texts),
     bookingForm: storedForm(p.bookingForm),
     show: {

@@ -20,6 +20,20 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
   });
 }
 
+// La misma semilla con la plantilla Signal y su paleta (la franja animada queda quieta: animations).
+for (const [name, viewport] of Object.entries(VIEWPORTS)) {
+  test(`página del DJ, plantilla Signal · ${name} ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.unrouteAll();
+    await mockApi(page, { template: 'SIGNAL', palette: 'SIGNAL' });
+    await page.setViewportSize(viewport);
+    await page.goto(DJ_PATH);
+    await expect(page.locator('#booking-form')).toBeAttached();
+    await expect(page.locator('.djs')).toBeVisible();
+    await settle(page);
+    await expect(page).toHaveScreenshot(`dj-signal-${name}.png`, { fullPage: true });
+  });
+}
+
 test('index · movil 390x844', async ({ page }) => {
   await page.setViewportSize(VIEWPORTS.movil);
   await page.goto('/');
