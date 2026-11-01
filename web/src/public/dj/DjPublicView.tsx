@@ -9,6 +9,7 @@ import { DjFooter } from './DjFooter';
 import { DjHero } from './DjHero';
 import { DjNav } from './DjNav';
 import { GrooveView } from './groove/GrooveView';
+import { NoirView } from './noir/NoirView';
 import { HeroMiniCards } from './HeroMiniCards';
 import { MediaModule, type MediaTab } from './MediaModule';
 import { ShowsSection } from './ShowsSection';
@@ -33,6 +34,7 @@ function prefersReducedMotion(): boolean {
 export function DjPublicView({ dj, mode = 'live' }: Props) {
   if (dj.template === 'SIGNAL') return <SignalView dj={dj} mode={mode} />;
   if (dj.template === 'GROOVE') return <GrooveView dj={dj} mode={mode} />;
+  if (dj.template === 'NOIR') return <NoirView dj={dj} mode={mode} />;
   return <ClassicView dj={dj} mode={mode} />;
 }
 

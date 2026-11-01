@@ -209,6 +209,25 @@ export const PALETTES: Record<PaletteKey, Palette> = {
     onAccent: '#120d1c',
     themeColor: '#0e0b16',
   },
+  // La de la plantilla Editorial Noir: la única clara. Marfil, borgoña, dorado y negro.
+  NOIR: {
+    name: 'Noir (marfil/borgoña)',
+    bg: '#f3ebde',
+    bgSoft: '#ebe0ce',
+    card: 'rgba(255,252,246,.96)',
+    muted: '#6e5d55',
+    text: '#1c1416',
+    accent: '#5c1a26',
+    accent2: '#b08d57',
+    border: 'rgba(92,26,38,.22)',
+    accentRgb: '92 26 38',
+    accent2Rgb: '176 141 87',
+    surfaceRgb: '255 252 246',
+    lineRgb: '120 92 80',
+    textRgb: '28 20 22',
+    onAccent: '#f6efe3',
+    themeColor: '#140d0f',
+  },
 };
 
 /** Variables CSS de una paleta, para aplicarlas en un contenedor o en <html>. */

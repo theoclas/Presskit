@@ -1,7 +1,28 @@
-import type { TemplateKey } from '@fersua/shared';
+import type { SocialLinkDto, SocialPlatform, TemplateKey } from '@fersua/shared';
 import { useEffect, useState, type RefObject } from 'react';
+import { safeHttpsUrl } from '../../lib/safeUrl';
 
-// Piezas que comparten las plantillas de portada a pantalla completa (Signal, Neon Groove).
+// Piezas que comparten las plantillas nuevas (Signal, Neon Groove, Editorial Noir).
+
+/** Dónde se escucha al DJ, en este orden de preferencia (botones «Escuchar ahora» y «Música»). */
+export const MUSIC_PLATFORMS: readonly SocialPlatform[] = ['SOUNDCLOUD', 'MIXCLOUD', 'SPOTIFY', 'APPLE_MUSIC', 'BEATPORT', 'BANDCAMP', 'YOUTUBE'];
+
+/** Las redes de música del perfil (con URL https válida), en el orden de MUSIC_PLATFORMS. */
+export function musicLinks(socials: readonly SocialLinkDto[]): (SocialLinkDto & { href: string })[] {
+  const out: (SocialLinkDto & { href: string })[] = [];
+  for (const platform of MUSIC_PLATFORMS) {
+    for (const s of socials) {
+      const href = s.platform === platform ? safeHttpsUrl(s.url) : null;
+      if (href) out.push({ ...s, href });
+    }
+  }
+  return out;
+}
+
+/** La primera red de música del perfil, o null. */
+export function musicLink(socials: readonly SocialLinkDto[]): string | null {
+  return musicLinks(socials)[0]?.href ?? null;
+}
 
 /** Tamaño del nombre gigante según su largo: un nombre largo no rompe la portada. */
 export function nameSize(name: string): 'xl' | 'l' | 'm' | 's' {

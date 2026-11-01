@@ -1,0 +1,970 @@
+/*
+ * Plantilla «Editorial Noir» (propuesta 03): la única de fondo claro.
+ * El contenedor lleva .djp.djn: las secciones reutilizadas (artistas, fechas, formulario,
+ * diálogos) conservan su CSS de dj-template.css y aquí se reajusta el aspecto. La portada, el
+ * menú y el pie son siempre oscuros (tinta y marfil fijos); el resto usa las variables de la
+ * paleta (Noir: marfil de fondo, borgoña de acento, dorado de acento 2).
+ */
+
+html[data-template="NOIR"][data-surface="public"] body {
+  background: var(--bg);
+}
+
+html[data-template="NOIR"] {
+  scroll-padding-top: 76px;
+}
+
+/* El calendario nativo del formulario, en claro cuando la paleta es la clara. */
+html[data-palette="NOIR"] .djp.djn input[type="date"],
+html[data-palette="NOIR"] .djp.djn input[type="time"] {
+  color-scheme: light;
+}
+
+.djp.djn {
+  --nr-serif: "Cormorant Garamond Variable", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --nr-ink: #140d0f;
+  --nr-ivory: #f4ece0;
+  --nr-gutter: clamp(16px, 4vw, 48px);
+  --nr-rule: rgb(var(--accent-2-rgb) / .45);
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: clip;
+}
+
+.djp.djn ::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.djp.djn .nr-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--nr-gutter);
+}
+
+.djp.djn .nr-arrow {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* ===== MENÚ (siempre oscuro) ===== */
+.djp.djn .nr-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  background: var(--nr-ink);
+  border-bottom: 1px solid rgb(var(--accent-2-rgb) / .25);
+  color: var(--nr-ivory);
+}
+
+.djp.djn--preview .nr-nav {
+  position: absolute;
+}
+
+.djp.djn .nr-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 72px;
+}
+
+.djp.djn .nr-brand {
+  max-width: 14ch;
+  font-family: var(--nr-serif);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: .95;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.djp.djn .nr-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.djp.djn .nr-nav-links > a {
+  position: relative;
+  padding: 8px 0;
+  text-decoration: none;
+  opacity: .85;
+}
+
+.djp.djn .nr-nav-links > a:hover {
+  opacity: 1;
+  color: var(--accent-2);
+}
+
+.djp.djn .nr-nav-links .nr-nav-cta {
+  padding: 10px 16px;
+  border: 1px solid rgb(244 236 224 / .7);
+  opacity: 1;
+}
+
+.djp.djn .nr-nav-links .nr-nav-cta:hover {
+  border-color: var(--accent-2);
+}
+
+.djp.djn .nr-burger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nr-ivory);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.djp.djn .nr-burger span {
+  display: block;
+  width: 24px;
+  height: 1.5px;
+  background: currentColor;
+  transition: transform .2s ease, opacity .2s ease;
+}
+
+.djp.djn .nr-burger.is-open span:nth-child(1) {
+  transform: translateY(7.5px) rotate(45deg);
+}
+
+.djp.djn .nr-burger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.djp.djn .nr-burger.is-open span:nth-child(3) {
+  transform: translateY(-7.5px) rotate(-45deg);
+}
+
+.djp.djn .nr-menu {
+  position: fixed;
+  inset: 72px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 28px var(--nr-gutter) calc(28px + env(safe-area-inset-bottom));
+  background: var(--nr-ink);
+  color: var(--nr-ivory);
+  overflow-y: auto;
+}
+
+.djp.djn .nr-menu[hidden] {
+  display: none;
+}
+
+.djp.djn .nr-menu a {
+  padding: 12px 0;
+  border-bottom: 1px solid rgb(var(--accent-2-rgb) / .25);
+  font-family: var(--nr-serif);
+  font-size: clamp(32px, 9vw, 48px);
+  font-weight: 400;
+  line-height: 1.05;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.djp.djn .nr-menu .nr-menu-cta {
+  color: var(--accent-2);
+  font-style: italic;
+}
+
+/* ===== PORTADA (banda oscura de revista) ===== */
+.djp.djn .nr-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: min(84svh, 780px);
+  padding: 120px 0 72px;
+  overflow: hidden;
+  background:
+    radial-gradient(700px 600px at 0% 50%, rgb(var(--accent-rgb) / .55), transparent 70%),
+    var(--nr-ink);
+  color: var(--nr-ivory);
+}
+
+.djp.djn .nr-hero--plain {
+  min-height: min(64svh, 600px);
+}
+
+.djp.djn .nr-hero-media {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 64%;
+}
+
+.djp.djn .nr-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 30%;
+  display: block;
+  filter: sepia(.22) saturate(.85) contrast(1.06) brightness(.82);
+}
+
+/* Fundido de la foto hacia la tinta y el borgoña de la izquierda. */
+.djp.djn .nr-hero-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--nr-ink) 0%, rgb(20 13 15 / .7) 22%, rgb(var(--accent-rgb) / .25) 48%, transparent 75%),
+    linear-gradient(0deg, rgb(20 13 15 / .65) 0%, transparent 35%);
+}
+
+.djp.djn .nr-hero-content {
+  position: relative;
+  width: 100%;
+}
+
+.djp.djn .nr-name {
+  margin: 0;
+  max-width: 13.5ch;
+  font-family: var(--nr-serif);
+  font-weight: 400;
+  line-height: .95;
+  letter-spacing: .005em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.djp.djn .nr-amp {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent-2);
+}
+
+.djp.djn .nr-amp-group {
+  white-space: nowrap;
+}
+
+.djp.djn .nr-name--xl {
+  font-size: clamp(58px, 9vw, 136px);
+}
+
+.djp.djn .nr-name--l {
+  font-size: clamp(48px, 7vw, 108px);
+}
+
+.djp.djn .nr-name--m {
+  font-size: clamp(38px, 5vw, 78px);
+  max-width: 16ch;
+}
+
+.djp.djn .nr-name--s {
+  font-size: clamp(32px, 3.8vw, 58px);
+  max-width: 20ch;
+}
+
+.djp.djn .nr-subline {
+  margin: 22px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .42em;
+  text-transform: uppercase;
+  color: rgb(244 236 224 / .8);
+}
+
+.djp.djn .nr-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.djp.djn .nr-btn,
+.djp.djn .nr-sticky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.djp.djn .nr-btn--gold {
+  border-color: var(--accent-2);
+  color: var(--nr-ivory);
+}
+
+.djp.djn .nr-btn--gold:hover {
+  background: rgb(var(--accent-2-rgb) / .18);
+}
+
+.djp.djn .nr-btn--ivory {
+  background: var(--nr-ivory);
+  color: var(--nr-ink);
+}
+
+.djp.djn .nr-btn--ivory:hover {
+  background: #fff;
+}
+
+.djp.djn .nr-btn--line {
+  align-self: flex-start;
+  margin-top: 26px;
+  border-color: rgb(var(--text-rgb) / .45);
+  color: var(--text);
+}
+
+.djp.djn .nr-btn--line:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.djp.djn .nr-note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: rgb(244 236 224 / .7);
+}
+
+/* ===== TÍTULOS DE SECCIÓN (serif con línea dorada) ===== */
+.djp.djn .sec-title {
+  margin: 0 0 10px;
+  font-family: var(--nr-serif);
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+}
+
+.djp.djn .sec-title,
+.djp.djn .nr-title {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.djp.djn .sec-title::after {
+  content: "";
+  width: 64px;
+  height: 1px;
+  flex: none;
+  background: var(--accent-2);
+}
+
+.djp.djn .sec-sub {
+  margin: 0 0 8px;
+  max-width: 60ch;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ===== BIOGRAFÍA ===== */
+.djp.djn .nr-bio {
+  padding: clamp(56px, 7vw, 96px) 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg);
+}
+
+.djp.djn .nr-bio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) 200px;
+  align-items: center;
+  gap: clamp(28px, 4vw, 56px);
+}
+
+.djp.djn .nr-collage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.djp.djn .nr-collage--one {
+  grid-template-columns: 1fr;
+}
+
+.djp.djn .nr-collage img,
+.djp.djn .nr-bio-accent img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  filter: sepia(.18) saturate(.9);
+}
+
+.djp.djn .nr-collage img:nth-child(2) {
+  margin-top: 36px;
+}
+
+.djp.djn .nr-bio-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.djp.djn .nr-bio-text {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.8;
+  color: rgb(var(--text-rgb) / .82);
+  white-space: pre-line;
+}
+
+/* Bloque borgoña con una foto teñida, como el panel del concepto. */
+.djp.djn .nr-bio-accent {
+  position: relative;
+  align-self: stretch;
+  min-height: 280px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(135deg, rgb(var(--accent-2-rgb) / .14) 0 1px, transparent 1px 14px),
+    var(--accent);
+}
+
+.djp.djn .nr-bio-accent img {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  mix-blend-mode: multiply;
+  opacity: .75;
+  filter: grayscale(1) contrast(1.1);
+}
+
+/* ===== SECCIONES ===== */
+.djp.djn .nr-sections {
+  display: grid;
+  gap: clamp(56px, 7vw, 96px);
+  padding-block: clamp(56px, 7vw, 96px);
+}
+
+.djp.djn .nr-sections > section {
+  min-width: 0;
+  padding: 40px 0 0;
+  border: 0;
+  border-top: 1px solid var(--nr-rule);
+  border-radius: 0;
+  background: none;
+}
+
+/* Música: los enlaces a las plataformas (el reproductor llega en la fase 2). */
+.djp.djn .nr-music {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.djp.djn .nr-music-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgb(var(--text-rgb) / .16);
+  background: rgb(var(--surface-rgb) / .7);
+  text-decoration: none;
+  transition: border-color .15s ease, color .15s ease;
+}
+
+.djp.djn .nr-music-link .si {
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.djp.djn .nr-music-link span {
+  flex: 1;
+  font-family: var(--nr-serif);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.djp.djn .nr-music-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Galería: cuadrícula editorial de retratos. */
+.djp.djn #galeria .media-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.djp.djn #galeria .media-item {
+  aspect-ratio: 4 / 5;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.djp.djn #galeria .media-item > button {
+  width: 100%;
+  height: 100%;
+}
+
+.djp.djn #galeria .media-item img {
+  filter: sepia(.15) saturate(.9);
+  transition: transform .5s ease, filter .3s ease;
+}
+
+.djp.djn #galeria .media-item:hover img {
+  transform: scale(1.04);
+  filter: none;
+}
+
+/* Artistas */
+.djp.djn .artists-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 28px 48px;
+  margin-top: 26px;
+}
+
+.djp.djn .artist-card {
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.djp.djn .artist-photo {
+  aspect-ratio: 3 / 4;
+  border-radius: 0;
+}
+
+.djp.djn .artist-photo img {
+  filter: sepia(.15) saturate(.9);
+}
+
+.djp.djn .artist-photo--empty {
+  background: var(--accent);
+  color: var(--accent-2);
+  font-family: var(--nr-serif);
+  font-size: 40px;
+}
+
+.djp.djn .artist-name {
+  font-family: var(--nr-serif);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.djp.djn .artist-role {
+  margin: 10px 0 12px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+}
+
+.djp.djn .artist-desc {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgb(var(--text-rgb) / .78);
+}
+
+.djp.djn .socials a {
+  border-color: rgb(var(--text-rgb) / .25);
+  border-radius: 0;
+  color: var(--text);
+}
+
+.djp.djn .socials a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ===== FECHAS (banda borgoña) ===== */
+.djp.djn .nr-band {
+  padding: clamp(56px, 7vw, 88px) 0;
+  background:
+    radial-gradient(600px 400px at 100% 0%, rgb(var(--accent-2-rgb) / .16), transparent 70%),
+    var(--accent);
+  color: var(--on-accent);
+}
+
+.djp.djn .nr-band section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.djp.djn .nr-band .sec-sub {
+  color: color-mix(in srgb, var(--on-accent) 75%, transparent);
+}
+
+.djp.djn .nr-band .shows {
+  gap: 0;
+  margin-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--on-accent) 25%, transparent);
+}
+
+.djp.djn .nr-band .show-item {
+  grid-template-columns: 130px minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 18px 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--on-accent) 25%, transparent);
+  border-radius: 0;
+  background: none;
+  font-size: 15px;
+}
+
+.djp.djn .nr-band .show-date {
+  font-family: var(--nr-serif);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: .02em;
+  color: var(--accent-2);
+}
+
+.djp.djn .nr-band .show-item--open .show-date {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .24em;
+}
+
+.djp.djn .nr-band .show-place {
+  color: var(--on-accent);
+}
+
+.djp.djn .nr-band .show-cta a,
+.djp.djn .nr-band .show-cta button {
+  padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--on-accent) 65%, transparent);
+  border-radius: 0;
+  background: none;
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+}
+
+.djp.djn .nr-band .show-cta a:hover,
+.djp.djn .nr-band .show-cta button:hover {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.djp.djn .nr-band .shows-note,
+.djp.djn .nr-band .shows-empty {
+  color: color-mix(in srgb, var(--on-accent) 70%, transparent);
+}
+
+/* ===== RIDER ===== */
+.djp.djn .nr-rider {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 48px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.djp.djn .nr-rider li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgb(var(--text-rgb) / .12);
+}
+
+.djp.djn .nr-rider-n {
+  font-family: var(--nr-serif);
+  font-size: 24px;
+  font-style: italic;
+  line-height: 1;
+  color: var(--accent-2);
+}
+
+.djp.djn .nr-rider b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.djp.djn .nr-rider-note {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ===== FORMULARIO ===== */
+.djp.djn .nr-sections > #booking {
+  padding: clamp(28px, 4vw, 56px);
+  border: 1px solid var(--nr-rule);
+  background: rgb(var(--surface-rgb) / .85);
+}
+
+.djp.djn form label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.djp.djn form label.consent {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.djp.djn input,
+.djp.djn textarea,
+.djp.djn select {
+  border-radius: 0;
+  border-color: rgb(var(--text-rgb) / .22);
+  background: rgb(var(--surface-rgb) / .9);
+}
+
+.djp.djn input:focus,
+.djp.djn textarea:focus,
+.djp.djn select:focus {
+  border-color: var(--accent);
+}
+
+.djp.djn .btn {
+  border-radius: 0;
+  padding: 13px 22px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.djp.djn .btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.djp.djn .btn-secondary {
+  border: 1px solid rgb(var(--text-rgb) / .4);
+  background: transparent;
+  color: var(--text);
+}
+
+.djp.djn dialog.dlg,
+.djp.djn .dlg-media,
+.djp.djn .form-alert,
+.djp.djn .booking-success {
+  border-radius: 0;
+}
+
+/* ===== PIE (oscuro) ===== */
+.djp.djn .nr-footer {
+  margin: 0;
+  padding: 56px 0 44px;
+  background: var(--nr-ink);
+  color: rgb(244 236 224 / .65);
+  text-align: left;
+  font-size: 12px;
+}
+
+.djp.djn .nr-footer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px 32px;
+}
+
+.djp.djn .nr-footer-name {
+  margin: 0;
+  font-family: var(--nr-serif);
+  font-size: clamp(32px, 4vw, 52px);
+  font-weight: 400;
+  line-height: .95;
+  text-transform: uppercase;
+  color: var(--nr-ivory);
+  overflow-wrap: anywhere;
+}
+
+.djp.djn .nr-icons {
+  display: flex;
+  gap: 8px;
+}
+
+.djp.djn .nr-icons a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgb(var(--accent-2-rgb) / .6);
+  border-radius: 50%;
+  color: var(--accent-2);
+}
+
+.djp.djn .nr-icons a:hover {
+  background: rgb(var(--accent-2-rgb) / .15);
+}
+
+.djp.djn .nr-icons .si {
+  width: 16px;
+  height: 16px;
+}
+
+.djp.djn .nr-footer-copy {
+  grid-column: 1 / -1;
+  margin: 0;
+  letter-spacing: .06em;
+}
+
+/* CTA fijo del teléfono */
+.djp.djn .nr-sticky {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: none;
+  visibility: hidden;
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: translateY(160%);
+  transition: transform .25s ease, visibility 0s linear .25s;
+}
+
+.djp.djn .nr-sticky.is-on {
+  visibility: visible;
+  transform: none;
+  transition: transform .25s ease;
+}
+
+/* ===== TABLETA Y TELÉFONO ===== */
+@media (max-width: 960px) {
+  .djp.djn .nr-nav-links {
+    display: none;
+  }
+
+  .djp.djn .nr-burger {
+    display: inline-flex;
+  }
+
+  .djp.djn .nr-hero {
+    align-items: flex-end;
+    min-height: 88svh;
+    padding: 96px 0 40px;
+  }
+
+  .djp.djn .nr-hero-media {
+    width: 100%;
+  }
+
+  .djp.djn .nr-hero-media img {
+    object-position: 50% 20%;
+  }
+
+  .djp.djn .nr-hero-media::after {
+    background:
+      linear-gradient(0deg, var(--nr-ink) 6%, rgb(20 13 15 / .75) 38%, rgb(var(--accent-rgb) / .2) 62%, transparent 85%),
+      linear-gradient(180deg, rgb(20 13 15 / .7) 0%, transparent 20%);
+  }
+
+  .djp.djn .nr-cta .nr-btn {
+    flex: 1 1 140px;
+  }
+
+  .djp.djn .nr-bio-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .djp.djn .nr-bio-accent {
+    display: none;
+  }
+
+  .djp.djn .nr-collage img:nth-child(2) {
+    margin-top: 24px;
+  }
+
+  .djp.djn .nr-sticky {
+    display: flex;
+  }
+
+  .djp.djn .nr-footer {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 961px) {
+  .djp.djn .nr-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .djp.djn .nr-cta .nr-btn {
+    flex-basis: 100%;
+    letter-spacing: .18em;
+  }
+}
+
+@media (max-width: 700px) {
+  .djp.djn #galeria .media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .djp.djn .artist-card {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .djp.djn .artist-name {
+    font-size: 26px;
+  }
+
+  .djp.djn .nr-band .show-item {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px 16px;
+  }
+
+  .djp.djn .nr-band .show-cta {
+    grid-column: 1 / -1;
+  }
+
+  .djp.djn .nr-rider {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .djp.djn .nr-footer-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .djp.djn .nr-sticky,
+  .djp.djn .nr-btn,
+  .djp.djn #galeria .media-item img {
+    transition: none;
+  }
+}

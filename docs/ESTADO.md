@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN:** Clásica, Signal y Neon Groove (`3a0753d`, migraciones `templates` y `template_groove` aplicadas), a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la portada dividida de Neon Groove y la opción "Fotos en blanco y negro" de Signal (migración `mono_photos`). Próximo: propuesta 03 "Editorial Noir" y fase 2 (mix y videos).
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN:** Clásica, Signal y Neon Groove (`3a0753d`, migraciones `templates` y `template_groove` aplicadas), a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la portada dividida de Neon Groove, la opción "Fotos en blanco y negro" de Signal (migración `mono_photos`) y la cuarta plantilla, **Editorial Noir** (migración `template_noir`). Próximo: fase 2 (mix y videos).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -36,6 +36,19 @@
 - **Neon Groove se distingue de Signal:** la portada pasa a ser dividida (texto a la izquierda; la foto en un marco redondeado e inclinado, con brillo violeta y un aro naranja detrás, sobre una rejilla sutil), los géneros son pastillas de neón y las tarjetas ya no se montan sobre la portada. En el teléfono, la foto queda arriba como tarjeta cuadrada y el texto centrado debajo.
 - **Signal con blanco y negro opcional:** `DjProfile.monoPhotos` (`true` por defecto; migración `20261101200000_mono_photos`). El editor muestra el interruptor "Fotos en blanco y negro" solo con Signal; apagado, la vista lleva `.djs--color` y las fotos salen a color (la portada un poco oscurecida para que el texto se lea).
 - Verificación: shared 45; api 496 y 123 e2e; web 230; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 7/7 (capturas base de Groove regeneradas; Clásica y Signal iguales). Local con fotos reales: Groove a 1440 y 390 y Signal a color, sin errores ni scroll horizontal.
+
+**Editorial Noir (propuesta 03 de Fernando, 2026-11-01):** la única de fondo claro.
+
+| Parte | Dónde |
+|---|---|
+| `TemplateKey.NOIR` y paleta `NOIR` (clara: marfil de fondo, borgoña de acento, dorado de acento 2, texto casi negro). Migración `20261101220000_template_noir` | `api/prisma`, `packages/shared` |
+| Textos: reutiliza `heroLabel`, `bioTitle`, `listenCta`, `musicLabel` y `storyMoreCta` (marcados también para `NOIR`); no suma textos nuevos | `packages/shared/src/text-slots.ts` |
+| Vista: menú y portada siempre oscuros (tinta y marfil fijos), foto a la derecha con fundido hacia borgoña, nombre en Cormorant Garamond con el «&» dorado en cursiva y pegado a la palabra siguiente, línea "etiqueta / título", botones "Escuchar ahora" (si hay red de música) y contacto; biografía con collage de dos fotos (integrantes primero) y un bloque borgoña; sección "Música" con los enlaces a las plataformas (sin reproductor hasta la fase 2); galería en cuadrícula de retratos; artistas; **fechas en la banda borgoña**; rider en dos columnas con números en cursiva dorada; formulario en tarjeta marfil; pie oscuro con íconos dorados; CTA fijo en el teléfono | `web/src/public/dj/noir/` |
+| Del concepto no salen: las citas de prensa (no hay ese dato; no se inventan), el correo visible (la plataforma no lo muestra a propósito) y la descarga del EPK (fase 3) | — |
+| `templateKit` suma `MUSIC_PLATFORMS`, `musicLinks` y `musicLink` (los usan Groove y Noir) | `web/src/public/dj/templateKit.ts` |
+| Fuente Cormorant Garamond (OFL, `@fontsource-variable/cormorant-garamond`, normal y cursiva): propia del sitio, solo baja en páginas Noir. El calendario del formulario va en claro con la paleta Noir (`html[data-palette="NOIR"]`) | `web/package.json`, `noir.css` |
+
+**Verificación (Noir):** shared 45; api 496 y 123 e2e; web 233; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 9/9 (capturas base nuevas `dj-noir-*`; las demás iguales). Local con fotos reales a 1440 y 390: sin errores ni scroll horizontal; menú del teléfono, CTA fijo y selector de 4 plantillas probados.
 
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
@@ -386,7 +399,7 @@ El cambio de DNS y Allset ya no están pendientes: se decidió no mover nada.
   - Acciones delicadas del admin (borrar, reiniciar contraseñas, asignar dueño, cambiar el correo de un DJ) piden contraseña + código otra vez (step-up, vale 5 min).
 - **Perfiles (M2):** el admin puede aprobar desde borrador (arma los perfiles él mismo; se le muestra lo que falta); aprobar y reactivar exigen el registro legal del art. 53; suspender solo desde aprobado. Las fotos de perfiles sin aprobar son privadas y se ven con URL firmada de 1 h. Un perfil aprobado se ve si no tiene dueño o si la cuenta del dueño está activa.
 - **Formulario:** catálogo fijo de campos. Cada solicitud se guarda y luego abre WhatsApp.
-- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal y Neon Groove) + 10 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
+- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal, Neon Groove y Editorial Noir) + 11 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
 - **Imágenes:** WebP con sharp en un volumen Docker.
 - **URL:** `booking.fersuastudio.com/<slug>`, de forma definitiva (decisión del 2026-09-30). `fersuastudio.com` y Allset se quedan en Hostinger; no hay cambio de DNS.
 - **Semilla:** solo Mac Fly & Mike Bran, sin dueño, slug `macfly-mike-bran`. Allset queda fuera.

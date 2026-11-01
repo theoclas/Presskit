@@ -60,6 +60,37 @@ const bar = (width: string, height: number, background: string, extra: CSSProper
 /** Boceto de la portada de cada plantilla (decorativo). */
 function TemplateSketch({ template }: { template: TemplateKey }) {
   const p = PALETTES[TEMPLATES[template].suggestedPalette];
+  if (template === 'NOIR') {
+    return (
+      <div aria-hidden="true" style={{ height: 96, borderRadius: 4, overflow: 'hidden', display: 'grid', gridTemplateRows: '58% 42%', border: `1px solid rgb(${p.accent2Rgb} / .5)` }}>
+        <div
+          style={{
+            padding: '8px 10px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: 4,
+            background: `linear-gradient(90deg, #140d0f 40%, rgb(${p.accentRgb} / .8) 70%, #6b5a52)`,
+          }}
+        >
+          <div style={bar('46%', 7, '#f4ece0')} />
+          <div style={{ display: 'flex', gap: 3 }}>
+            <div style={bar('7%', 7, p.accent2)} />
+            <div style={bar('34%', 7, '#f4ece0')} />
+          </div>
+        </div>
+        <div style={{ background: p.bg, padding: '6px 10px', display: 'grid', gridTemplateColumns: '18% 18% 1fr', gap: 5, alignItems: 'center' }}>
+          <div style={{ height: '100%', background: '#8a7a70' }} />
+          <div style={{ height: '100%', background: '#a99a8f' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={bar('40%', 5, p.text)} />
+            <div style={bar('85%', 2, p.muted)} />
+            <div style={bar('70%', 2, p.muted)} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (template === 'GROOVE') {
     return (
       <div

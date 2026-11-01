@@ -27,4 +27,9 @@ export const TEMPLATES: Record<TemplateKey, Template> = {
     description: 'Cinematográfica y a color: foto con luz de neón, nombre en cursiva ancha y tarjetas con brillo.',
     suggestedPalette: 'GROOVE',
   },
+  NOIR: {
+    name: 'Editorial Noir',
+    description: 'Estilo revista de moda: fondo marfil, letra serif elegante y bloques borgoña y dorado.',
+    suggestedPalette: 'NOIR',
+  },
 };

@@ -1,4 +1,4 @@
-import { SOCIAL_PLATFORMS, type PublicDjProfileDto, type SocialLinkDto, type SocialPlatform } from '@fersua/shared';
+import { SOCIAL_PLATFORMS, type PublicDjProfileDto, type SocialLinkDto } from '@fersua/shared';
 import { useRef, useState, type ReactNode } from 'react';
 import { safeHttpsUrl } from '../../../lib/safeUrl';
 import { isWhatsappUrl } from '../../../lib/whatsapp';
@@ -10,7 +10,7 @@ import { GalleryGrid } from '../GalleryGrid';
 import { ShowsSection } from '../ShowsSection';
 import { SocialLinks } from '../SocialLinks';
 import { TemplateNav, type TemplateNavLink } from '../TemplateNav';
-import { nameSize, useHeroScroll, useHtmlTemplate } from '../templateKit';
+import { musicLink, nameSize, useHeroScroll, useHtmlTemplate } from '../templateKit';
 import '@fontsource-variable/archivo/wdth-italic.css';
 import '@fontsource-variable/archivo/wdth.css';
 import './groove.css';
@@ -19,18 +19,6 @@ interface Props {
   dj: PublicDjProfileDto;
   /** 'preview': vista previa del editor (el formulario no se envía). */
   mode?: 'live' | 'preview';
-}
-
-/** Dónde se escucha al DJ, en este orden de preferencia (el botón «Escuchar ahora»). */
-const MUSIC_PLATFORMS: readonly SocialPlatform[] = ['SOUNDCLOUD', 'MIXCLOUD', 'SPOTIFY', 'APPLE_MUSIC', 'BEATPORT', 'BANDCAMP', 'YOUTUBE'];
-
-/** La primera red de música del perfil (con URL https válida), o null. */
-export function musicLink(socials: readonly SocialLinkDto[]): string | null {
-  for (const platform of MUSIC_PLATFORMS) {
-    const href = safeHttpsUrl(socials.find((s) => s.platform === platform)?.url);
-    if (href) return href;
-  }
-  return null;
 }
 
 /** Fechas visibles en la tarjeta antes de «Ver todas». */

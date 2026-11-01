@@ -240,3 +240,47 @@ describe('opciones de las plantillas', () => {
     expect(pills).toEqual(macflyProfile.genres.map((g) => g.name));
   });
 });
+
+describe('DjPublicView con la plantilla Editorial Noir', () => {
+  afterEach(cleanup);
+  const soundcloud = { platform: 'SOUNDCLOUD' as const, label: 'SoundCloud', url: 'https://soundcloud.com/macflymikebran' };
+  const spotify = { platform: 'SPOTIFY' as const, label: 'Spotify', url: 'https://open.spotify.com/artist/abc' };
+  const noir = { ...macflyProfile, template: 'NOIR' as const, socials: [spotify, soundcloud] };
+
+  it('pinta Noir con el mismo contenido: nombre con el «&» pegado a la palabra siguiente, bio, galería, fechas y formulario', () => {
+    const { container } = render(<DjPublicView dj={noir} />);
+    expect(container.querySelector('.djn')).toBeTruthy();
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe(noir.displayName);
+    expect(h1.querySelector('.nr-amp-group')?.textContent).toBe('& Macfly');
+    expect(container.querySelector('.nr-subline')?.textContent).toBe(`${noir.texts.heroLabel} / ${noir.texts.heroTitle}`);
+    expect(container.querySelector('#bio')?.textContent).toContain(noir.texts.heroSubtitle);
+    expect(container.querySelectorAll('.nr-collage img').length).toBe(2);
+    expect(container.querySelectorAll('#galeria .media-item img').length).toBe(noir.gallery.length);
+    expect(container.querySelector('.nr-band #fechas .shows')).toBeTruthy();
+    expect(container.querySelectorAll('#rider li').length).toBe(noir.riderItems.length);
+    expect(container.querySelector('#booking form')).toBeTruthy();
+  });
+
+  it('la sección de música enlaza las plataformas en orden de preferencia; sin ellas no aparece', () => {
+    const { container } = render(<DjPublicView dj={noir} />);
+    const links = [...container.querySelectorAll('#musica .nr-music-link')].map((a) => a.getAttribute('href'));
+    expect(links).toEqual([soundcloud.url, spotify.url]);
+    expect(screen.getByRole('link', { name: noir.texts.listenCta }).getAttribute('href')).toBe(soundcloud.url);
+    cleanup();
+    const none = render(<DjPublicView dj={{ ...noir, socials: [] }} />);
+    expect(none.container.querySelector('#musica')).toBeNull();
+    expect(screen.queryByRole('link', { name: noir.texts.listenCta })).toBeNull();
+  });
+
+  it('pone data-template en <html> y el texto del DJ nunca es HTML', () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const { container, unmount } = render(
+      <DjPublicView dj={{ ...noir, displayName: `${evil} & co`, texts: { ...noir.texts, heroSubtitle: evil } }} />,
+    );
+    expect(document.documentElement.dataset.template).toBe('NOIR');
+    expect(container.querySelector('img[src="x"]')).toBeNull();
+    unmount();
+    expect(document.documentElement.dataset.template).toBeUndefined();
+  });
+});
