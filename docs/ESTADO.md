@@ -22,7 +22,7 @@
 
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
-**Siguiente (fase 2, en rama aparte; se puede pasar a Cursor):**
+**Siguiente (fase 2, en rama aparte; instrucciones para Cursor en `docs/fase2-musica-y-videos.md`):**
 - reproductor del último mix (link de SoundCloud o Mixcloud con su reproductor oficial; abrir `frame-src` en `deploy/edge/snippets/security-headers.conf`);
 - clips de video (YouTube sin cookies, mismo cambio de CSP);
 - después, el press kit descargable (subir PDF/ZIP con validación) y, si se pide, ES/EN.
