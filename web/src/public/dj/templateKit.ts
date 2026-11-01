@@ -1,6 +1,7 @@
 import type { SocialLinkDto, SocialPlatform, TemplateKey } from '@fersua/shared';
 import { useEffect, useState, type RefObject } from 'react';
 import { safeHttpsUrl } from '../../lib/safeUrl';
+import { markTemplate, useTemplateEnv } from './templateEnv';
 
 // Piezas que comparten las plantillas nuevas (Signal, Neon Groove, Editorial Noir).
 
@@ -35,13 +36,8 @@ export function nameSize(name: string): 'xl' | 'l' | 'm' | 's' {
 
 /** El fondo de <body> (overscroll, bordes) pasa al de la plantilla mientras se ve. */
 export function useHtmlTemplate(template: TemplateKey): void {
-  useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.template = template;
-    return () => {
-      delete root.dataset.template;
-    };
-  }, [template]);
+  const { doc } = useTemplateEnv();
+  useEffect(() => markTemplate(doc, template), [template, doc]);
 }
 
 /**
@@ -49,30 +45,31 @@ export function useHtmlTemplate(template: TemplateKey): void {
  * entre el final de la portada y el formulario #booking).
  */
 export function useHeroScroll(heroRef: RefObject<HTMLElement | null>): { scrolled: boolean; stickyOn: boolean } {
+  const { win, doc } = useTemplateEnv();
   const [scrolled, setScrolled] = useState(false);
   const [stickyOn, setStickyOn] = useState(false);
   useEffect(() => {
     let frame = 0;
     const update = () => {
       frame = 0;
-      setScrolled(window.scrollY > 24);
+      setScrolled(win.scrollY > 24);
       const hero = heroRef.current?.getBoundingClientRect();
-      const booking = document.getElementById('booking')?.getBoundingClientRect();
+      const booking = doc.getElementById('booking')?.getBoundingClientRect();
       const pastHero = !!hero && hero.bottom < 80;
-      const atBooking = !!booking && booking.top < window.innerHeight;
+      const atBooking = !!booking && booking.top < win.innerHeight;
       setStickyOn(pastHero && !atBooking);
     };
     const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
+      if (!frame) frame = win.requestAnimationFrame(update);
     };
     update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
+    win.addEventListener('scroll', onScroll, { passive: true });
+    win.addEventListener('resize', onScroll, { passive: true });
     return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      if (frame) win.cancelAnimationFrame(frame);
+      win.removeEventListener('scroll', onScroll);
+      win.removeEventListener('resize', onScroll);
     };
-  }, [heroRef]);
+  }, [heroRef, win, doc]);
   return { scrolled, stickyOn };
 }

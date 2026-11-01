@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
+import { lockBodyScroll, useTemplateEnv } from './templateEnv';
 
 export interface TemplateNavLink {
   href: string;
@@ -44,15 +45,14 @@ function NavAnchor({ link, className, onClick, ref }: NavAnchorProps) {
  * teléfono, una hamburguesa abre las secciones a pantalla completa (Escape o un enlace la cierran).
  */
 export function TemplateNav({ prefix: p, displayName, links, booking, scrolled, extra }: Props) {
+  const { doc } = useTemplateEnv();
   const [open, setOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const { body } = document;
-    const prevOverflow = body.style.overflow;
-    body.style.overflow = 'hidden';
+    const unlock = lockBodyScroll(doc);
     firstLinkRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -60,12 +60,12 @@ export function TemplateNav({ prefix: p, displayName, links, booking, scrolled, 
         toggleRef.current?.focus();
       }
     };
-    document.addEventListener('keydown', onKey);
+    doc.addEventListener('keydown', onKey);
     return () => {
-      body.style.overflow = prevOverflow;
-      document.removeEventListener('keydown', onKey);
+      unlock();
+      doc.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, doc]);
 
   const all = booking ? [...links, booking] : links;
   const navClass = open ? `${p}-nav is-solid is-open` : scrolled ? `${p}-nav is-solid` : `${p}-nav`;

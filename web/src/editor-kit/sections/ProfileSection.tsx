@@ -18,9 +18,11 @@ import {
   type UpdateProfileInput,
 } from '@fersua/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Collapse, Form, Input, Row, Select, Space, Switch, Typography } from 'antd';
+import { Alert, Button, Card, Col, Collapse, Form, Grid, Input, Row, Select, Space, Switch, Typography } from 'antd';
 import { useMemo, useState } from 'react';
+import { filledTexts, type PreviewDraft } from '../../lib/previewDraft';
 import { asList, describeError, http, useAfterSave } from '../api';
+import { LivePreview } from '../LivePreview';
 import { SAVED_MESSAGE, useFeedback } from '../feedback';
 import { applyFieldErrors, countConfig, maxChars, nullIfEmpty, requiredText, useSyncedForm } from '../forms';
 import {
@@ -195,6 +197,25 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
   const suggestedPalette = TEMPLATES[template].suggestedPalette;
   const [openGroups, setOpenGroups] = useState<string[]>([]);
 
+  // Vista previa en vivo: lo que el formulario tiene ahora, sin guardar.
+  const screens = Grid.useBreakpoint();
+  const [showPreview, setShowPreview] = useState(false);
+  const [focusGroup, setFocusGroup] = useState<TextGroup | null>(null);
+  const watchedTexts = Form.useWatch('texts', { form, preserve: true }) as Record<string, string> | undefined;
+  const city = Form.useWatch('city', form) as string | undefined;
+  const monoPhotos = Form.useWatch('monoPhotos', { form, preserve: true }) as boolean | undefined;
+  const draft = useMemo<PreviewDraft>(
+    () => ({
+      displayName,
+      city: city ?? initial.city,
+      template,
+      palette,
+      monoPhotos: monoPhotos ?? initial.monoPhotos,
+      texts: filledTexts(watchedTexts ?? initial.texts),
+    }),
+    [displayName, city, template, palette, monoPhotos, watchedTexts, initial],
+  );
+
   const applySuggestedPalette = () => {
     form.setFields([{ name: 'palette', value: suggestedPalette, touched: true }]);
     onValuesChange();
@@ -264,22 +285,29 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
     key: group,
     label: TEXT_GROUP_LABELS[group],
     forceRender: true,
-    children: visibleSlots.filter((s) => s.group === group).map((slot) => (
-      <TextSlotField
-        key={slot.key}
-        slot={slot}
-        form={form}
-        onRestored={onValuesChange}
-        ownText={!!ownTexts?.includes(slot.key)}
-        derivedDefault={
-          slot.key === 'heroPhotoAlt'
-            ? `Show de ${displayName}`
-            : slot.key === 'footerText'
-              ? `${displayName} — Booking`
-              : undefined
-        }
-      />
-    )),
+    // Al enfocar un texto, la vista previa baja hasta su sección.
+    children: (
+      <div onFocusCapture={() => setFocusGroup(group)}>
+        {visibleSlots
+          .filter((s) => s.group === group)
+          .map((slot) => (
+            <TextSlotField
+              key={slot.key}
+              slot={slot}
+              form={form}
+              onRestored={onValuesChange}
+              ownText={!!ownTexts?.includes(slot.key)}
+              derivedDefault={
+                slot.key === 'heroPhotoAlt'
+                  ? `Show de ${displayName}`
+                  : slot.key === 'footerText'
+                    ? `${displayName} — Booking`
+                    : undefined
+              }
+            />
+          ))}
+      </div>
+    ),
   }));
 
   return (
@@ -432,13 +460,46 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
             </Card>
           </Col>
           <Col xs={24}>
-            <Card title="Textos de la página" size="small">
-              <Collapse
-                items={collapseItems}
-                size="small"
-                activeKey={openGroups}
-                onChange={(keys) => setOpenGroups(Array.isArray(keys) ? keys.map(String) : [String(keys)])}
-              />
+            <Card
+              title="Textos de la página"
+              size="small"
+              extra={
+                screens.xl ? null : (
+                  <Button size="small" onClick={() => setShowPreview((v) => !v)} aria-expanded={showPreview}>
+                    {showPreview ? 'Ocultar vista previa' : 'Ver vista previa en vivo'}
+                  </Button>
+                )
+              }
+            >
+              <Row gutter={[16, 16]}>
+                <Col xs={24} xl={13}>
+                  <Collapse
+                    items={collapseItems}
+                    size="small"
+                    activeKey={openGroups}
+                    onChange={(keys) => {
+                      const next = Array.isArray(keys) ? keys.map(String) : [String(keys)];
+                      // El grupo recién abierto es el que la vista previa muestra.
+                      const opened = next.find((k) => !openGroups.includes(k));
+                      if (opened) setFocusGroup(opened as TextGroup);
+                      setOpenGroups(next);
+                    }}
+                  />
+                </Col>
+                {screens.xl || showPreview ? (
+                  <Col xs={{ span: 24, order: -1 }} xl={{ span: 11, order: 0 }}>
+                    {/* Debajo de la barra superior del admin y del panel, que es fija. */}
+                    <div style={{ position: 'sticky', top: 88 }}>
+                      <LivePreview
+                        draft={draft}
+                        focusGroup={focusGroup}
+                        height={screens.xl ? 600 : 460}
+                        defaultDevice={screens.md ? 'desktop' : 'mobile'}
+                      />
+                    </div>
+                  </Col>
+                ) : null}
+              </Row>
             </Card>
           </Col>
         </Row>

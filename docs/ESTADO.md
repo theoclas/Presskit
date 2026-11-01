@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`c99a8c3`, migraciones `templates`, `template_groove`, `mono_photos` y `template_noir` aplicadas): Clásica, Signal (con "Fotos en blanco y negro" opcional), Neon Groove (portada dividida) y Editorial Noir, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la quinta plantilla, **Hyperwave** en mosaico (migración `template_hyperwave`). Próximo: vista previa en vivo junto a los textos del editor y fase 2 (mix y videos).
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`c99a8c3`, migraciones `templates`, `template_groove`, `mono_photos` y `template_noir` aplicadas): Clásica, Signal (con "Fotos en blanco y negro" opcional), Neon Groove (portada dividida) y Editorial Noir, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la quinta plantilla, **Hyperwave** en mosaico (migración `template_hyperwave`), y la **vista previa en vivo** junto a los textos del editor. Próximo: fase 2 (mix y videos).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -61,6 +61,18 @@
 | Fuente Unbounded (OFL, `@fontsource-variable/unbounded`): ancha y recta (no repite la cursiva de Groove) | `web/package.json` |
 
 **Verificación (Hyperwave):** shared 45; api 496 y 123 e2e; web 238; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 11/11 (capturas base nuevas `dj-hyperwave-*`; las demás iguales). Local con fotos reales a 1440 y 390: sin errores ni scroll horizontal, mosaico sin huecos con secciones faltantes; menú del teléfono (con velo) y CTA fijo probados.
+
+**Vista previa en vivo en el editor (pedido de Fernando, 2026-11-01):** en "Perfil y textos", junto a "Textos de la página", la página real del DJ con lo que el formulario tiene **sin guardar** (textos, nombre, ciudad, plantilla, paleta y fotos en blanco y negro), en escritorio o celular. Al abrir un grupo de textos o enfocar un campo baja sola hasta su sección. En pantallas chicas va detrás del botón "Ver vista previa en vivo".
+
+| Parte | Dónde |
+|---|---|
+| `LivePreview`: un iframe con `srcdoc` (no carga ninguna URL) donde el editor monta su propia raíz de React con `DjPublicView`; copia las hojas de estilo del editor (y las que llegan después) y pone la paleta en el `<html>` del iframe. El iframe da su ancho a las media queries (1280 o 390, escalado al recuadro). Fotos, fechas y demás salen de `GET {base}/preview` (se refresca al guardar cualquier sección) | `web/src/editor-kit/LivePreview.tsx` |
+| `applyDraft`, `filledTexts`, `scrollToGroup` y `GROUP_TARGETS` (grupo de textos → sección de la página) | `web/src/lib/previewDraft.ts` |
+| `TemplateEnvContext`: las plantillas usan la ventana y el documento del entorno (scroll, teclado, `data-template`, bloqueo del scroll del menú), así dentro de la vista previa actúan sobre el iframe y no sobre el editor | `web/src/public/dj/templateEnv.ts`, `templateKit.ts`, `TemplateNav.tsx` |
+
+**Por qué `srcdoc` y no un iframe a `/_preview`:** el sitio prohíbe enmarcarse (`frame-ancestors 'none'` y `X-Frame-Options: DENY`, contra clickjacking). Cambiarlo a `'self'` se descartó para no debilitar esa protección en producción; con `srcdoc` no hace falta tocar las cabeceras.
+
+**Verificación:** web 243 (29 archivos; pruebas nuevas de `previewDraft`), lint, typecheck, build, `ci:bundle`, `ci:compose`, regresión visual 11/11 (las plantillas públicas no cambian). En el admin local: escribir "Prueba en vivo" en el título la cambia al instante en la vista previa; elegir Signal sin guardar pinta Signal; abrir "Sección de fechas" baja a las fechas; la BD no cambia sin guardar; sin errores de consola.
 
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
