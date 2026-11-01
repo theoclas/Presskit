@@ -189,20 +189,6 @@ export function GrooveView({ dj, mode = 'live' }: Props) {
       />
       <main id="main" tabIndex={-1}>
         <header ref={heroRef} className={dj.heroImage ? 'gv-hero' : 'gv-hero gv-hero--plain'} id="intro">
-          {dj.heroImage ? (
-            <div className="gv-hero-media">
-              <ResponsiveImage
-                image={dj.heroImage}
-                // En vertical la foto horizontal se recorta para cubrir el alto: se ve ~3 veces más ancha.
-                sizes="(orientation: portrait) 300vw, 100vw"
-                alt={dj.heroImage.alt || texts.heroPhotoAlt || `Show de ${dj.displayName}`}
-                priority
-              />
-              <div className="gv-tint" aria-hidden="true" />
-            </div>
-          ) : null}
-          <div className="gv-hero-glow" aria-hidden="true" />
-          <div className="gv-hero-shade" aria-hidden="true" />
           <svg className="gv-wave" viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true" focusable="false">
             <defs>
               <linearGradient id="gv-wave-grad" x1="0" x2="1">
@@ -214,43 +200,60 @@ export function GrooveView({ dj, mode = 'live' }: Props) {
             <path d="M0 170C140 120 240 200 360 150S530 90 600 125" />
           </svg>
 
-          <div className="gv-wrap gv-hero-content">
-            {eyebrow ? <p className="gv-eyebrow">{eyebrow}</p> : null}
-            <h1 className={`gv-name gv-name--${nameSize(dj.displayName)}`}>
-              <GrooveName name={dj.displayName} />
-            </h1>
-            {dj.genres.length ? (
-              <p className="gv-genres">
-                {dj.genres.map((g, i) => (
-                  <span key={g.slug}>
-                    {i > 0 ? <span aria-hidden="true"> / </span> : null}
-                    {g.name}
-                  </span>
-                ))}
-              </p>
-            ) : null}
-            {primary || secondary ? (
-              <div className="gv-cta">
-                {primary ? (
-                  <a
-                    className="gv-btn gv-btn--primary"
-                    href={primary.href}
-                    target={primary.external ? '_blank' : undefined}
-                    rel={primary.external ? 'noopener noreferrer' : undefined}
-                  >
-                    {primary.label}
-                    <Icon d={ICONS.arrow} className="gv-btn-icon" />
-                  </a>
-                ) : null}
-                {secondary ? (
-                  <a className="gv-btn gv-btn--ghost" href={secondary.href} target="_blank" rel="noopener noreferrer nofollow ugc">
-                    {secondary.play ? <Icon d={ICONS.play} className="gv-btn-icon gv-btn-icon--play" /> : null}
-                    {secondary.label}
-                  </a>
-                ) : null}
+          {/* Portada dividida (a diferencia de Signal): el texto a un lado y la foto enmarcada al otro. */}
+          <div className="gv-wrap gv-hero-grid">
+            <div className="gv-hero-text">
+              {eyebrow ? <p className="gv-eyebrow">{eyebrow}</p> : null}
+              <h1 className={`gv-name gv-name--${nameSize(dj.displayName)}`}>
+                <GrooveName name={dj.displayName} />
+              </h1>
+              {dj.genres.length ? (
+                <ul className="gv-genres" aria-label="Géneros">
+                  {dj.genres.map((g) => (
+                    <li key={g.slug}>{g.name}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {primary || secondary ? (
+                <div className="gv-cta">
+                  {primary ? (
+                    <a
+                      className="gv-btn gv-btn--primary"
+                      href={primary.href}
+                      target={primary.external ? '_blank' : undefined}
+                      rel={primary.external ? 'noopener noreferrer' : undefined}
+                    >
+                      {primary.label}
+                      <Icon d={ICONS.arrow} className="gv-btn-icon" />
+                    </a>
+                  ) : null}
+                  {secondary ? (
+                    <a className="gv-btn gv-btn--ghost" href={secondary.href} target="_blank" rel="noopener noreferrer nofollow ugc">
+                      {secondary.play ? <Icon d={ICONS.play} className="gv-btn-icon gv-btn-icon--play" /> : null}
+                      {secondary.label}
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+              {texts.heroNote ? <p className="gv-note">{texts.heroNote}</p> : null}
+            </div>
+
+            {dj.heroImage ? (
+              <div className="gv-hero-visual">
+                <div className="gv-ring" aria-hidden="true" />
+                <div className="gv-frame">
+                  <ResponsiveImage
+                    image={dj.heroImage}
+                    // El marco es vertical o cuadrado y la foto suele ser horizontal: se ve recortada,
+                    // así que se pide una variante más ancha que el marco.
+                    sizes="(max-width: 960px) 180vw, 1100px"
+                    alt={dj.heroImage.alt || texts.heroPhotoAlt || `Show de ${dj.displayName}`}
+                    priority
+                  />
+                  <div className="gv-tint" aria-hidden="true" />
+                </div>
               </div>
             ) : null}
-            {texts.heroNote ? <p className="gv-note">{texts.heroNote}</p> : null}
           </div>
         </header>
 

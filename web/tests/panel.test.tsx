@@ -52,6 +52,7 @@ function profile(over: Partial<EditorProfileDto> = {}): EditorProfileDto {
     publicPhone: null,
     palette: 'SUNSET',
     template: 'CLASSIC',
+    monoPhotos: true,
     texts: {},
     bookingForm: [],
     show: { gallery: true, rider: true, events: true, openDateRow: true, form: true },

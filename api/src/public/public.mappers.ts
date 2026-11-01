@@ -161,6 +161,7 @@ export function mapProfile(profile: ProfileDetail, images: ImageMapper): PublicD
     city: profile.city ?? null,
     palette: profile.palette,
     template: profile.template,
+    monoPhotos: profile.monoPhotos,
     texts,
     heroImage: images.toImageDto(profile.heroImage, texts.heroPhotoAlt),
     genres: mapGenres(profile.genres),

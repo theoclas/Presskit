@@ -233,6 +233,8 @@ model DjProfile {
   publicPhone      String?       @db.VarChar(20)
   palette          PaletteKey    @default(SUNSET)
   template         TemplateKey   @default(CLASSIC)
+  /// Signal: fotos en blanco y negro (por defecto) o a color.
+  monoPhotos       Boolean       @default(true)
   /// Record<TextSlotKey, string>, validado contra PAGE_TEXT_SLOTS.
   texts            Json
   /// FormFieldConfig[] ordenado, validado contra BOOKING_FIELD_CATALOGUE.

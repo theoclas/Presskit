@@ -175,6 +175,8 @@ export interface EditorProfileDto {
   publicPhone: string | null;
   palette: PaletteKey;
   template: TemplateKey;
+  /** Signal: fotos en blanco y negro (true, por defecto) o a color. */
+  monoPhotos: boolean;
   /** Solo lo guardado (sin valores por defecto); la web los completa con resolveTexts. */
   texts: Partial<PageTexts>;
   bookingForm: FormFieldConfig[];
@@ -215,6 +217,7 @@ export interface UpdateProfileInput {
   publicPhone?: string | null;
   palette?: PaletteKey;
   template?: TemplateKey;
+  monoPhotos?: boolean;
   /** Parche de textos: solo claves de PAGE_TEXT_SLOTS; '' vuelve al valor por defecto. */
   texts?: Partial<Record<string, string>>;
   show?: Partial<EditorProfileDto['show']>;

@@ -46,6 +46,7 @@ export interface ProfileFormValues {
   seoDescription: string;
   palette: PaletteKey;
   template: TemplateKey;
+  monoPhotos: boolean;
   whatsappNumber: string;
   publicEmail: string;
   publicPhone: string;
@@ -91,6 +92,7 @@ export function profileFormValues(p: EditorProfileDto, opts: { ownTexts?: readon
     seoDescription: p.seoDescription ?? '',
     palette: p.palette ?? DEFAULT_PALETTE,
     template: p.template ?? DEFAULT_TEMPLATE,
+    monoPhotos: p.monoPhotos ?? true,
     whatsappNumber: p.whatsappNumber ?? '',
     publicEmail: p.publicEmail ?? '',
     publicPhone: p.publicPhone ?? '',
@@ -142,6 +144,7 @@ export function buildProfilePatch(
   }
   if (values.palette !== initial.palette) patch.palette = values.palette;
   if (values.template !== initial.template) patch.template = values.template;
+  if (!!values.monoPhotos !== !!initial.monoPhotos) patch.monoPhotos = !!values.monoPhotos;
   const show: Partial<ShowFlags> = {};
   for (const key of Object.keys(SHOW_LABELS) as (keyof ShowFlags)[]) {
     if (!!values.show?.[key] !== !!initial.show[key]) show[key] = !!values.show?.[key];
@@ -381,6 +384,15 @@ export function ProfileSection({ profile }: { profile: EditorProfileDto }) {
                 Todas las plantillas usan el mismo contenido: puedes cambiar de una a otra sin perder nada. Guarda y abre
                 la vista previa para verla.
               </Typography.Paragraph>
+              {/* Siempre montado (oculto fuera de Signal) para que el valor viaje con el formulario. */}
+              <Form.Item
+                name="monoPhotos"
+                valuePropName="checked"
+                hidden={template !== 'SIGNAL'}
+                style={{ margin: '12px 0 0' }}
+              >
+                <SwitchRow label="Fotos en blanco y negro (apágalo para mostrarlas a color)" />
+              </Form.Item>
               {palette !== suggestedPalette ? (
                 <Alert
                   type="info"

@@ -946,6 +946,18 @@ html[data-template="SIGNAL"] {
   transition: transform .25s ease;
 }
 
+/* Opción «fotos a color» (monoPhotos apagado): sin el blanco y negro. La portada se oscurece un
+   poco para que el texto se siga leyendo sobre cualquier foto. */
+.djp.djs.djs--color .sg-hero-media img {
+  filter: saturate(1.05) brightness(.82);
+}
+
+.djp.djs.djs--color .sg-story-media img,
+.djp.djs.djs--color .artist-photo img,
+.djp.djs.djs--color .media-item img {
+  filter: none;
+}
+
 /* ===== TABLETA Y TELÉFONO ===== */
 @media (max-width: 900px) {
   .djp.djs .sg-nav-links {

@@ -66,6 +66,8 @@ export interface PublicDjProfileDto {
   city: string | null;
   palette: PaletteKey;
   template: TemplateKey;
+  /** Signal: fotos en blanco y negro (true) o a color. */
+  monoPhotos: boolean;
   texts: PageTexts;
   heroImage: ImageDto | null;
   genres: GenreDto[];

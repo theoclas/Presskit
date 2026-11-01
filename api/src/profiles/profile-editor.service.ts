@@ -130,6 +130,7 @@ export class ProfileEditorService {
     }
     if (body.palette !== undefined) set('palette', 'palette', body.palette, current.palette);
     if (body.template !== undefined) set('template', 'template', body.template, current.template);
+    if (body.monoPhotos !== undefined) set('monoPhotos', 'monoPhotos', body.monoPhotos, current.monoPhotos);
 
     if (body.texts !== undefined) {
       const { texts, errors } = validateTexts(body.texts);

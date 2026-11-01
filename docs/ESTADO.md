@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`84976ce`, migración `templates` aplicada): Clásica + Signal, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Neon Groove** (tercera plantilla, migración `template_groove`): hecha, probada y en `main`, **falta desplegarla**. Próximo: fase 2 (mix y videos).
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN:** Clásica, Signal y Neon Groove (`3a0753d`, migraciones `templates` y `template_groove` aplicadas), a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la portada dividida de Neon Groove y la opción "Fotos en blanco y negro" de Signal (migración `mono_photos`). Próximo: propuesta 03 "Editorial Noir" y fase 2 (mix y videos).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -31,6 +31,11 @@
 | Fuente Archivo (OFL, `@fontsource-variable/archivo`, ejes de ancho y peso, cursiva): propia del sitio, solo baja en páginas Groove | `web/package.json` |
 
 **Verificación (2026-11-01, Groove):** shared 45; api 496 y 123 e2e; web 227; lint y typecheck; build, `ci:bundle`, `ci:compose`; `prisma migrate diff` sin drift; regresión visual 7/7 (Clásica y Signal sin cambios tras el refactor; capturas base nuevas `dj-groove-*`). Local con fotos reales a 1440 y 390: sin errores ni scroll horizontal; menú del teléfono, CTA fijo y selector de 3 plantillas en el admin probados.
+
+**Ajustes pedidos por Fernando (2026-11-01, después de ver Groove publicada):**
+- **Neon Groove se distingue de Signal:** la portada pasa a ser dividida (texto a la izquierda; la foto en un marco redondeado e inclinado, con brillo violeta y un aro naranja detrás, sobre una rejilla sutil), los géneros son pastillas de neón y las tarjetas ya no se montan sobre la portada. En el teléfono, la foto queda arriba como tarjeta cuadrada y el texto centrado debajo.
+- **Signal con blanco y negro opcional:** `DjProfile.monoPhotos` (`true` por defecto; migración `20261101200000_mono_photos`). El editor muestra el interruptor "Fotos en blanco y negro" solo con Signal; apagado, la vista lleva `.djs--color` y las fotos salen a color (la portada un poco oscurecida para que el texto se lea).
+- Verificación: shared 45; api 496 y 123 e2e; web 230; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 7/7 (capturas base de Groove regeneradas; Clásica y Signal iguales). Local con fotos reales: Groove a 1440 y 390 y Signal a color, sin errores ni scroll horizontal.
 
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
@@ -71,7 +76,7 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
 ## Producción (M1 + M2)
 - **https://booking.fersuastudio.com**, con HTTPS por certbot (vence el 2026-12-28 y se renueva solo), `noindex` mientras sea beta.
 - **VPS:** `~/apps/fersuastudio-booking`, proyecto compose `fersua-booking` (db, migrate, api, edge). El edge escucha en `127.0.0.1:8090`; el vhost del host es `/etc/nginx/sites-available/fersua-booking.conf`.
-- **Versión desplegada:** `84976ce` (plantillas, 2026-11-01), con la migración `20261101120000_templates` aplicada (todos los perfiles en `CLASSIC`). Antes, `412d1b2` (M4). Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
+- **Versión desplegada:** `3a0753d` (Neon Groove, 2026-11-01), con las migraciones `20261101120000_templates` y `20261101180000_template_groove` aplicadas. Antes, `84976ce` (Clásica + Signal) y `412d1b2` (M4). Ojo: una sesión SSH que se corta no detiene `deploy.sh` en el VPS; revisar con `pgrep -f "bash scripts/deploy.sh"` antes de lanzar otro. Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
 - **Respaldos (crontab de `deploy`, UTC):**
   - 08:15, nocturno local (`scripts/backup.sh nightly`);
   - 08:45, copia externa cifrada a Google Drive (`scripts/offsite-backup.sh nightly`, repositorio `rclone:gdrive-fersua:fersua-booking-respaldos-v2` desde el 2026-10-10);

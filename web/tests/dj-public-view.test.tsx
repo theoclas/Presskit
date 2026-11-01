@@ -220,3 +220,23 @@ describe('DjPublicView con la plantilla Neon Groove', () => {
     expect(document.documentElement.dataset.template).toBeUndefined();
   });
 });
+
+describe('opciones de las plantillas', () => {
+  afterEach(cleanup);
+
+  it('Signal viene en blanco y negro; con monoPhotos apagado muestra las fotos a color', () => {
+    const { container } = render(<DjPublicView dj={{ ...macflyProfile, template: 'SIGNAL' }} />);
+    expect(container.querySelector('.djs')?.classList.contains('djs--color')).toBe(false);
+    cleanup();
+    const color = render(<DjPublicView dj={{ ...macflyProfile, template: 'SIGNAL', monoPhotos: false }} />);
+    expect(color.container.querySelector('.djs')?.classList.contains('djs--color')).toBe(true);
+  });
+
+  it('Neon Groove: portada dividida con la foto enmarcada y los géneros como pastillas', () => {
+    const { container } = render(<DjPublicView dj={{ ...macflyProfile, template: 'GROOVE' }} />);
+    expect(container.querySelector('.gv-hero-grid .gv-hero-text h1')).toBeTruthy();
+    expect(container.querySelector('.gv-hero-grid .gv-hero-visual .gv-frame img')).toBeTruthy();
+    const pills = [...container.querySelectorAll('.gv-genres li')].map((li) => li.textContent);
+    expect(pills).toEqual(macflyProfile.genres.map((g) => g.name));
+  });
+});

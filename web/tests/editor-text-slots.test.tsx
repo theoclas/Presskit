@@ -52,6 +52,7 @@ function profile(overrides: Partial<EditorProfileDto> = {}): EditorProfileDto {
     publicPhone: null,
     palette: 'SUNSET',
     template: 'CLASSIC',
+    monoPhotos: true,
     texts: { heroTitle: 'Club show' },
     bookingForm: [],
     show: { gallery: true, rider: true, events: true, openDateRow: true, form: true },
@@ -138,6 +139,12 @@ describe('parche de textos', () => {
     };
     expect(buildProfilePatch(initial, values)).toEqual({ city: 'Bogotá', show: { rider: false } });
     expect(buildProfilePatch(initial, { ...values, whatsappNumber: '57 300 111 2222' }).whatsappNumber).toBe('573001112222');
+  });
+
+  it('las fotos en blanco y negro vienen encendidas y solo viajan si cambian', () => {
+    const initial = profileFormValues(profile());
+    expect(initial.monoPhotos).toBe(true);
+    expect(buildProfilePatch(initial, { ...initial, monoPhotos: false })).toEqual({ monoPhotos: false });
   });
 
   it('la plantilla arranca en la guardada y solo viaja si cambió', () => {

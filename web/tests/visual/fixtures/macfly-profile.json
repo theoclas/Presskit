@@ -4,6 +4,7 @@
   "city": "Medellín",
   "palette": "SUNSET",
   "template": "CLASSIC",
+  "monoPhotos": true,
   "texts": {
     "navTag": "Booking",
     "navArtists": "Artistas",

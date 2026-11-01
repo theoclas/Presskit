@@ -112,6 +112,10 @@ export class UpdateProfileBody implements UpdateProfileInput {
   @IsIn(TEMPLATE_KEYS)
   template?: TemplateKey;
 
+  @ValidateIf(present)
+  @IsBoolean()
+  monoPhotos?: boolean;
+
   /** Se valida con validateTexts (shared): solo claves de PAGE_TEXT_SLOTS. */
   @ValidateIf(present)
   @IsObject()

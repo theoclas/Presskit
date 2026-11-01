@@ -75,7 +75,7 @@ export function SignalView({ dj, mode = 'live' }: Props) {
   useHtmlTemplate('SIGNAL');
 
   return (
-    <div className={mode === 'preview' ? 'djp djs djs--preview' : 'djp djs'}>
+    <div className={['djp djs', mode === 'preview' ? 'djs--preview' : '', dj.monoPhotos ? '' : 'djs--color'].filter(Boolean).join(' ')}>
       <TemplateNav
         prefix="sg"
         displayName={dj.displayName}
