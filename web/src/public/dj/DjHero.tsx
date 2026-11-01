@@ -16,6 +16,12 @@ interface Props {
   miniCards: ReactNode | null;
 }
 
+/**
+ * Con una descripción más corta que esto, la columna derecha va a su alto natural: si no, la
+ * proporción 1.2fr/1fr de la plantilla estira las tarjetas para igualar un texto que no está.
+ */
+export const COMPACT_SUBTITLE_MAX = 160;
+
 export function DjHero({
   displayName,
   texts,
@@ -28,8 +34,10 @@ export function DjHero({
 }: Props) {
   const hasRight = !!heroImage || !!miniCards;
   const single = !(heroImage && miniCards);
+  const compact = [...texts.heroSubtitle].length < COMPACT_SUBTITLE_MAX;
+  const heroClass = ['hero', hasRight ? '' : 'hero--solo', compact ? 'hero--compact' : ''].filter(Boolean).join(' ');
   return (
-    <header className={hasRight ? 'hero' : 'hero hero--solo'}>
+    <header className={heroClass}>
       <div className="hero-left">
         {texts.heroLabel ? <div className="hero-label">{texts.heroLabel}</div> : null}
         <h1 className="hero-title">{texts.heroTitle || displayName}</h1>

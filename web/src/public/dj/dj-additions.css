@@ -124,6 +124,27 @@
   }
 }
 
+/* La foto del hero da el alto de la columna derecha: se encuadra siempre en 16:9, como la de
+   la página original. Una foto vertical o cuadrada ya no alarga el hero ni las tarjetas. */
+.djp .hero-photo img {
+  aspect-ratio: 16 / 9;
+}
+
+/* Poco texto a la izquierda: foto y tarjetas a su alto natural, sin estirarse (DjHero). */
+@media (min-width: 961px) {
+  .djp .hero--compact .hero-right {
+    grid-template-rows: auto auto;
+  }
+
+  .djp .hero--compact .hero-right--single {
+    grid-template-rows: auto;
+  }
+
+  .djp .hero--compact .hero-left {
+    align-self: center;
+  }
+}
+
 .djp .grid--single {
   grid-template-columns: minmax(0, 1fr);
 }
