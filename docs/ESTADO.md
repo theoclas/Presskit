@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales** (Clásica + Signal, a elección del DJ): hechas y probadas, ver "Plantillas" abajo. Arreglo del hero estirado de la Clásica (`85cd3f2`) en producción.
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`84976ce`, migración `templates` aplicada): Clásica + Signal, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. Próximo: plantilla "Neon Groove" (propuesta 02 de Fernando) y fase 2 (mix y videos).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -59,7 +59,7 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
 ## Producción (M1 + M2)
 - **https://booking.fersuastudio.com**, con HTTPS por certbot (vence el 2026-12-28 y se renueva solo), `noindex` mientras sea beta.
 - **VPS:** `~/apps/fersuastudio-booking`, proyecto compose `fersua-booking` (db, migrate, api, edge). El edge escucha en `127.0.0.1:8090`; el vhost del host es `/etc/nginx/sites-available/fersua-booking.conf`.
-- **Versión desplegada:** `412d1b2` (M4), con la migración `m4_hardening` aplicada. Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
+- **Versión desplegada:** `84976ce` (plantillas, 2026-11-01), con la migración `20261101120000_templates` aplicada (todos los perfiles en `CLASSIC`). Antes, `412d1b2` (M4). Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
 - **Respaldos (crontab de `deploy`, UTC):**
   - 08:15, nocturno local (`scripts/backup.sh nightly`);
   - 08:45, copia externa cifrada a Google Drive (`scripts/offsite-backup.sh nightly`, repositorio `rclone:gdrive-fersua:fersua-booking-respaldos-v2` desde el 2026-10-10);
