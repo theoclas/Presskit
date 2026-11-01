@@ -23,10 +23,11 @@ export const PALETTE_KEYS = [
   'GROOVE',
   'NOIR',
   'HYPERWAVE',
+  'VERTEX',
 ] as const;
 export type PaletteKey = (typeof PALETTE_KEYS)[number];
 
-export const TEMPLATE_KEYS = ['CLASSIC', 'SIGNAL', 'GROOVE', 'NOIR', 'HYPERWAVE'] as const;
+export const TEMPLATE_KEYS = ['CLASSIC', 'SIGNAL', 'GROOVE', 'NOIR', 'HYPERWAVE', 'VERTEX'] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const SOCIAL_PLATFORM_KEYS = [

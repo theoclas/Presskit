@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`18deea6`, migraciones `templates`, `template_groove`, `mono_photos`, `template_noir` y `template_hyperwave` aplicadas): Clásica, Signal (con "Fotos en blanco y negro" opcional), Neon Groove (portada dividida), Editorial Noir e Hyperwave (mosaico), a elección del DJ en su editor, con **vista previa en vivo** junto a los textos (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. Próximo: fase 2 (mix y videos, instrucciones para Cursor en `docs/fase2-musica-y-videos.md`).
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`18deea6`, migraciones `templates`, `template_groove`, `mono_photos`, `template_noir` y `template_hyperwave` aplicadas): Clásica, Signal (con "Fotos en blanco y negro" opcional), Neon Groove (portada dividida), Editorial Noir e Hyperwave (mosaico), a elección del DJ en su editor, con **vista previa en vivo** junto a los textos (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la sexta plantilla, **Vertex Club** en pantalla dividida (migración `template_vertex`). Próximo: fase 2 (mix y videos, instrucciones para Cursor en `docs/fase2-musica-y-videos.md`).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -73,6 +73,17 @@
 **Por qué `srcdoc` y no un iframe a `/_preview`:** el sitio prohíbe enmarcarse (`frame-ancestors 'none'` y `X-Frame-Options: DENY`, contra clickjacking). Cambiarlo a `'self'` se descartó para no debilitar esa protección en producción; con `srcdoc` no hace falta tocar las cabeceras.
 
 **Verificación:** web 243 (29 archivos; pruebas nuevas de `previewDraft`), lint, typecheck, build, `ci:bundle`, `ci:compose`, regresión visual 11/11 (las plantillas públicas no cambian). En el admin local: escribir "Prueba en vivo" en el título la cambia al instante en la vista previa; elegir Signal sin guardar pinta Signal; abrir "Sección de fechas" baja a las fechas; la BD no cambia sin guardar; sin errores de consola.
+
+**Vertex Club (propuesta 05 de Fernando, 2026-11-02), en pantalla dividida:** el PDF repetía la estructura de Signal (foto a lo ancho en blanco y negro + nombre condensado + naranja). Se toma su estética industrial (carbón, gris cemento, naranja señalética, grano, flyer de club) con una **estructura propia**: en escritorio la identidad queda fija a la izquierda y los módulos numerados pasan a la derecha.
+
+| Parte | Dónde |
+|---|---|
+| `TemplateKey.VERTEX` y paleta `VERTEX`. Migración `20261102020000_template_vertex` | `api/prisma`, `packages/shared` |
+| Textos: reutiliza `heroLabel`, `bioTitle`, `listenCta`, `musicLabel` y `storyMoreCta` (marcados también para `VERTEX`); no suma textos nuevos | `packages/shared/src/text-slots.ts` |
+| Vista: menú fijo con cinta de señalización; panel fijo (`position: sticky`, alto de pantalla) con la foto en grises y grano (SVG `feTurbulence` en `data:`, permitido por `img-src data:`), franja naranja, esquina de visor, nombre en Big Shoulders Display con el «&» naranja, botones e íconos; columna de módulos con índice («01 Bio», «02 Música»…) y encabezados numerados: biografía, música como panel de conexiones («CH.01»), **fechas como boletas** con talón troquelado, **galería como tira de película** (perforaciones y «VX—01»), artistas, **rider como ficha técnica** (puntos guía solo si hay nota) y formulario con cinta. En teléfono y tableta (<1024 px) se recompone en una columna con el índice deslizable | `web/src/public/dj/vertex/` |
+| Fuentes Big Shoulders Display y JetBrains Mono (OFL, `@fontsource-variable/…`). Ojo: el paquete de Big Shoulders exporta `./*` → `./*.css`, así que se importa como `…/big-shoulders-display/wght` (sin `.css`) | `web/package.json`, `VertexView.tsx` |
+
+**Verificación (Vertex):** shared 45; api 496 y 123 e2e; web 247; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 13/13 (capturas base nuevas `dj-vertex-*`; las demás iguales). Local con fotos reales: a 1440 el panel izquierdo sigue fijo tras bajar 1.700 px; a 390 sin errores ni scroll horizontal; menú del teléfono y CTA fijo probados.
 
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
@@ -423,7 +434,7 @@ El cambio de DNS y Allset ya no están pendientes: se decidió no mover nada.
   - Acciones delicadas del admin (borrar, reiniciar contraseñas, asignar dueño, cambiar el correo de un DJ) piden contraseña + código otra vez (step-up, vale 5 min).
 - **Perfiles (M2):** el admin puede aprobar desde borrador (arma los perfiles él mismo; se le muestra lo que falta); aprobar y reactivar exigen el registro legal del art. 53; suspender solo desde aprobado. Las fotos de perfiles sin aprobar son privadas y se ven con URL firmada de 1 h. Un perfil aprobado se ve si no tiene dueño o si la cuenta del dueño está activa.
 - **Formulario:** catálogo fijo de campos. Cada solicitud se guarda y luego abre WhatsApp.
-- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal, Neon Groove, Editorial Noir y Hyperwave) + 12 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
+- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal, Neon Groove, Editorial Noir, Hyperwave y Vertex Club) + 13 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
 - **Imágenes:** WebP con sharp en un volumen Docker.
 - **URL:** `booking.fersuastudio.com/<slug>`, de forma definitiva (decisión del 2026-09-30). `fersuastudio.com` y Allset se quedan en Hostinger; no hay cambio de DNS.
 - **Semilla:** solo Mac Fly & Mike Bran, sin dueño, slug `macfly-mike-bran`. Allset queda fuera.

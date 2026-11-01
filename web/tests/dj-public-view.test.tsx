@@ -356,3 +356,50 @@ describe('DjPublicView con la plantilla Hyperwave (mosaico)', () => {
     expect(document.documentElement.dataset.template).toBeUndefined();
   });
 });
+
+describe('DjPublicView con la plantilla Vertex Club (pantalla dividida)', () => {
+  afterEach(cleanup);
+  const soundcloud = { platform: 'SOUNDCLOUD' as const, label: 'SoundCloud', url: 'https://soundcloud.com/macflymikebran' };
+  const vertex = { ...macflyProfile, template: 'VERTEX' as const, socials: [soundcloud] };
+
+  it('la identidad va en el panel fijo y los módulos numerados en la otra columna', () => {
+    const { container } = render(<DjPublicView dj={vertex} />);
+    expect(container.querySelector('.djv .vx-split > header.vx-pin h1')?.textContent).toBe(vertex.displayName);
+    expect(container.querySelector('.vx-pin .vx-amp')?.textContent).toBe('&');
+    const nums = [...container.querySelectorAll('.vx-flow .vx-num')].map((n) => n.textContent);
+    expect(nums[0]).toBe('01 —');
+    expect(nums).toEqual(nums.map((_, i) => `${String(i + 1).padStart(2, '0')} —`));
+    // El índice enlaza los mismos módulos, en el mismo orden.
+    const index = [...container.querySelectorAll('.vx-index a')].map((a) => a.getAttribute('href'));
+    expect(index).toEqual(['#bio', '#musica', '#fechas', '#galeria', '#artistas', '#rider', '#booking']);
+    for (const sel of ['#bio', '#musica .vx-patch-row', '.vx-module--tickets #fechas .shows', '.vx-strip .media-grid', '#artistas', '#rider .vx-spec', '#booking form']) {
+      expect(container.querySelector(sel), sel).toBeTruthy();
+    }
+    expect(screen.getByRole('link', { name: vertex.texts.listenCta }).getAttribute('href')).toBe(soundcloud.url);
+  });
+
+  it('el rider solo muestra la nota (con su línea de puntos) cuando la hay', () => {
+    const dj = { ...vertex, riderItems: [{ name: 'CDJ 3000', note: 'x2' }, { name: 'DJM V10', note: null }] };
+    const { container } = render(<DjPublicView dj={dj} />);
+    const rows = container.querySelectorAll('#rider .vx-spec li');
+    expect(rows[0]!.querySelector('.vx-spec-note')?.textContent).toBe('x2');
+    expect(rows[1]!.querySelector('.vx-spec-note')).toBeNull();
+    expect(rows[1]!.querySelector('.vx-spec-dots')).toBeNull();
+  });
+
+  it('sin secciones opcionales, el índice y los números se ajustan', () => {
+    const dj = { ...vertex, socials: [], members: [], show: { ...vertex.show, gallery: false, rider: false } };
+    const { container } = render(<DjPublicView dj={dj} />);
+    expect([...container.querySelectorAll('.vx-index a')].map((a) => a.getAttribute('href'))).toEqual(['#bio', '#fechas', '#booking']);
+    expect([...container.querySelectorAll('.vx-flow .vx-num')].map((n) => n.textContent)).toEqual(['01 —', '02 —', '03 —']);
+  });
+
+  it('pone data-template en <html> y el texto del DJ nunca es HTML', () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const { container, unmount } = render(<DjPublicView dj={{ ...vertex, displayName: `${evil} & co`, texts: { ...vertex.texts, heroSubtitle: evil } }} />);
+    expect(document.documentElement.dataset.template).toBe('VERTEX');
+    expect(container.querySelector('img[src="x"]')).toBeNull();
+    unmount();
+    expect(document.documentElement.dataset.template).toBeUndefined();
+  });
+});

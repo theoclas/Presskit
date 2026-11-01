@@ -37,4 +37,9 @@ export const TEMPLATES: Record<TemplateKey, Template> = {
     description: 'Futurista en mosaico: toda la página en tarjetas de vidrio con brillo azul y el nombre en cromo.',
     suggestedPalette: 'HYPERWAVE',
   },
+  VERTEX: {
+    name: 'Vertex Club',
+    description: 'Industrial y directa: la foto y el nombre quedan fijos a un lado y los módulos numerados pasan al otro.',
+    suggestedPalette: 'VERTEX',
+  },
 };

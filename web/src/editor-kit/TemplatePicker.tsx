@@ -60,6 +60,50 @@ const bar = (width: string, height: number, background: string, extra: CSSProper
 /** Boceto de la portada de cada plantilla (decorativo). */
 function TemplateSketch({ template }: { template: TemplateKey }) {
   const p = PALETTES[TEMPLATES[template].suggestedPalette];
+  if (template === 'VERTEX') {
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          height: 96,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          overflow: 'hidden',
+          border: `1px solid ${p.border}`,
+          background: p.bg,
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            padding: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            gap: 3,
+            background: 'linear-gradient(0deg, #0b0b0c 30%, #4a4a4a)',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 0, right: '18%', width: '18%', height: '70%', background: p.accent, opacity: 0.8 }} />
+          <div style={bar('80%', 9, p.text, { position: 'relative', borderRadius: 0 })} />
+          <div style={{ display: 'flex', gap: 3, position: 'relative' }}>
+            <div style={bar('16%', 9, p.accent, { borderRadius: 0 })} />
+            <div style={bar('55%', 9, p.text, { borderRadius: 0 })} />
+          </div>
+          <div style={bar('45%', 7, p.accent, { marginTop: 3, position: 'relative', borderRadius: 0 })} />
+        </div>
+        <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, borderLeft: `1px solid ${p.border}` }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <div style={bar('14%', 4, p.accent, { borderRadius: 0 })} />
+              <div style={bar('60%', 6, p.text, { borderRadius: 0 })} />
+            </div>
+          ))}
+          <div style={{ height: 4, marginTop: 'auto', background: `repeating-linear-gradient(-45deg, ${p.accent} 0 4px, ${p.bg} 4px 8px)` }} />
+        </div>
+      </div>
+    );
+  }
   if (template === 'HYPERWAVE') {
     const tile = (area: string, extra: CSSProperties = {}): CSSProperties => ({
       gridArea: area,

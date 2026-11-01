@@ -247,6 +247,25 @@ export const PALETTES: Record<PaletteKey, Palette> = {
     onAccent: '#ffffff',
     themeColor: '#04060c',
   },
+  // La de la plantilla Vertex Club: negro carbón, blanco roto, gris cemento y naranja señalética.
+  VERTEX: {
+    name: 'Vertex (carbón/naranja)',
+    bg: '#111214',
+    bgSoft: '#1a1b1e',
+    card: 'rgba(28,29,32,.96)',
+    muted: '#8f8d88',
+    text: '#efebe4',
+    accent: '#ff5a1f',
+    accent2: '#8a8a86',
+    border: 'rgba(239,235,228,.16)',
+    accentRgb: '255 90 31',
+    accent2Rgb: '138 138 134',
+    surfaceRgb: '28 29 32',
+    lineRgb: '138 138 134',
+    textRgb: '239 235 228',
+    onAccent: '#111214',
+    themeColor: '#111214',
+  },
 };
 
 /** Variables CSS de una paleta, para aplicarlas en un contenedor o en <html>. */

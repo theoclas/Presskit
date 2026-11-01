@@ -57,6 +57,7 @@ enum PaletteKey {
   GROOVE
   NOIR
   HYPERWAVE
+  VERTEX
 }
 
 /// Plantilla visual de la página pública (todas leen el mismo contenido).
@@ -66,6 +67,7 @@ enum TemplateKey {
   GROOVE
   NOIR
   HYPERWAVE
+  VERTEX
 }
 
 enum SocialPlatform {

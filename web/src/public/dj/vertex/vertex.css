@@ -1,0 +1,1035 @@
+/*
+ * Plantilla «Vertex Club» (propuesta 05): industrial, estilo flyer de club, en pantalla dividida.
+ * El contenedor lleva .djp.djv: las secciones reutilizadas (artistas, fechas, formulario,
+ * diálogos) conservan su CSS de dj-template.css y aquí se reajusta el aspecto, con las variables
+ * de la paleta (Vertex: carbón, blanco roto, gris cemento de acento 2 y naranja señalética).
+ */
+
+html[data-template="VERTEX"][data-surface="public"] body {
+  background: var(--bg);
+}
+
+html[data-template="VERTEX"] {
+  scroll-padding-top: 72px;
+}
+
+.djp.djv {
+  --vx-display: "Big Shoulders Display Variable", "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --vx-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --vx-line: rgb(var(--text-rgb) / .14);
+  --vx-hazard: repeating-linear-gradient(-45deg, var(--accent) 0 10px, var(--bg) 10px 20px);
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: clip;
+}
+
+.djp.djv ::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.djp.djv .vx-arrow {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* ===== MENÚ (barra fija con cinta de señalización) ===== */
+.djp.djv .vx-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  background: var(--bg);
+}
+
+.djp.djv .vx-nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 4px;
+  background: var(--vx-hazard);
+}
+
+.djp.djv--preview .vx-nav {
+  position: absolute;
+}
+
+.djp.djv .vx-wrap {
+  padding: 0 clamp(16px, 3vw, 40px);
+}
+
+.djp.djv .vx-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  height: 60px;
+}
+
+.djp.djv .vx-brand {
+  max-width: 16ch;
+  font-family: var(--vx-display);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: .9;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.djp.djv .vx-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.djp.djv .vx-nav-links > a {
+  position: relative;
+  padding: 8px 0;
+  text-decoration: none;
+  /* Línea que se desplaza al pasar el ratón. */
+  background: linear-gradient(var(--accent), var(--accent)) left bottom / 0 2px no-repeat;
+  transition: background-size .2s ease;
+}
+
+.djp.djv .vx-nav-links > a:hover {
+  background-size: 100% 2px;
+}
+
+.djp.djv .vx-nav-links .vx-nav-cta {
+  padding: 9px 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.djp.djv .vx-burger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.djp.djv .vx-burger span {
+  display: block;
+  width: 26px;
+  height: 3px;
+  background: currentColor;
+  transition: transform .2s ease, opacity .2s ease;
+}
+
+.djp.djv .vx-burger.is-open span:nth-child(1) {
+  transform: translateY(9px) rotate(45deg);
+}
+
+.djp.djv .vx-burger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.djp.djv .vx-burger.is-open span:nth-child(3) {
+  transform: translateY(-9px) rotate(-45deg);
+}
+
+.djp.djv .vx-menu {
+  position: fixed;
+  inset: 64px 0 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px clamp(16px, 3vw, 40px) calc(24px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  overflow-y: auto;
+  counter-reset: vxmenu;
+}
+
+.djp.djv .vx-menu[hidden] {
+  display: none;
+}
+
+.djp.djv .vx-menu a {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--vx-line);
+  font-family: var(--vx-display);
+  font-size: clamp(34px, 10vw, 56px);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  text-decoration: none;
+  counter-increment: vxmenu;
+}
+
+.djp.djv .vx-menu a::before {
+  content: counter(vxmenu, decimal-leading-zero);
+  font-family: var(--vx-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.djp.djv .vx-menu .vx-menu-cta {
+  color: var(--accent);
+}
+
+/* ===== PANTALLA DIVIDIDA ===== */
+.djp.djv .vx-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* La identidad queda fija mientras la columna derecha se desplaza. */
+.djp.djv .vx-pin {
+  position: sticky;
+  top: 0;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  height: 100vh;
+  min-height: 560px;
+  padding: 96px clamp(24px, 3.5vw, 56px) clamp(28px, 4vw, 56px);
+  overflow: hidden;
+  background: #0b0b0c;
+  border-right: 1px solid var(--vx-line);
+}
+
+.djp.djv--preview .vx-pin {
+  position: relative;
+}
+
+.djp.djv .vx-pin-media {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+}
+
+.djp.djv .vx-pin-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 55% 25%;
+  display: block;
+  filter: grayscale(1) contrast(1.25) brightness(.78);
+}
+
+.djp.djv .vx-pin-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(0deg, rgb(11 11 12 / .95) 0%, rgb(11 11 12 / .55) 42%, transparent 70%),
+    linear-gradient(90deg, rgb(11 11 12 / .5), transparent 60%);
+}
+
+/* Grano fino de película sobre la foto. */
+.djp.djv .vx-grain {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  opacity: .35;
+  pointer-events: none;
+}
+
+/* Franja naranja vertical (como el bloque del flyer). */
+.djp.djv .vx-stripe {
+  position: absolute;
+  top: 0;
+  right: 14%;
+  z-index: -1;
+  width: 18%;
+  height: 72%;
+  background: linear-gradient(180deg, rgb(var(--accent-rgb) / .85), rgb(var(--accent-rgb) / .15));
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.djp.djv .vx-pin--plain .vx-stripe {
+  mix-blend-mode: normal;
+  opacity: .5;
+}
+
+.djp.djv .vx-corner {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  width: 28px;
+  height: 28px;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+.djp.djv .vx-pin-content {
+  position: relative;
+  width: 100%;
+}
+
+.djp.djv .vx-meta,
+.djp.djv .vx-tagline,
+.djp.djv .vx-genres {
+  margin: 0;
+  font-family: var(--vx-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.djp.djv .vx-meta {
+  margin-bottom: 14px;
+  color: var(--accent);
+}
+
+.djp.djv .vx-name {
+  margin: 0;
+  font-family: var(--vx-display);
+  font-weight: 900;
+  line-height: .86;
+  letter-spacing: -.005em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.djp.djv .vx-amp {
+  color: var(--accent);
+}
+
+.djp.djv .vx-name--xl {
+  font-size: clamp(72px, 10vw, 168px);
+}
+
+.djp.djv .vx-name--l {
+  font-size: clamp(60px, 8vw, 136px);
+}
+
+.djp.djv .vx-name--m {
+  font-size: clamp(46px, 5.6vw, 96px);
+}
+
+.djp.djv .vx-name--s {
+  font-size: clamp(36px, 4.2vw, 70px);
+}
+
+.djp.djv .vx-tagline {
+  margin-top: 18px;
+}
+
+.djp.djv .vx-genres {
+  margin-top: 8px;
+  color: rgb(var(--text-rgb) / .7);
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+.djp.djv .vx-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.djp.djv .vx-btn,
+.djp.djv .vx-sticky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 22px;
+  border: 2px solid transparent;
+  font-family: var(--vx-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: transform .12s ease, background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.djp.djv .vx-btn--signal,
+.djp.djv .vx-sticky {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.djp.djv .vx-btn--signal:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--text);
+}
+
+.djp.djv .vx-btn--line {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.djp.djv .vx-btn--line:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.djp.djv .vx-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.djp.djv .vx-icons {
+  display: flex;
+  gap: 6px;
+  margin-top: 22px;
+}
+
+.djp.djv .vx-icons a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--vx-line);
+  color: var(--text);
+}
+
+.djp.djv .vx-icons a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.djp.djv .vx-icons .si {
+  width: 17px;
+  height: 17px;
+}
+
+/* ===== COLUMNA DE MÓDULOS ===== */
+.djp.djv .vx-flow {
+  min-width: 0;
+  padding: 96px clamp(20px, 4vw, 64px) 0;
+}
+
+.djp.djv .vx-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 28px;
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.djp.djv .vx-index a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--vx-line);
+  text-decoration: none;
+}
+
+.djp.djv .vx-index a span {
+  color: var(--accent);
+}
+
+.djp.djv .vx-index a:hover {
+  border-color: var(--accent);
+}
+
+.djp.djv .vx-module {
+  padding: 36px 0 44px;
+  border: 0;
+  border-top: 1px solid var(--vx-line);
+  border-radius: 0;
+  background: none;
+}
+
+.djp.djv .vx-module section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.djp.djv .vx-head {
+  margin-bottom: 18px;
+}
+
+.djp.djv .vx-num {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--vx-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--accent);
+}
+
+.djp.djv .vx-title,
+.djp.djv .sec-title {
+  margin: 0;
+  font-family: var(--vx-display);
+  font-size: clamp(40px, 4.4vw, 64px);
+  font-weight: 900;
+  line-height: .9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.djp.djv .sec-sub {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.djp.djv .vx-bio-text {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgb(var(--text-rgb) / .85);
+  white-space: pre-line;
+}
+
+.djp.djv .vx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 6px 0;
+  font-family: var(--vx-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--accent);
+  background: linear-gradient(var(--accent), var(--accent)) left bottom / 0 2px no-repeat;
+  transition: background-size .2s ease;
+}
+
+.djp.djv .vx-link:hover {
+  background-size: 100% 2px;
+}
+
+/* Música: filas tipo panel de conexiones. */
+.djp.djv .vx-patch {
+  display: grid;
+  border-top: 1px solid var(--vx-line);
+}
+
+.djp.djv .vx-patch-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--vx-line);
+  text-decoration: none;
+  transition: padding .15s ease, color .15s ease;
+}
+
+.djp.djv .vx-patch-row:hover {
+  padding-left: 12px;
+  color: var(--accent);
+}
+
+.djp.djv .vx-patch-n {
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.djp.djv .vx-patch-row .si {
+  width: 20px;
+  height: 20px;
+}
+
+.djp.djv .vx-patch-label {
+  flex: 1;
+  font-family: var(--vx-display);
+  font-size: 26px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* Fechas como boletas de entrada, con talón troquelado. */
+.djp.djv .vx-module--tickets .shows {
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.djp.djv .vx-module--tickets .show-item {
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--vx-line);
+  border-radius: 4px;
+  background: rgb(var(--surface-rgb) / .9);
+  font-size: 14px;
+}
+
+.djp.djv .vx-module--tickets .show-date {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--vx-display);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  line-height: 1;
+  text-align: center;
+}
+
+.djp.djv .vx-module--tickets .show-item--open .show-date {
+  background: none;
+  color: var(--accent);
+  border-right: 1px solid var(--vx-line);
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.djp.djv .vx-module--tickets .show-place {
+  padding: 14px 18px;
+  color: var(--text);
+}
+
+.djp.djv .vx-module--tickets .show-cta {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-left: 2px dashed rgb(var(--text-rgb) / .25);
+}
+
+.djp.djv .show-cta a,
+.djp.djv .show-cta button {
+  padding: 8px 12px;
+  border: 1px solid var(--text);
+  border-radius: 0;
+  background: none;
+  color: var(--text);
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.djp.djv .show-cta a:hover,
+.djp.djv .show-cta button:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.djp.djv .shows-note,
+.djp.djv .shows-empty {
+  font-family: var(--vx-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Galería como tira de película, con perforaciones y número de cuadro. */
+.djp.djv .vx-strip {
+  padding: 14px 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 8px, rgb(var(--text-rgb) / .2) 8px 18px) top / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 8px, rgb(var(--text-rgb) / .2) 8px 18px) bottom / 100% 6px no-repeat,
+    #050505;
+}
+
+.djp.djv .vx-strip .media-grid {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0 6px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  counter-reset: vxframe;
+}
+
+.djp.djv .vx-strip .media-item {
+  position: relative;
+  flex: 0 0 min(64%, 320px);
+  aspect-ratio: 4 / 5;
+  border: 0;
+  border-radius: 0;
+  scroll-snap-align: start;
+  counter-increment: vxframe;
+}
+
+.djp.djv .vx-strip .media-item::after {
+  content: "VX—" counter(vxframe, decimal-leading-zero);
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--vx-mono);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.djp.djv .vx-strip .media-item > button {
+  width: 100%;
+  height: 100%;
+}
+
+.djp.djv .vx-strip .media-item img {
+  filter: grayscale(1) contrast(1.15);
+  transition: filter .25s ease;
+}
+
+.djp.djv .vx-strip .media-item:hover img {
+  filter: none;
+}
+
+/* Artistas */
+.djp.djv .artists-list {
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.djp.djv .artist-card {
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.djp.djv .artist-photo {
+  aspect-ratio: 4 / 5;
+  border-radius: 0;
+}
+
+.djp.djv .artist-photo img {
+  filter: grayscale(1) contrast(1.15);
+}
+
+.djp.djv .artist-name {
+  font-family: var(--vx-display);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+.djp.djv .artist-role {
+  margin: 8px 0 10px;
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.djp.djv .artist-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgb(var(--text-rgb) / .8);
+}
+
+.djp.djv .socials a {
+  border-color: var(--vx-line);
+  border-radius: 0;
+  color: var(--text);
+  font-family: var(--vx-mono);
+}
+
+/* Rider como ficha técnica. */
+.djp.djv .vx-spec {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--vx-mono);
+  font-size: 13px;
+}
+
+.djp.djv .vx-spec li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--vx-line);
+}
+
+.djp.djv .vx-spec-n {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.djp.djv .vx-spec b {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.djp.djv .vx-spec-dots {
+  flex: 1;
+  min-width: 20px;
+  border-bottom: 2px dotted rgb(var(--text-rgb) / .25);
+}
+
+.djp.djv .vx-spec-note {
+  color: var(--muted);
+  text-align: right;
+}
+
+/* Formulario */
+.djp.djv .vx-module--booking {
+  position: relative;
+}
+
+.djp.djv .vx-module--booking::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(--vx-hazard);
+}
+
+.djp.djv form label {
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.djp.djv form label.consent {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.djp.djv input,
+.djp.djv textarea,
+.djp.djv select {
+  border-radius: 0;
+  border-color: rgb(var(--text-rgb) / .25);
+  background: #0b0b0c;
+}
+
+.djp.djv input:focus,
+.djp.djv textarea:focus,
+.djp.djv select:focus {
+  border-color: var(--accent);
+}
+
+.djp.djv .btn {
+  border-radius: 0;
+  padding: 12px 20px;
+  font-family: var(--vx-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.djp.djv .btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.djp.djv .btn-secondary {
+  border: 2px solid var(--text);
+  background: transparent;
+}
+
+.djp.djv dialog.dlg,
+.djp.djv .dlg-media,
+.djp.djv .form-alert,
+.djp.djv .booking-success {
+  border-radius: 0;
+}
+
+/* Pie (dentro de la columna de módulos) */
+.djp.djv .vx-footer {
+  margin: 0;
+  padding: 36px 0 40px;
+  border-top: 1px solid var(--vx-line);
+  text-align: left;
+  font-family: var(--vx-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.djp.djv .vx-footer-name {
+  margin: 0 0 10px;
+  font-family: var(--vx-display);
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 900;
+  line-height: .9;
+  text-transform: uppercase;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.djp.djv .vx-footer-copy {
+  margin: 0;
+}
+
+/* CTA fijo del teléfono */
+.djp.djv .vx-sticky {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: none;
+  visibility: hidden;
+  transform: translateY(160%);
+  transition: transform .25s ease, visibility 0s linear .25s;
+}
+
+.djp.djv .vx-sticky.is-on {
+  visibility: visible;
+  transform: none;
+  transition: transform .25s ease;
+}
+
+/* ===== TABLETA Y TELÉFONO: se recompone en una columna ===== */
+@media (max-width: 1023px) {
+  .djp.djv .vx-nav-links {
+    display: none;
+  }
+
+  .djp.djv .vx-burger {
+    display: inline-flex;
+  }
+
+  .djp.djv .vx-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .djp.djv .vx-pin {
+    position: relative;
+    height: auto;
+    min-height: 92svh;
+    padding: 96px clamp(16px, 4vw, 40px) 36px;
+    border-right: 0;
+  }
+
+  .djp.djv .vx-pin-media img {
+    object-position: 50% 20%;
+  }
+
+  .djp.djv .vx-stripe {
+    right: 8%;
+    width: 24%;
+    height: 55%;
+  }
+
+  .djp.djv .vx-cta .vx-btn {
+    flex: 1 1 100%;
+  }
+
+  .djp.djv .vx-flow {
+    padding-top: 28px;
+  }
+
+  /* El índice de módulos se desliza de lado. */
+  .djp.djv .vx-index {
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * clamp(20px, 4vw, 64px));
+    padding: 0 clamp(20px, 4vw, 64px) 22px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .djp.djv .vx-index a {
+    flex: none;
+  }
+
+  .djp.djv .vx-sticky {
+    display: flex;
+  }
+
+  .djp.djv .vx-footer {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 1024px) {
+  .djp.djv .vx-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .djp.djv .vx-module--tickets .show-item {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+
+  .djp.djv .vx-module--tickets .show-cta {
+    grid-column: 1 / -1;
+    padding: 10px 14px;
+    border-left: 0;
+    border-top: 2px dashed rgb(var(--text-rgb) / .25);
+  }
+
+  .djp.djv .artist-card {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .djp.djv .artist-name {
+    font-size: 28px;
+  }
+
+  .djp.djv .vx-spec li {
+    flex-wrap: wrap;
+  }
+
+  .djp.djv .vx-spec-dots {
+    display: none;
+  }
+
+  .djp.djv .vx-spec-note {
+    flex-basis: 100%;
+    padding-left: 30px;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .djp.djv .vx-sticky,
+  .djp.djv .vx-btn,
+  .djp.djv .vx-patch-row,
+  .djp.djv .vx-strip .media-item img {
+    transition: none;
+  }
+}
