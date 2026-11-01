@@ -27,7 +27,7 @@ resuelve las contradicciones entre esos documentos. Si algo choca, **manda este 
 | Contenido | Textos, fotos, fechas, rider, redes con íconos de una lista fija, integrantes y paleta. Todo con límites que valida el servidor |
 | Formulario | Catálogo fijo de campos: correo 1-3, teléfono 1-3, dirección 1-2, evento, presupuesto… El DJ activa, obliga, renombra y ordena |
 | Envío del formulario | Se guarda en la BD (bandeja del DJ y del admin) y después abre WhatsApp con el resumen que arma el servidor |
-| Diseño | Plantilla fija + 8 paletas predefinidas. La naranja/rosa actual es la de por defecto. **Cambio del 2026-11-01 (Fernando):** varias plantillas que el DJ elige en su editor, todas con el mismo contenido: Clásica (la de siempre, por defecto) y Signal; 9 paletas (suma Signal). Ver `docs/ESTADO.md` |
+| Diseño | Plantilla fija + 8 paletas predefinidas. La naranja/rosa actual es la de por defecto. **Cambio del 2026-11-01 (Fernando):** varias plantillas que el DJ elige en su editor, todas con el mismo contenido: Clásica (la de siempre, por defecto), Signal y Neon Groove; 10 paletas (suman Signal y Groove). Ver `docs/ESTADO.md` |
 | Imágenes | En el VPS, en un volumen Docker. sharp las convierte a WebP con variantes y sin EXIF/GPS |
 | URLs | `fersuastudio.com/<slug>`. Index: grilla de tarjetas estilo Mac Fly, con buscador, filtro por género y destacados |
 | Lanzamiento | **Decisión del 2026-09-30: la plataforma de DJs vive de forma DEFINITIVA en `booking.fersuastudio.com`.** No hay cambio de DNS del dominio principal: `fersuastudio.com` (incluido Allset) se queda en el hosting compartido de Hostinger y no se toca |

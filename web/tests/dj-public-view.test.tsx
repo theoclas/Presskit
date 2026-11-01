@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { macflyProfile } from '../src/dev-fixtures/macfly';
 import { DjPublicView } from '../src/public/dj/DjPublicView';
-import { nameSize } from '../src/public/dj/signal/SignalView';
+import { nameSize } from '../src/public/dj/templateKit';
 
 describe('DjPublicView', () => {
   afterEach(cleanup);
@@ -148,5 +148,75 @@ describe('DjPublicView con la plantilla Signal', () => {
     expect(nameSize('Mike Bran & Macfly')).toBe('l');
     expect(nameSize('Los del barrio sound system')).toBe('m');
     expect(nameSize('Un nombre artístico larguísimo de verdad')).toBe('s');
+  });
+});
+
+describe('DjPublicView con la plantilla Neon Groove', () => {
+  afterEach(cleanup);
+  const soundcloud = { platform: 'SOUNDCLOUD' as const, label: 'SoundCloud', url: 'https://soundcloud.com/macflymikebran' };
+  const groove = { ...macflyProfile, template: 'GROOVE' as const, socials: [soundcloud] };
+  const manyEvents = Array.from({ length: 5 }, (_, i) => ({ ...macflyProfile.events[0]!, id: `e${i}`, venue: `Club ${i}` }));
+
+  it('pinta Groove con el mismo contenido: nombre con el «&» de acento, biografía, fechas y formulario', () => {
+    const { container } = render(<DjPublicView dj={groove} />);
+    expect(container.querySelector('.djg')).toBeTruthy();
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe(groove.displayName);
+    expect(h1.querySelector('.gv-amp')?.textContent).toBe('&');
+    expect(container.querySelector('.gv-eyebrow')?.textContent).toBe(`${groove.texts.heroTitle} · Medellín`);
+    expect(screen.getByRole('heading', { level: 2, name: groove.texts.bioTitle })).toBeTruthy();
+    expect(container.querySelector('#bio')?.textContent).toContain(groove.texts.heroSubtitle);
+    expect(container.querySelector('.gv-dates #fechas .shows')).toBeTruthy();
+    expect(container.querySelectorAll('#galeria .media-item img').length).toBe(groove.gallery.length);
+    expect(container.querySelectorAll('#rider li').length).toBe(groove.riderItems.length);
+    expect(container.querySelector('#booking form')).toBeTruthy();
+  });
+
+  it('«Escuchar ahora» abre la red de música del perfil; sin ella, el segundo botón es WhatsApp', () => {
+    render(<DjPublicView dj={groove} />);
+    const listen = screen.getByRole('link', { name: groove.texts.listenCta });
+    expect(listen.getAttribute('href')).toBe(soundcloud.url);
+    expect(listen.getAttribute('target')).toBe('_blank');
+    cleanup();
+    render(<DjPublicView dj={{ ...groove, socials: [] }} />);
+    expect(screen.queryByRole('link', { name: groove.texts.listenCta })).toBeNull();
+    const wa = screen.getAllByRole('link', { name: groove.texts.heroPrimaryCta });
+    expect(wa[0]!.getAttribute('href')).toBe(groove.whatsapp.heroUrl);
+  });
+
+  it('el botón principal va al formulario; sin formulario, a WhatsApp', () => {
+    const { container } = render(<DjPublicView dj={groove} />);
+    expect(container.querySelector('.gv-btn--primary')?.getAttribute('href')).toBe('#booking');
+    cleanup();
+    const noForm = render(<DjPublicView dj={{ ...groove, show: { ...groove.show, form: false } }} />);
+    expect(noForm.container.querySelector('.gv-btn--primary')?.getAttribute('href')).toBe(groove.whatsapp.heroUrl);
+  });
+
+  it('con más de 3 fechas, la tarjeta se resume y «Ver las N fechas» la despliega', () => {
+    const { container } = render(<DjPublicView dj={{ ...groove, events: manyEvents }} />);
+    const card = container.querySelector('.gv-dates')!;
+    const more = screen.getByRole('button', { name: 'Ver las 5 fechas' });
+    expect(card.classList.contains('is-expanded')).toBe(false);
+    fireEvent.click(more);
+    expect(card.classList.contains('is-expanded')).toBe(true);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(more.textContent).toBe('Ver menos');
+  });
+
+  it('los accesos rápidos solo enlazan lo que existe', () => {
+    const { container } = render(<DjPublicView dj={{ ...groove, socials: [], show: { ...groove.show, rider: false } }} />);
+    const tiles = [...container.querySelectorAll('.gv-tile')].map((a) => a.getAttribute('href'));
+    expect(tiles).toEqual(['#bio', '#galeria']);
+  });
+
+  it('pone data-template en <html> y el texto del DJ nunca es HTML', () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const { container, unmount } = render(
+      <DjPublicView dj={{ ...groove, displayName: `${evil} & co`, texts: { ...groove.texts, heroSubtitle: evil } }} />,
+    );
+    expect(document.documentElement.dataset.template).toBe('GROOVE');
+    expect(container.querySelector('img[src="x"]')).toBeNull();
+    unmount();
+    expect(document.documentElement.dataset.template).toBeUndefined();
   });
 });

@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`84976ce`, migración `templates` aplicada): Clásica + Signal, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. Próximo: plantilla "Neon Groove" (propuesta 02 de Fernando) y fase 2 (mix y videos).
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`84976ce`, migración `templates` aplicada): Clásica + Signal, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Neon Groove** (tercera plantilla, migración `template_groove`): hecha, probada y en `main`, **falta desplegarla**. Próximo: fase 2 (mix y videos).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -19,6 +19,18 @@
 | Regresión visual: capturas base `dj-signal-movil` y `dj-signal-escritorio`; las de la clásica no cambiaron | `web/tests/visual` |
 
 **Verificación (2026-11-01):** shared 45; api 496 unitarias y 123 e2e; web 221 (28 archivos); typecheck y lint de api y web; `prisma migrate diff` sin drift; regresión visual 5/5. En el navegador (local, Playwright): Signal a 1440 y 390 sin errores de consola ni scroll horizontal, menú del teléfono (abre, foco al primer enlace, Escape cierra), CTA fijo (oculto arriba y en el formulario); en el admin, elegir Clásica + "Usar esa paleta" + guardar deja la BD en `CLASSIC`/`SUNSET`.
+
+**Neon Groove (propuesta 02 de Fernando, 2026-11-01):**
+
+| Parte | Dónde |
+|---|---|
+| `TemplateKey.GROOVE` y paleta `GROOVE` (negro tinta, naranja, violeta). Migración `20261101180000_template_groove` | `api/prisma`, `packages/shared` |
+| Textos solo de Groove: `bioTitle` ("Biografía"), `listenCta` ("Escuchar ahora"), `musicLabel` ("Música"); `storyMoreCta` lo comparten Signal y Groove; `heroLabel` y los textos sobre la foto quedan de Clásica y Signal | `packages/shared/src/text-slots.ts` |
+| Vista: foto teñida de violeta y naranja (`mix-blend-mode: color` sobre la foto en grises: cualquier foto queda igual de "neón"; con otra paleta toma sus colores), aro y brillos, nombre en Archivo cursiva ancha con el "&" de acento, etiqueta superior = título de la portada · ciudad, botón principal al formulario (o WhatsApp), "Escuchar ahora" a la primera red de música del perfil (SoundCloud, Mixcloud, Spotify…; si no hay, el segundo botón es WhatsApp), íconos de redes en el menú, accesos rápidos en el teléfono (solo los que existen), tarjeta de biografía y tarjeta de fechas (3 visibles y "Ver las N fechas"), artistas, galería en carrusel con flechas, rider en tarjetas, formulario y CTA fijo en el teléfono | `web/src/public/dj/groove/` |
+| Compartido por Signal y Groove: menú (`TemplateNav`, con prefijo de clases) y `templateKit` (`nameSize`, `useHtmlTemplate`, `useHeroScroll`) | `web/src/public/dj/` |
+| Fuente Archivo (OFL, `@fontsource-variable/archivo`, ejes de ancho y peso, cursiva): propia del sitio, solo baja en páginas Groove | `web/package.json` |
+
+**Verificación (2026-11-01, Groove):** shared 45; api 496 y 123 e2e; web 227; lint y typecheck; build, `ci:bundle`, `ci:compose`; `prisma migrate diff` sin drift; regresión visual 7/7 (Clásica y Signal sin cambios tras el refactor; capturas base nuevas `dj-groove-*`). Local con fotos reales a 1440 y 390: sin errores ni scroll horizontal; menú del teléfono, CTA fijo y selector de 3 plantillas en el admin probados.
 
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
@@ -369,7 +381,7 @@ El cambio de DNS y Allset ya no están pendientes: se decidió no mover nada.
   - Acciones delicadas del admin (borrar, reiniciar contraseñas, asignar dueño, cambiar el correo de un DJ) piden contraseña + código otra vez (step-up, vale 5 min).
 - **Perfiles (M2):** el admin puede aprobar desde borrador (arma los perfiles él mismo; se le muestra lo que falta); aprobar y reactivar exigen el registro legal del art. 53; suspender solo desde aprobado. Las fotos de perfiles sin aprobar son privadas y se ven con URL firmada de 1 h. Un perfil aprobado se ve si no tiene dueño o si la cuenta del dueño está activa.
 - **Formulario:** catálogo fijo de campos. Cada solicitud se guarda y luego abre WhatsApp.
-- **Diseño:** plantillas a elección del DJ (Clásica por defecto y Signal) + 9 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
+- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal y Neon Groove) + 10 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
 - **Imágenes:** WebP con sharp en un volumen Docker.
 - **URL:** `booking.fersuastudio.com/<slug>`, de forma definitiva (decisión del 2026-09-30). `fersuastudio.com` y Allset se quedan en Hostinger; no hay cambio de DNS.
 - **Semilla:** solo Mac Fly & Mike Bran, sin dueño, slug `macfly-mike-bran`. Allset queda fuera.

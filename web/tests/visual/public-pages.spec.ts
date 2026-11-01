@@ -34,6 +34,29 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
   });
 }
 
+// Neon Groove con dos redes del perfil (SoundCloud da el botón «Escuchar ahora» y los íconos del menú).
+const GROOVE_PATCH = {
+  template: 'GROOVE',
+  palette: 'GROOVE',
+  socials: [
+    { platform: 'INSTAGRAM', label: 'Instagram', url: 'https://www.instagram.com/macflymikebran/' },
+    { platform: 'SOUNDCLOUD', label: 'SoundCloud', url: 'https://soundcloud.com/macflymikebran' },
+  ],
+};
+
+for (const [name, viewport] of Object.entries(VIEWPORTS)) {
+  test(`página del DJ, plantilla Neon Groove · ${name} ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.unrouteAll();
+    await mockApi(page, GROOVE_PATCH);
+    await page.setViewportSize(viewport);
+    await page.goto(DJ_PATH);
+    await expect(page.locator('#booking-form')).toBeAttached();
+    await expect(page.locator('.djg')).toBeVisible();
+    await settle(page);
+    await expect(page).toHaveScreenshot(`dj-groove-${name}.png`, { fullPage: true });
+  });
+}
+
 test('index · movil 390x844', async ({ page }) => {
   await page.setViewportSize(VIEWPORTS.movil);
   await page.goto('/');

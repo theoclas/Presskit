@@ -60,6 +60,34 @@ const bar = (width: string, height: number, background: string, extra: CSSProper
 /** Boceto de la portada de cada plantilla (decorativo). */
 function TemplateSketch({ template }: { template: TemplateKey }) {
   const p = PALETTES[TEMPLATES[template].suggestedPalette];
+  if (template === 'GROOVE') {
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          height: 96,
+          borderRadius: 8,
+          padding: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: 4,
+          background: `radial-gradient(circle at 72% 40%, rgb(${p.accentRgb} / .55), transparent 38%), radial-gradient(circle at 95% 0%, rgb(${p.accent2Rgb} / .8), transparent 55%), linear-gradient(90deg, ${p.bg} 30%, rgb(${p.accent2Rgb} / .35))`,
+          border: `1px solid rgb(${p.accent2Rgb} / .45)`,
+        }}
+      >
+        <div style={bar('58%', 10, p.text, { transform: 'skewX(-12deg)' })} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          <div style={bar('9%', 10, p.accent, { transform: 'skewX(-12deg)' })} />
+          <div style={bar('40%', 10, p.text, { transform: 'skewX(-12deg)' })} />
+        </div>
+        <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
+          <div style={bar('30%', 9, p.accent)} />
+          <div style={bar('26%', 9, 'transparent', { border: `1px solid ${p.text}` })} />
+        </div>
+      </div>
+    );
+  }
   if (template === 'SIGNAL') {
     return (
       <div

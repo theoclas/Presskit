@@ -190,6 +190,25 @@ export const PALETTES: Record<PaletteKey, Palette> = {
     onAccent: '#090b0b',
     themeColor: '#090b0b',
   },
+  // La de la plantilla Neon Groove: negro tinta, naranja intenso, violeta eléctrico y blanco hielo.
+  GROOVE: {
+    name: 'Groove (naranja/violeta)',
+    bg: '#0e0b16',
+    bgSoft: '#151021',
+    card: 'rgba(30,22,48,.92)',
+    muted: '#a9a2c2',
+    text: '#f4f2fb',
+    accent: '#ff7a1a',
+    accent2: '#8b5cf6',
+    border: 'rgba(139,92,246,.35)',
+    accentRgb: '255 122 26',
+    accent2Rgb: '139 92 246',
+    surfaceRgb: '30 22 48',
+    lineRgb: '139 124 189',
+    textRgb: '244 242 251',
+    onAccent: '#120d1c',
+    themeColor: '#0e0b16',
+  },
 };
 
 /** Variables CSS de una paleta, para aplicarlas en un contenedor o en <html>. */

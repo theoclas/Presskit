@@ -54,12 +54,14 @@ enum PaletteKey {
   GOLD
   MONO
   SIGNAL
+  GROOVE
 }
 
 /// Plantilla visual de la página pública (todas leen el mismo contenido).
 enum TemplateKey {
   CLASSIC
   SIGNAL
+  GROOVE
 }
 
 enum SocialPlatform {

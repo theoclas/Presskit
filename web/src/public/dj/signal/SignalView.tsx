@@ -1,5 +1,5 @@
 import type { PublicDjProfileDto } from '@fersua/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { isWhatsappUrl } from '../../../lib/whatsapp';
 import { ResponsiveImage } from '../../components/ResponsiveImage';
 import { ArtistsSection } from '../ArtistsSection';
@@ -7,7 +7,8 @@ import { BookingSection } from '../BookingSection';
 import { GalleryGrid } from '../GalleryGrid';
 import { ShowsSection } from '../ShowsSection';
 import { SocialLinks } from '../SocialLinks';
-import { SignalNav, type SignalNavLink } from './SignalNav';
+import { TemplateNav, type TemplateNavLink } from '../TemplateNav';
+import { nameSize, useHeroScroll, useHtmlTemplate } from '../templateKit';
 import '@fontsource/anton/400.css';
 import './signal.css';
 
@@ -15,15 +16,6 @@ interface Props {
   dj: PublicDjProfileDto;
   /** 'preview': vista previa del editor (el formulario no se envía). */
   mode?: 'live' | 'preview';
-}
-
-/** Tamaño del nombre gigante según su largo: un nombre largo no rompe la portada. */
-export function nameSize(name: string): 'xl' | 'l' | 'm' | 's' {
-  const len = [...name.trim()].length;
-  if (len <= 10) return 'xl';
-  if (len <= 18) return 'l';
-  if (len <= 28) return 'm';
-  return 's';
 }
 
 function Arrow() {
@@ -71,54 +63,21 @@ export function SignalView({ dj, mode = 'live' }: Props) {
   const stickyHref = showBooking ? '#booking' : heroWa;
   const stickyLabel = showBooking ? texts.heroSecondaryCta : texts.heroPrimaryCta;
 
-  const navLinks: SignalNavLink[] = [
+  const navLinks: TemplateNavLink[] = [
     hasStory ? { href: '#story', label: texts.storyLabel } : null,
     hasArtists ? { href: '#artistas', label: texts.navArtists } : null,
     hasGallery ? { href: '#galeria', label: galleryTitle } : null,
     showEvents ? { href: '#fechas', label: texts.navEvents } : null,
-  ].filter((l): l is SignalNavLink => !!l && !!l.label);
+  ].filter((l): l is TemplateNavLink => !!l && !!l.label);
 
   const heroRef = useRef<HTMLElement>(null);
-  const [scrolled, setScrolled] = useState(false);
-  const [stickyOn, setStickyOn] = useState(false);
-
-  // El fondo de <body> (overscroll, bordes) pasa al plano de la plantilla mientras se ve.
-  useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.template = 'SIGNAL';
-    return () => {
-      delete root.dataset.template;
-    };
-  }, []);
-
-  // Menú con fondo al bajar, y el CTA fijo solo entre el final de la portada y el formulario.
-  useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      setScrolled(window.scrollY > 24);
-      const hero = heroRef.current?.getBoundingClientRect();
-      const booking = document.getElementById('booking')?.getBoundingClientRect();
-      const pastHero = !!hero && hero.bottom < 80;
-      const atBooking = !!booking && booking.top < window.innerHeight;
-      setStickyOn(pastHero && !atBooking);
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-    };
-  }, []);
+  const { scrolled, stickyOn } = useHeroScroll(heroRef);
+  useHtmlTemplate('SIGNAL');
 
   return (
     <div className={mode === 'preview' ? 'djp djs djs--preview' : 'djp djs'}>
-      <SignalNav
+      <TemplateNav
+        prefix="sg"
         displayName={dj.displayName}
         links={navLinks}
         booking={showBooking ? { href: '#booking', label: texts.navBooking } : null}

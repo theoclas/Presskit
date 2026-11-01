@@ -8,6 +8,7 @@ import { BookingSection } from './BookingSection';
 import { DjFooter } from './DjFooter';
 import { DjHero } from './DjHero';
 import { DjNav } from './DjNav';
+import { GrooveView } from './groove/GrooveView';
 import { HeroMiniCards } from './HeroMiniCards';
 import { MediaModule, type MediaTab } from './MediaModule';
 import { ShowsSection } from './ShowsSection';
@@ -30,7 +31,9 @@ function prefersReducedMotion(): boolean {
  * que la página y la vista previa la compartan.
  */
 export function DjPublicView({ dj, mode = 'live' }: Props) {
-  return dj.template === 'SIGNAL' ? <SignalView dj={dj} mode={mode} /> : <ClassicView dj={dj} mode={mode} />;
+  if (dj.template === 'SIGNAL') return <SignalView dj={dj} mode={mode} />;
+  if (dj.template === 'GROOVE') return <GrooveView dj={dj} mode={mode} />;
+  return <ClassicView dj={dj} mode={mode} />;
 }
 
 /**

@@ -22,4 +22,9 @@ export const TEMPLATES: Record<TemplateKey, Template> = {
     description: 'Estilo cartel de festival: foto a pantalla completa en blanco y negro y el nombre en letra gigante.',
     suggestedPalette: 'SIGNAL',
   },
+  GROOVE: {
+    name: 'Neon Groove',
+    description: 'Cinematográfica y a color: foto con luz de neón, nombre en cursiva ancha y tarjetas con brillo.',
+    suggestedPalette: 'GROOVE',
+  },
 };
