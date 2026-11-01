@@ -228,6 +228,25 @@ export const PALETTES: Record<PaletteKey, Palette> = {
     onAccent: '#f6efe3',
     themeColor: '#140d0f',
   },
+  // La de la plantilla Hyperwave: negro profundo, azul eléctrico, cian y plateado.
+  HYPERWAVE: {
+    name: 'Hyperwave (azul/cian)',
+    bg: '#04060c',
+    bgSoft: '#0a0f1c',
+    card: 'rgba(14,22,40,.72)',
+    muted: '#93a1bb',
+    text: '#eef3fb',
+    accent: '#2f7bff',
+    accent2: '#19e3ff',
+    border: 'rgba(120,170,255,.22)',
+    accentRgb: '47 123 255',
+    accent2Rgb: '25 227 255',
+    surfaceRgb: '14 22 40',
+    lineRgb: '120 150 200',
+    textRgb: '238 243 251',
+    onAccent: '#ffffff',
+    themeColor: '#04060c',
+  },
 };
 
 /** Variables CSS de una paleta, para aplicarlas en un contenedor o en <html>. */

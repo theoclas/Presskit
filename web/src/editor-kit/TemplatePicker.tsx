@@ -60,6 +60,42 @@ const bar = (width: string, height: number, background: string, extra: CSSProper
 /** Boceto de la portada de cada plantilla (decorativo). */
 function TemplateSketch({ template }: { template: TemplateKey }) {
   const p = PALETTES[TEMPLATES[template].suggestedPalette];
+  if (template === 'HYPERWAVE') {
+    const tile = (area: string, extra: CSSProperties = {}): CSSProperties => ({
+      gridArea: area,
+      borderRadius: 5,
+      border: `1px solid rgb(${p.accentRgb} / .45)`,
+      background: 'rgba(20,30,55,.85)',
+      ...extra,
+    });
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          height: 96,
+          borderRadius: 8,
+          padding: 6,
+          display: 'grid',
+          gap: 4,
+          gridTemplateColumns: '1.3fr 1fr 1fr',
+          gridTemplateRows: '1fr 1fr 1fr',
+          gridTemplateAreas: '"photo name name" "photo cta cta" "a b c"',
+          background: `radial-gradient(circle at 90% 0%, rgb(${p.accentRgb} / .5), transparent 60%), ${p.bg}`,
+        }}
+      >
+        <div style={tile('photo', { background: 'linear-gradient(160deg, #3a5a9a, #0b1328)' })} />
+        <div style={tile('name', { display: 'flex', alignItems: 'center', padding: '0 6px' })}>
+          <div style={bar('80%', 8, 'linear-gradient(180deg, #fff, #8996b0)')} />
+        </div>
+        <div style={tile('cta', { display: 'flex', alignItems: 'center', padding: '0 6px' })}>
+          <div style={bar('55%', 8, 'transparent', { border: `1px solid ${p.accent2}`, boxShadow: `0 0 6px ${p.accent2}` })} />
+        </div>
+        <div style={tile('a')} />
+        <div style={tile('b')} />
+        <div style={tile('c')} />
+      </div>
+    );
+  }
   if (template === 'NOIR') {
     return (
       <div aria-hidden="true" style={{ height: 96, borderRadius: 4, overflow: 'hidden', display: 'grid', gridTemplateRows: '58% 42%', border: `1px solid rgb(${p.accent2Rgb} / .5)` }}>

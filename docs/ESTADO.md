@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > Documento de continuación. Léelo primero al retomar (persona o Claude).
-> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN:** Clásica, Signal y Neon Groove (`3a0753d`, migraciones `templates` y `template_groove` aplicadas), a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la portada dividida de Neon Groove, la opción "Fotos en blanco y negro" de Signal (migración `mono_photos`) y la cuarta plantilla, **Editorial Noir** (migración `template_noir`). Próximo: fase 2 (mix y videos).
+> Última actualización: 2026-11-01. **Plantillas visuales EN PRODUCCIÓN** (`c99a8c3`, migraciones `templates`, `template_groove`, `mono_photos` y `template_noir` aplicadas): Clásica, Signal (con "Fotos en blanco y negro" opcional), Neon Groove (portada dividida) y Editorial Noir, a elección del DJ en su editor (ver "Plantillas" abajo). Arreglo del hero estirado de la Clásica (`85cd3f2`) también en producción. **Sin desplegar todavía:** la quinta plantilla, **Hyperwave** en mosaico (migración `template_hyperwave`). Próximo: vista previa en vivo junto a los textos del editor y fase 2 (mix y videos).
 > 2026-09-30: **M4 en producción** (`412d1b2`): microcaché, PQRS con token, registros legales y **copia externa cifrada en Google Drive activa** (restic, primera instantánea `2b98e772`) + vigilante cada 10 min. Fernando ya guardó la clave de los respaldos. Registro de DJs **cerrado** hasta que Fernando decida abrirlo.
 
 ## Plantillas visuales (2026-11-01)
@@ -50,6 +50,18 @@
 
 **Verificación (Noir):** shared 45; api 496 y 123 e2e; web 233; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 9/9 (capturas base nuevas `dj-noir-*`; las demás iguales). Local con fotos reales a 1440 y 390: sin errores ni scroll horizontal; menú del teléfono, CTA fijo y selector de 4 plantillas probados.
 
+**Hyperwave (propuesta 04 de Fernando, 2026-11-01), en mosaico:** el PDF repetía la estructura de Signal y de la primera Groove (foto a lo ancho + nombre en cursiva ancha); Fernando eligió tomar su estética (cromo, vidrio, azul eléctrico) con una **estructura propia**: toda la página es un tablero de tarjetas de vidrio.
+
+| Parte | Dónde |
+|---|---|
+| `TemplateKey.HYPERWAVE` y paleta `HYPERWAVE` (negro profundo, azul eléctrico, cian). Migración `20261102000000_template_hyperwave` | `api/prisma`, `packages/shared` |
+| Textos: reutiliza `heroLabel`, `bioTitle`, `listenCta`, `musicLabel` y `storyMoreCta` (marcados también para `HYPERWAVE`); no suma textos nuevos | `packages/shared/src/text-slots.ts` |
+| Vista: menú flotante de vidrio; bloque superior con la foto (tinte frío, líneas de escaneo, mira y ciudad), la tarjeta del nombre en cromo (Unbounded) con etiquetas, título y géneros, y la de botones (borde holográfico); después el mosaico: bio, cifras (artistas, géneros, fechas, fotos), música, galería (4 miniaturas, «+N» y visor), fechas (3 y «Ver las N»), artistas, rider, redes y formulario. Entrada escalonada (sin animación con `prefers-reduced-motion`) | `web/src/public/dj/hyperwave/` |
+| `packBento(spans, cols)`: arma las filas sin huecos estirando la última tarjeta de cada fila; la vista calcula 12 columnas (escritorio) y 2 (tableta) y las pasa como `--span-lg` / `--span-md`. En el teléfono, una columna | `HyperwaveView.tsx`, `hyperwave.css` |
+| Fuente Unbounded (OFL, `@fontsource-variable/unbounded`): ancha y recta (no repite la cursiva de Groove) | `web/package.json` |
+
+**Verificación (Hyperwave):** shared 45; api 496 y 123 e2e; web 238; lint y typecheck; build, `ci:bundle`, `ci:compose`; migración sin drift; regresión visual 11/11 (capturas base nuevas `dj-hyperwave-*`; las demás iguales). Local con fotos reales a 1440 y 390: sin errores ni scroll horizontal, mosaico sin huecos con secciones faltantes; menú del teléfono (con velo) y CTA fijo probados.
+
 **Arreglo de la clásica en producción (`85cd3f2`):** la foto del hero se encuadra siempre en 16:9 (como la original): una foto cuadrada o vertical estiraba las tarjetas (en `/fersuadj` el hero medía 829 px; ahora 376). Con una descripción de menos de 160 caracteres el hero es compacto (`hero--compact`). Mac Fly queda igual.
 
 **Siguiente (fase 2, en rama aparte; instrucciones para Cursor en `docs/fase2-musica-y-videos.md`):**
@@ -89,7 +101,7 @@ Los diseños detallados están en `docs/diseno/01…11`. Los contratos del api e
 ## Producción (M1 + M2)
 - **https://booking.fersuastudio.com**, con HTTPS por certbot (vence el 2026-12-28 y se renueva solo), `noindex` mientras sea beta.
 - **VPS:** `~/apps/fersuastudio-booking`, proyecto compose `fersua-booking` (db, migrate, api, edge). El edge escucha en `127.0.0.1:8090`; el vhost del host es `/etc/nginx/sites-available/fersua-booking.conf`.
-- **Versión desplegada:** `3a0753d` (Neon Groove, 2026-11-01), con las migraciones `20261101120000_templates` y `20261101180000_template_groove` aplicadas. Antes, `84976ce` (Clásica + Signal) y `412d1b2` (M4). Ojo: una sesión SSH que se corta no detiene `deploy.sh` en el VPS; revisar con `pgrep -f "bash scripts/deploy.sh"` antes de lanzar otro. Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
+- **Versión desplegada:** `c99a8c3` (Groove con portada dividida, Signal con blanco y negro opcional y Editorial Noir, 2026-11-01), con las migraciones `templates`, `template_groove`, `mono_photos` y `template_noir` aplicadas. Antes, `3a0753d`, `84976ce` y `412d1b2` (M4). Conviene lanzarlo con `nohup bash scripts/deploy.sh > ~/deploy-plantillas.log 2>&1 &` y revisar el log: así una sesión SSH cortada no lo interrumpe (comprobar que no corre otro con `ps -eo cmd | grep -x "bash scripts/deploy.sh"`; `pgrep -f` se encuentra a sí mismo). Ojo: una sesión SSH que se corta no detiene `deploy.sh` en el VPS; revisar con `pgrep -f "bash scripts/deploy.sh"` antes de lanzar otro. Microcaché verificada en vivo (MISS → HIT). Registro cerrado: para abrirlo, `sed -i "s/^REGISTRATION_OPEN=.*/REGISTRATION_OPEN=true/" .env && docker compose up -d api` en el VPS (antes, la verificación de correos guardados de la sección I de `docs/02-primer-despliegue.md`).
 - **Respaldos (crontab de `deploy`, UTC):**
   - 08:15, nocturno local (`scripts/backup.sh nightly`);
   - 08:45, copia externa cifrada a Google Drive (`scripts/offsite-backup.sh nightly`, repositorio `rclone:gdrive-fersua:fersua-booking-respaldos-v2` desde el 2026-10-10);
@@ -399,7 +411,7 @@ El cambio de DNS y Allset ya no están pendientes: se decidió no mover nada.
   - Acciones delicadas del admin (borrar, reiniciar contraseñas, asignar dueño, cambiar el correo de un DJ) piden contraseña + código otra vez (step-up, vale 5 min).
 - **Perfiles (M2):** el admin puede aprobar desde borrador (arma los perfiles él mismo; se le muestra lo que falta); aprobar y reactivar exigen el registro legal del art. 53; suspender solo desde aprobado. Las fotos de perfiles sin aprobar son privadas y se ven con URL firmada de 1 h. Un perfil aprobado se ve si no tiene dueño o si la cuenta del dueño está activa.
 - **Formulario:** catálogo fijo de campos. Cada solicitud se guarda y luego abre WhatsApp.
-- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal, Neon Groove y Editorial Noir) + 11 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
+- **Diseño:** plantillas a elección del DJ (Clásica por defecto, Signal, Neon Groove, Editorial Noir y Hyperwave) + 12 paletas (decisión del 2026-11-01; antes, plantilla fija + 8 paletas).
 - **Imágenes:** WebP con sharp en un volumen Docker.
 - **URL:** `booking.fersuastudio.com/<slug>`, de forma definitiva (decisión del 2026-09-30). `fersuastudio.com` y Allset se quedan en Hostinger; no hay cambio de DNS.
 - **Semilla:** solo Mac Fly & Mike Bran, sin dueño, slug `macfly-mike-bran`. Allset queda fuera.

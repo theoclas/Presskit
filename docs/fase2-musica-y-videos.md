@@ -5,7 +5,7 @@
 
 ## Dónde y cómo
 - Carpeta: `C:\Fernando\Desarrollo\Personal\Presskit` (clon del mismo repo). Primero `git pull`
-  en `main` (tiene que incluir las cuatro plantillas: Clásica, Signal, Neon Groove y Editorial Noir).
+  en `main` (tiene que incluir las cinco plantillas: Clásica, Signal, Neon Groove, Editorial Noir e Hyperwave).
 - Rama nueva: `feat/fase2-musica-videos`. Nada directo a `main`; al final, un PR.
 - Node 22 (`.nvmrc`). Desarrollo local y verificación completa: sección "Desarrollo local" de
   `docs/ESTADO.md`.
@@ -18,6 +18,7 @@ Que el DJ pueda mostrar **su último mix** (SoundCloud, Mixcloud o Spotify) y **
 - Neon Groove: la barra del reproductor bajo la portada (como en su concepto) y "Escuchar ahora"
   baja hasta ella cuando hay mix (hoy abre la red de música del perfil);
 - Editorial Noir: el reproductor dentro de la sección "Música" (hoy solo enlaces a las plataformas);
+- Hyperwave: el reproductor en la tarjeta "Música" del mosaico (hoy, enlaces a las plataformas);
 - en la Clásica es opcional.
 
 ## Reglas del proyecto que hay que respetar
@@ -55,14 +56,14 @@ Que el DJ pueda mostrar **su último mix** (SoundCloud, Mixcloud o Spotify) y **
 - **Editor:** una tarjeta "Música y videos" en el editor (`web/src/editor-kit`), con la misma
   validación del api antes de enviar. Va con un interruptor en "Secciones visibles", como los demás.
 - **Plantillas:** usar las clases y variables de cada una (`signal/signal.css` con prefijo
-  `.djp.djs`; `groove/groove.css` con prefijo `.djp.djg`; `noir/noir.css` con prefijo `.djp.djn`), siempre con las variables de la paleta.
+  `.djp.djs`; `groove/groove.css` con prefijo `.djp.djg`; `noir/noir.css` con prefijo `.djp.djn`; `hyperwave/hyperwave.css` con prefijo `.djp.djh`), siempre con las variables de la paleta.
   Los textos nuevos ("Latest mix", "Videos") van como `PAGE_TEXT_SLOTS` con `templates` (las
   plantillas que los muestran).
 
 ## Terminado es
 - Pruebas: shared, api (unitarias y e2e), web, lint y typecheck en verde; `ci:bundle` y
   `ci:compose` OK.
-- Regresión visual: la Clásica sin cambios; Signal, Neon Groove y Editorial Noir con capturas base nuevas (el fixture
+- Regresión visual: la Clásica sin cambios; Signal, Neon Groove, Editorial Noir e Hyperwave con capturas base nuevas (el fixture
   `web/tests/visual/fixtures/macfly-profile.json` con un mix y dos videos).
 - `docs/ESTADO.md` actualizado y un PR a `main`. **No desplegar:** Claude revisa el PR y
   Fernando decide.

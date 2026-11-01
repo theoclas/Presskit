@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { macflyProfile } from '../src/dev-fixtures/macfly';
 import { DjPublicView } from '../src/public/dj/DjPublicView';
+import { HW_GALLERY_THUMBS, packBento } from '../src/public/dj/hyperwave/HyperwaveView';
 import { nameSize } from '../src/public/dj/templateKit';
 
 describe('DjPublicView', () => {
@@ -279,6 +280,77 @@ describe('DjPublicView con la plantilla Editorial Noir', () => {
       <DjPublicView dj={{ ...noir, displayName: `${evil} & co`, texts: { ...noir.texts, heroSubtitle: evil } }} />,
     );
     expect(document.documentElement.dataset.template).toBe('NOIR');
+    expect(container.querySelector('img[src="x"]')).toBeNull();
+    unmount();
+    expect(document.documentElement.dataset.template).toBeUndefined();
+  });
+});
+
+describe('DjPublicView con la plantilla Hyperwave (mosaico)', () => {
+  afterEach(cleanup);
+  const soundcloud = { platform: 'SOUNDCLOUD' as const, label: 'SoundCloud', url: 'https://soundcloud.com/macflymikebran' };
+  const instagram = { platform: 'INSTAGRAM' as const, label: 'Instagram', url: 'https://www.instagram.com/macflymikebran/' };
+  const hyper = { ...macflyProfile, template: 'HYPERWAVE' as const, socials: [instagram, soundcloud] };
+
+  it('el mosaico nunca deja huecos: cada fila suma el ancho completo', () => {
+    const rows = (spans: number[], cols: number) => {
+      const sums: number[] = [];
+      let acc = 0;
+      for (const s of spans) {
+        acc += s;
+        if (acc === cols) {
+          sums.push(acc);
+          acc = 0;
+        }
+      }
+      return { sums, rest: acc };
+    };
+    for (const input of [[5, 3, 4, 7, 5, 8, 4, 4, 12], [5, 3, 7, 5, 8, 4, 12], [5, 12], [7], [3, 3, 3], [8, 8, 8]]) {
+      const out = packBento(input, 12);
+      expect(rows(out, 12).rest).toBe(0);
+      out.forEach((s, i) => expect(s).toBeGreaterThanOrEqual(Math.min(input[i]!, 12)));
+    }
+    expect(packBento([5, 3, 7, 5, 8, 4, 12], 12)).toEqual([5, 7, 7, 5, 8, 4, 12]);
+    expect(packBento([1, 2, 1, 1], 2)).toEqual([2, 2, 1, 1]);
+  });
+
+  it('pinta todo en tarjetas: nombre, botones, bio, cifras, música, galería, fechas, artistas, rider, redes y formulario', () => {
+    const { container } = render(<DjPublicView dj={hyper} />);
+    expect(container.querySelector('.djh')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(hyper.displayName);
+    for (const sel of ['.hw-photo', '.hw-name', '.hw-cta', '#bio', '.hw-stats', '#musica', '#galeria', '.hw-dates #fechas', '#artistas', '#rider', '.hw-socials', '#booking form']) {
+      expect(container.querySelector(sel), sel).toBeTruthy();
+    }
+    // Cada celda lleva su ancho calculado.
+    const cells = [...container.querySelectorAll<HTMLElement>('.hw-cell')];
+    const total = cells.reduce((n, c) => n + Number(c.style.getPropertyValue('--span-lg')), 0);
+    expect(total % 12).toBe(0);
+    expect(screen.getByRole('link', { name: hyper.texts.listenCta }).getAttribute('href')).toBe(soundcloud.url);
+  });
+
+  it('la galería muestra 4 miniaturas, la última con «+N», y abre el visor', () => {
+    const many = Array.from({ length: 7 }, (_, i) => ({ ...macflyProfile.gallery[0]!, id: `g${i}` }));
+    const { container } = render(<DjPublicView dj={{ ...hyper, gallery: many }} />);
+    const thumbs = container.querySelectorAll('.hw-thumb');
+    expect(thumbs.length).toBe(HW_GALLERY_THUMBS);
+    expect(container.querySelector('.hw-thumb-more')?.textContent).toBe('+3');
+    fireEvent.click(thumbs[0]!);
+    expect(container.querySelector('dialog.lightbox')).toBeTruthy();
+  });
+
+  it('sin redes ni galería, esas tarjetas no aparecen y el mosaico sigue completo', () => {
+    const { container } = render(<DjPublicView dj={{ ...hyper, socials: [], show: { ...hyper.show, gallery: false } }} />);
+    expect(container.querySelector('#musica')).toBeNull();
+    expect(container.querySelector('.hw-socials')).toBeNull();
+    expect(container.querySelector('#galeria')).toBeNull();
+    const cells = [...container.querySelectorAll<HTMLElement>('.hw-cell')];
+    expect(cells.reduce((n, c) => n + Number(c.style.getPropertyValue('--span-lg')), 0) % 12).toBe(0);
+  });
+
+  it('pone data-template en <html> y el texto del DJ nunca es HTML', () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const { container, unmount } = render(<DjPublicView dj={{ ...hyper, displayName: evil, texts: { ...hyper.texts, heroSubtitle: evil } }} />);
+    expect(document.documentElement.dataset.template).toBe('HYPERWAVE');
     expect(container.querySelector('img[src="x"]')).toBeNull();
     unmount();
     expect(document.documentElement.dataset.template).toBeUndefined();
